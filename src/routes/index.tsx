@@ -136,7 +136,18 @@ function TierRow({ tier, slot }: { tier: Tier; slot: { src: string; nsfw: boolea
   return (
     <div
       className="flex items-center gap-6 px-5 rounded-md relative"
-      style={{ height: rowHeight, ...bgStyle, border: isPremium ? "1px solid rgba(0,0,0,0.06)" : "none" }}
+      style={{
+        height: rowHeight,
+        ...bgStyle,
+        border:
+          tier.premium === "silver"
+            ? "1px solid rgba(200,205,220,0.45)"
+            : tier.premium === "crimson"
+            ? "1px solid rgba(200,70,80,0.30)"
+            : isPremium
+            ? "1px solid rgba(0,0,0,0.06)"
+            : "none",
+      }}
     >
       {/* Left: name + kanji */}
       <div className="flex-1 flex items-baseline gap-5">

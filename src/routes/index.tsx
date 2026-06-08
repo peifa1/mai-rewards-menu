@@ -118,9 +118,17 @@ function TierRow({ tier, slot }: { tier: Tier; slot: { src: string; nsfw: boolea
 
   const bgStyle: React.CSSProperties =
     tier.premium === "silver"
-      ? { background: "linear-gradient(90deg, rgba(220,220,230,0.5), rgba(245,245,250,0.25) 60%, rgba(200,205,215,0.35))" }
+      ? {
+          background:
+            "linear-gradient(105deg, rgba(220,220,230,0.55) 0%, rgba(245,245,250,0.30) 40%, rgba(255,255,255,0.45) 52%, rgba(200,205,215,0.40) 70%, rgba(220,220,230,0.55) 100%)",
+          boxShadow: "inset 0 0 40px rgba(255,255,255,0.35)",
+        }
       : tier.premium === "crimson"
-      ? { background: "linear-gradient(90deg, rgba(140,30,40,0.18), rgba(180,50,60,0.08) 60%, rgba(120,20,30,0.18))" }
+      ? {
+          background:
+            "linear-gradient(105deg, rgba(140,30,40,0.22) 0%, rgba(180,50,60,0.12) 40%, rgba(210,70,80,0.28) 52%, rgba(120,20,30,0.22) 70%, rgba(140,30,40,0.22) 100%)",
+          boxShadow: "inset 0 0 40px rgba(255,220,220,0.12)",
+        }
       : {};
 
   const nameColor = tier.premium === "crimson" ? "#6b1620" : tier.premium === "silver" ? "#3a3f4a" : "#3a1f26";

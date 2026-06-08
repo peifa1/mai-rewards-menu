@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -54,11 +54,10 @@ function Index() {
 function CanvasScaler({ children }: { children: React.ReactNode }) {
   // Scale the fixed 1080 canvas to fit viewport width on small screens, never above 1.
   const [scale, setScale] = useState(1);
-  useMemo(() => {
-    if (typeof window === "undefined") return;
+  useEffect(() => {
     const update = () => {
       const max = Math.min(window.innerWidth - 32, 1080);
-      setScale(max / 1080);
+      setScale(Math.min(1, max / 1080));
     };
     update();
     window.addEventListener("resize", update);

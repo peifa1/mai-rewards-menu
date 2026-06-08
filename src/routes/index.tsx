@@ -2,9 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import deco02 from "@/assets/deco-02.webp.asset.json";
 import deco03 from "@/assets/deco-03.webp.asset.json";
-import deco04 from "@/assets/deco-04.webp.asset.json";
-import deco05 from "@/assets/deco-05.webp.asset.json";
-import deco06 from "@/assets/deco-06.webp.asset.json";
 import deco07 from "@/assets/deco-07.webp.asset.json";
 
 export const Route = createFileRoute("/")({
@@ -94,10 +91,7 @@ function Canvas({ slots }: { slots: typeof DEFAULT_IMAGES }) {
       {/* Sakura corner sprinkles */}
       <img src={deco07.url} alt="" className="absolute top-6 left-6 w-20 h-20 opacity-90 -rotate-12 pointer-events-none" />
       <img src={deco02.url} alt="" className="absolute top-8 right-8 w-16 h-16 opacity-90 rotate-12 pointer-events-none" />
-      <img src={deco06.url} alt="" className="absolute top-[180px] right-4 w-14 h-14 opacity-80 rotate-6 pointer-events-none" />
-      <img src={deco03.url} alt="" className="absolute bottom-28 left-6 w-20 h-20 opacity-90 -rotate-6 pointer-events-none" />
-      <img src={deco05.url} alt="" className="absolute bottom-24 right-8 w-20 h-20 opacity-90 rotate-3 pointer-events-none" />
-      <img src={deco04.url} alt="" className="absolute bottom-8 left-[46%] w-16 h-16 opacity-90 -rotate-3 pointer-events-none" />
+      <img src={deco03.url} alt="" className="absolute bottom-8 right-8 w-20 h-20 opacity-90 rotate-3 pointer-events-none" />
 
       {/* Menu rows */}
       <div className="px-16 mt-2 flex flex-col">
@@ -124,9 +118,17 @@ function TierRow({ tier, slot }: { tier: Tier; slot: { src: string; nsfw: boolea
 
   const bgStyle: React.CSSProperties =
     tier.premium === "silver"
-      ? { background: "linear-gradient(90deg, rgba(220,220,230,0.5), rgba(245,245,250,0.25) 60%, rgba(200,205,215,0.35))" }
+      ? {
+          background:
+            "linear-gradient(105deg, rgba(220,220,230,0.55) 0%, rgba(245,245,250,0.30) 40%, rgba(255,255,255,0.45) 52%, rgba(200,205,215,0.40) 70%, rgba(220,220,230,0.55) 100%)",
+          boxShadow: "inset 0 0 40px rgba(255,255,255,0.35)",
+        }
       : tier.premium === "crimson"
-      ? { background: "linear-gradient(90deg, rgba(140,30,40,0.18), rgba(180,50,60,0.08) 60%, rgba(120,20,30,0.18))" }
+      ? {
+          background:
+            "linear-gradient(105deg, rgba(140,30,40,0.22) 0%, rgba(180,50,60,0.12) 40%, rgba(210,70,80,0.28) 52%, rgba(120,20,30,0.22) 70%, rgba(140,30,40,0.22) 100%)",
+          boxShadow: "inset 0 0 40px rgba(255,220,220,0.12)",
+        }
       : {};
 
   const nameColor = tier.premium === "crimson" ? "#6b1620" : tier.premium === "silver" ? "#3a3f4a" : "#3a1f26";

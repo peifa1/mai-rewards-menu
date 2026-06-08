@@ -120,14 +120,14 @@ function TierRow({ tier, slot }: { tier: Tier; slot: { src: string; nsfw: boolea
     tier.premium === "silver"
       ? {
           background:
-            "linear-gradient(105deg, rgba(220,220,230,0.55) 0%, rgba(245,245,250,0.30) 40%, rgba(255,255,255,0.45) 52%, rgba(200,205,215,0.40) 70%, rgba(220,220,230,0.55) 100%)",
-          boxShadow: "inset 0 0 40px rgba(255,255,255,0.35)",
+            "linear-gradient(105deg, rgba(210,210,225,0.70) 0%, rgba(240,242,250,0.45) 25%, rgba(255,255,255,0.65) 45%, rgba(230,232,245,0.50) 55%, rgba(210,215,230,0.75) 75%, rgba(230,230,245,0.55) 100%)",
+          boxShadow: "inset 0 0 60px rgba(255,255,255,0.50), 0 0 18px rgba(200,205,220,0.30)",
         }
       : tier.premium === "crimson"
       ? {
           background:
-            "linear-gradient(105deg, rgba(140,30,40,0.22) 0%, rgba(180,50,60,0.12) 40%, rgba(210,70,80,0.28) 52%, rgba(120,20,30,0.22) 70%, rgba(140,30,40,0.22) 100%)",
-          boxShadow: "inset 0 0 40px rgba(255,220,220,0.12)",
+            "linear-gradient(105deg, rgba(160,35,45,0.32) 0%, rgba(200,55,65,0.18) 25%, rgba(240,90,100,0.42) 45%, rgba(170,40,50,0.28) 55%, rgba(130,25,35,0.35) 75%, rgba(150,30,40,0.22) 100%)",
+          boxShadow: "inset 0 0 60px rgba(255,210,210,0.22), 0 0 18px rgba(200,60,70,0.20)",
         }
       : {};
 

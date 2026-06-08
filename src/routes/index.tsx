@@ -91,10 +91,7 @@ function Canvas({ slots }: { slots: typeof DEFAULT_IMAGES }) {
       {/* Sakura corner sprinkles */}
       <img src={deco07.url} alt="" className="absolute top-6 left-6 w-20 h-20 opacity-90 -rotate-12 pointer-events-none" />
       <img src={deco02.url} alt="" className="absolute top-8 right-8 w-16 h-16 opacity-90 rotate-12 pointer-events-none" />
-      <img src={deco06.url} alt="" className="absolute top-[180px] right-4 w-14 h-14 opacity-80 rotate-6 pointer-events-none" />
-      <img src={deco03.url} alt="" className="absolute bottom-28 left-6 w-20 h-20 opacity-90 -rotate-6 pointer-events-none" />
-      <img src={deco05.url} alt="" className="absolute bottom-24 right-8 w-20 h-20 opacity-90 rotate-3 pointer-events-none" />
-      <img src={deco04.url} alt="" className="absolute bottom-8 left-[46%] w-16 h-16 opacity-90 -rotate-3 pointer-events-none" />
+      <img src={deco03.url} alt="" className="absolute bottom-8 right-8 w-20 h-20 opacity-90 rotate-3 pointer-events-none" />
 
       {/* Menu rows */}
       <div className="px-16 mt-2 flex flex-col">

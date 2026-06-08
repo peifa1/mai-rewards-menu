@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import deco02 from "@/assets/deco-02.webp.asset.json";
+import deco03 from "@/assets/deco-03.webp.asset.json";
+import deco04 from "@/assets/deco-04.webp.asset.json";
+import deco05 from "@/assets/deco-05.webp.asset.json";
+import deco06 from "@/assets/deco-06.webp.asset.json";
+import deco07 from "@/assets/deco-07.webp.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({

@@ -146,30 +146,72 @@ function TierRow({ tier, slot }: { tier: Tier; slot: { src: string; nsfw: boolea
         </div>
       </div>
 
-      {/* Image preview */}
-      <div
-        className="relative shrink-0 overflow-hidden rounded-sm"
-        style={{
-          width: isPremium ? 130 : 96,
-          height: isPremium ? 130 : 96,
-          boxShadow: "0 4px 14px rgba(90,30,50,0.15)",
-          border: tier.premium === "crimson" ? "2px solid #6b1620" : tier.premium === "silver" ? "2px solid #b8bcc8" : "2px solid #fff",
-        }}
-      >
-        <img
-          src={slot.src}
-          alt={tier.name}
-          className="w-full h-full object-cover"
-          style={{ filter: slot.nsfw ? "blur(14px) saturate(1.1)" : "none", transform: slot.nsfw ? "scale(1.15)" : "none" }}
-        />
-        {slot.nsfw && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="px-2 py-0.5 text-[11px] font-bold tracking-wider rounded-sm" style={{ background: "#c8132a", color: "#fff" }}>
-              🔞 NSFW
+      {/* Image preview stack */}
+      {(() => {
+        const stackCount = tier.key === "yokan" ? 0 : tier.key === "sensu" || tier.key === "tomo" ? 2 : 3;
+        const mainSize = isPremium ? 130 : 96;
+        const peek = isPremium ? 14 : 11;
+        const borderColor = tier.premium === "crimson" ? "#6b1620" : tier.premium === "silver" ? "#b8bcc8" : "#ffffff";
+        const totalWidth = mainSize + stackCount * peek;
+        return (
+          <div className="relative shrink-0" style={{ width: totalWidth, height: mainSize }}>
+            {Array.from({ length: stackCount }).map((_, i) => {
+              const idx = stackCount - i; // farthest first
+              const shrink = idx * 6;
+              const size = mainSize - shrink;
+              return (
+                <div
+                  key={i}
+                  className="absolute overflow-hidden rounded-sm bg-[#f1d9df]"
+                  style={{
+                    width: size,
+                    height: size,
+                    left: idx * peek,
+                    top: (mainSize - size) / 2,
+                    border: `2px solid ${borderColor}`,
+                    boxShadow: "0 3px 10px rgba(90,30,50,0.18)",
+                    opacity: 0.85 - idx * 0.05,
+                    zIndex: i,
+                  }}
+                >
+                  <img
+                    src={slot.src}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    style={{ filter: slot.nsfw ? "blur(10px) saturate(1.1)" : "grayscale(8%) brightness(0.95)", transform: slot.nsfw ? "scale(1.15)" : "none" }}
+                  />
+                </div>
+              );
+            })}
+            <div
+              className="absolute overflow-hidden rounded-sm"
+              style={{
+                width: mainSize,
+                height: mainSize,
+                left: 0,
+                top: 0,
+                boxShadow: "0 4px 14px rgba(90,30,50,0.25)",
+                border: `2px solid ${borderColor}`,
+                zIndex: stackCount + 1,
+              }}
+            >
+              <img
+                src={slot.src}
+                alt={tier.name}
+                className="w-full h-full object-cover"
+                style={{ filter: slot.nsfw ? "blur(14px) saturate(1.1)" : "none", transform: slot.nsfw ? "scale(1.15)" : "none" }}
+              />
+              {slot.nsfw && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="px-2 py-0.5 text-[11px] font-bold tracking-wider rounded-sm" style={{ background: "#c8132a", color: "#fff" }}>
+                    🔞 NSFW
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* Hanko stamp for premium */}
       {isPremium && (

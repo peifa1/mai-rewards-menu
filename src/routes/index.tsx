@@ -359,8 +359,13 @@ function AdjustOverlay({
   return (
     <div
       ref={ref}
-      className="absolute inset-0 cursor-move group"
-      style={{ WebkitClipPath: clipPath, clipPath }}
+      className="absolute top-0 h-full cursor-move group"
+      style={{
+        left: `${left}%`,
+        width: `${width}%`,
+        WebkitClipPath: clipPath,
+        clipPath,
+      }}
       onMouseDown={handleDown}
       onDoubleClick={() => onChange({ zoom: 1, posX: 50, posY: 30 })}
       title="Drag to pan · Scroll to zoom · Double-click to reset"

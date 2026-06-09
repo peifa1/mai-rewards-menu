@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toPng } from "html-to-image";
 import artYokan from "@/assets/art-yokan.jpg.asset.json";
 import artSensu from "@/assets/art-sensu.jpg.asset.json";
 import artTomo from "@/assets/art-tomo.jpg.asset.json";
@@ -65,10 +66,46 @@ const DEFAULT_SLOTS: SlotsMap = {
 
 function Index() {
   const [slots, setSlots] = useState<SlotsMap>(DEFAULT_SLOTS);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!canvasRef.current) return;
+    setExporting(true);
+    try {
+      const dataUrl = await toPng(canvasRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        width: 1080,
+        height: 1080,
+      });
+      const link = document.createElement("a");
+      link.download = "iomaya-mai-monthly-rewards.png";
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Export failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center gap-10 py-10 px-4" style={{ background: "#2a0a14" }}>
-      <CanvasScaler>
+    <div className="min-h-screen w-full flex flex-col items-center gap-6 py-8 px-4" style={{ background: "#2a0a14" }}>
+      <button
+        onClick={handleExport}
+        disabled={exporting}
+        className="px-6 py-2.5 rounded-full text-sm font-semibold tracking-widest uppercase transition-all hover:scale-105 disabled:opacity-60"
+        style={{
+          background: "linear-gradient(135deg, #c8132a, #8a0a1c)",
+          color: "#fff0f4",
+          border: "1px solid rgba(255,200,215,0.4)",
+          boxShadow: "0 6px 24px rgba(200,19,42,0.45), 0 0 0 1px rgba(255,180,200,0.15) inset",
+        }}
+      >
+        {exporting ? "Exporting…" : "Export as Image"}
+      </button>
+      <CanvasScaler innerRef={canvasRef}>
         <Canvas slots={slots} />
       </CanvasScaler>
       <Editor slots={slots} onChange={setSlots} />
@@ -76,7 +113,7 @@ function Index() {
   );
 }
 
-function CanvasScaler({ children }: { children: React.ReactNode }) {
+function CanvasScaler({ children, innerRef }: { children: React.ReactNode; innerRef?: React.Ref<HTMLDivElement> }) {
   const [scale, setScale] = useState(1);
   useEffect(() => {
     const update = () => {
@@ -90,8 +127,18 @@ function CanvasScaler({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ width: 1080 * scale, height: 1080 * scale }} className="relative">
       <div
-        style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: 1080, height: 1080 }}
-        className="absolute top-0 left-0 shadow-2xl"
+        ref={innerRef}
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          width: 1080,
+          height: 1080,
+          boxShadow:
+            "0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,180,200,0.08), inset 0 0 120px rgba(0,0,0,0.35)",
+          borderRadius: 8,
+          overflow: "hidden",
+        }}
+        className="absolute top-0 left-0"
       >
         {children}
       </div>

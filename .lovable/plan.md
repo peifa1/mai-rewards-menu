@@ -1,66 +1,47 @@
-# Fix the Vercel 404 + finish env var setup
+# Wire up the images you uploaded to public/images
 
-## Why the 404 happens
+## Goal
+Make the page render with the files now sitting in `public/images/`, without renaming any files.
 
-Your project uses **TanStack Start**, which is an SSR framework — not a plain static Vite site. The current `vite.config.ts` builds the server bundle for **Cloudflare Workers** (the default in `@lovable.dev/vite-tanstack-config`).
+## What I'll change
 
-When Vercel runs the build, it gets a Cloudflare-shaped output and doesn't know how to serve it → every URL returns **404 NOT_FOUND**. That's exactly the screenshot you sent.
-
-I confirmed your app code does **not** actually use any server functions — all data goes browser → Lovable Cloud directly. That's good news: switching the build target is safe and won't break anything.
-
-## Plan
-
-### Step 1 — Change the build target to Vercel (1 file edit)
-
-Update `vite.config.ts` to tell the underlying `nitro` builder to output Vercel's serverless format instead of Cloudflare's:
+**Only `src/routes/index.tsx`** — replace the 8 `.asset.json` imports and their usages with URL-encoded paths to your `public/images/` files.
 
 ```ts
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+// Remove these 8 imports (lines 7-14):
+import artYokan from "@/assets/art-yokan.jpg.asset.json";
+import artSensu from "@/assets/art-sensu.jpg.asset.json";
+import artTomo  from "@/assets/art-tomo.jpg.asset.json";
+import artOkami from "@/assets/art-okami.jpg.asset.json";
+import artDanna from "@/assets/art-danna.jpg.asset.json";
+import chibi    from "@/assets/chibi.png.asset.json";
+import petal    from "@/assets/petal.png.asset.json";
+import thankYou from "@/assets/thankyou.png.asset.json";
 
-export default defineConfig({
-  tanstackStart: {
-    server: { entry: "server" },
-  },
-  nitro: {
-    preset: "vercel",
-  },
-});
+// Replace with constants (URL-encoded for spaces):
+const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
+const thankYou = { url: "/images/thank%20%20you!!_text.png" };
+const petal    = { url: "/images/petal.png" };
+
+// Art placeholders — rotate the 4 you uploaded across the 5 slots:
+const artYokan = { url: "/images/ahri.jpg" };
+const artTomo  = { url: "/images/cosplay.jpg" };
+const artOkami = { url: "/images/ahri.jpg" };
+const artSensu = { url: "/images/ahri-nsfw.jpg" };  // NSFW slot
+const artDanna = { url: "/images/cosplay-nsfw.jpg" }; // NSFW slot
 ```
 
-This produces a `.vercel/output/` directory that Vercel auto-detects and serves correctly — SSR pages, static assets, and routing all work.
+All the downstream `.url` accesses (`chibi.url`, `petal.url`, `artYokan.url`, etc.) keep working unchanged.
 
-### Step 2 — You add the env vars in Vercel (UI, no code)
+## Cleanup (optional, same change)
 
-In Vercel left sidebar → **Environment Variables** → add three, all environments checked:
+Delete the 8 now-unused `.asset.json` files under `src/assets/`. The art-*, chibi, petal, thankyou pointers won't be referenced anymore. Safe — they remain on the CDN if you ever need them back, and revertable from chat history.
 
-```
-VITE_SUPABASE_URL              = https://aqoxkmxkbsvofhgnszjr.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY  = <the anon key from your .env>
-VITE_SUPABASE_PROJECT_ID       = aqoxkmxkbsvofhgnszjr
-```
+## Doesn't touch
+Backend, env vars, Vercel config, any other code or styling. Just pointing `<img src>` at the files you already shipped to `public/`.
 
-(I'll paste the full key value in chat once we switch to build mode.)
+## After this lands
+- Push from Lovable → GitHub auto-syncs → Vercel rebuilds.
+- `diablita.xyz` should show all images. If any single image still 404s, it's a filename typo I can fix in seconds by reading the Vercel deploy.
 
-### Step 3 — Trigger a fresh redeploy
-
-Vercel auto-deploys when Lovable pushes the `vite.config.ts` change to GitHub. But to be safe and pick up the new env vars:
-- **Deployments** tab → latest deployment → **⋯** menu → **Redeploy** → **uncheck** "Use existing build cache" → **Redeploy**.
-
-### Step 4 — Verify
-
-- Open `mai-rewards-menu.vercel.app` and `diablita.xyz` — both should load the showcase.
-- If anything fails, open DevTools (F12) → Console, and paste me any red error.
-
-## What this changes
-- One file: `vite.config.ts` (adds 3 lines)
-- That's it. No data, no routes, no UI touched.
-
-## What this does NOT do
-- Does not affect Lovable preview (Lovable still builds with its own config).
-- Does not change your Lovable Cloud backend.
-- Does not fix the **app_state public-write security issue** — that's still pending. After Vercel is working, we'll do the editor passphrase fix (Part 2 from the earlier plan).
-
-## Side note: your Vercel account
-The "Action Required: billing address missing" banner in your screenshot is unrelated to deployment — Vercel just wants you to complete your profile because you bought a domain. Hobby plan stays free; complete it when convenient.
-
-Ready to apply? Approve the plan and I'll make the `vite.config.ts` edit + give you the exact env var values to paste.
+Ready when you switch to build mode.

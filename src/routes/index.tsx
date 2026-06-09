@@ -4,14 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toPng } from "html-to-image";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines } from "lucide-react";
 
-import artYokan from "@/assets/art-yokan.jpg.asset.json";
-import artSensu from "@/assets/art-sensu.jpg.asset.json";
-import artTomo from "@/assets/art-tomo.jpg.asset.json";
-import artOkami from "@/assets/art-okami.jpg.asset.json";
-import artDanna from "@/assets/art-danna.jpg.asset.json";
-import chibi from "@/assets/chibi.png.asset.json";
-import petal from "@/assets/petal.png.asset.json";
-import thankYou from "@/assets/thankyou.png.asset.json";
+const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
+const thankYou = { url: "/images/thank%20%20you!!_text.png" };
+const petal    = { url: "/images/petal.png" };
+const artYokan = { url: "/images/ahri.jpg" };
+const artTomo  = { url: "/images/cosplay.jpg" };
+const artOkami = { url: "/images/ahri.jpg" };
+const artSensu = { url: "/images/ahri-nsfw.jpg" };
+const artDanna = { url: "/images/cosplay-nsfw.jpg" };
 
 
 export const Route = createFileRoute("/")({

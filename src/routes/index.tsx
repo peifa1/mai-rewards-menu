@@ -270,7 +270,7 @@ function Canvas({ slots, onUpdateSlot }: { slots: SlotsMap; onUpdateSlot: SlotUp
       <div className="relative mt-2 flex flex-col" style={{ padding: "0 56px" }}>
         {TIERS.map((t, i) => (
           <div key={t.key}>
-            <TierRow tier={t} images={slots[t.key]} />
+            <TierRow tier={t} images={slots[t.key]} onUpdateSlot={onUpdateSlot} />
             {i < TIERS.length - 1 && (
               <div
                 className="my-1"

@@ -387,12 +387,21 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
   const kanjiColor = tier.premium ? "#ffd6e0" : "#e8a8b8";
 
   // 2-image panoramic strip with diagonal cut.
+  // Each image gets its OWN bounding box (its own slice of the strip),
+  // so pan/zoom act within that slice instead of the whole strip.
   const groupWidthPct = 64;
   const mid = 50;
   const skew = 6;
+  const s0Width = mid + skew;       // 56
+  const s1Left = mid - skew;        // 44
+  const s1Width = 100 - s1Left;     // 56
+  const slices = [
+    { left: 0, width: s0Width },
+    { left: s1Left, width: s1Width },
+  ];
   const polys = [
-    `polygon(0 0, ${mid + skew}% 0, ${mid - skew}% 100%, 0 100%)`,
-    `polygon(${mid + skew}% 0, 100% 0, 100% 100%, ${mid - skew}% 100%)`,
+    `polygon(0 0, 100% 0, ${((mid - skew) / s0Width) * 100}% 100%, 0 100%)`,
+    `polygon(${((mid + skew - s1Left) / s1Width) * 100}% 0, 100% 0, 100% 100%, 0 100%)`,
   ];
 
   // Prestige treatment — Danna (top) > Okami (mid) > rest

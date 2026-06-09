@@ -218,34 +218,45 @@ function Canvas({ slots }: { slots: SlotsMap }) {
 }
 
 function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
-  const rowHeight = tier.premium ? 150 : 128;
+  const isTop = tier.key === "danna";
+  const isMid = tier.key === "okami";
+  const rowHeight = isTop ? 156 : tier.premium ? 142 : 128;
   const nameColor = tier.premium ? "#fff8fa" : "#f7dde4";
   const kanjiColor = tier.premium ? "#ffd6e0" : "#e8a8b8";
 
   // 2-image panoramic strip with diagonal cut.
   const groupWidthPct = 64;
   const mid = 50;
-  const skew = 6; // percent, half of diagonal spread
+  const skew = 6;
   const polys = [
     `polygon(0 0, ${mid + skew}% 0, ${mid - skew}% 100%, 0 100%)`,
     `polygon(${mid + skew}% 0, 100% 0, 100% 100%, ${mid - skew}% 100%)`,
   ];
 
-  // Prestige treatment for Okami/Danna
-  const prestigeBg: React.CSSProperties | undefined = tier.premium
+  // Prestige treatment — Danna (top) > Okami (mid) > rest
+  const prestigeBg: React.CSSProperties | undefined = isTop
     ? {
         background:
-          "linear-gradient(90deg, rgba(255,170,190,0.10) 0%, rgba(255,140,165,0.06) 35%, transparent 70%)",
-        boxShadow: "inset 0 0 40px rgba(255,140,170,0.10)",
+          "linear-gradient(90deg, rgba(255,180,200,0.16) 0%, rgba(255,150,175,0.09) 35%, transparent 72%)",
+        boxShadow: "inset 0 0 55px rgba(255,150,180,0.16)",
+      }
+    : isMid
+    ? {
+        background:
+          "linear-gradient(90deg, rgba(255,170,190,0.07) 0%, rgba(255,140,165,0.04) 35%, transparent 70%)",
+        boxShadow: "inset 0 0 28px rgba(255,140,170,0.07)",
       }
     : undefined;
+
+  const borderColor = isTop ? "#ffd28a" : isMid ? "#ffb3c4" : "transparent";
+  const borderWidth = isTop ? 4 : tier.premium ? 3 : 3;
 
   return (
     <div
       className="relative w-full overflow-hidden"
       style={{
         height: rowHeight,
-        borderLeft: tier.premium ? "3px solid #ffb3c4" : "3px solid transparent",
+        borderLeft: `${borderWidth}px solid ${borderColor}`,
         paddingLeft: 18,
         ...prestigeBg,
       }}
@@ -255,9 +266,10 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
         <div
           className="absolute left-0 top-0 h-full pointer-events-none"
           style={{
-            width: 90,
-            background:
-              "linear-gradient(90deg, rgba(255,180,200,0.22) 0%, transparent 100%)",
+            width: isTop ? 110 : 80,
+            background: isTop
+              ? "linear-gradient(90deg, rgba(255,200,160,0.30) 0%, rgba(255,180,200,0.18) 40%, transparent 100%)"
+              : "linear-gradient(90deg, rgba(255,180,200,0.16) 0%, transparent 100%)",
           }}
         />
       )}
@@ -307,20 +319,28 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
           {tier.premium && (
             <div
               className="font-tambyon"
-              style={{ fontSize: 22, color: "#ffd28a", letterSpacing: "0.3em", marginRight: 4 }}
+              style={{
+                fontSize: isTop ? 26 : 20,
+                color: isTop ? "#ffd28a" : "#ffc7a0",
+                letterSpacing: "0.3em",
+                marginRight: 4,
+                textShadow: isTop ? "0 0 12px rgba(255,200,140,0.6)" : "none",
+              }}
             >
-              ✦
+              {isTop ? "✦ ✦" : "✦"}
             </div>
           )}
           <div
             className="font-tambyon"
             style={{
-              fontSize: tier.premium ? 62 : 50,
+              fontSize: isTop ? 66 : tier.premium ? 56 : 50,
               color: nameColor,
               lineHeight: 1,
               letterSpacing: "0.04em",
-              textShadow: tier.premium
-                ? "0 2px 18px rgba(255,150,180,0.55), 0 0 1px rgba(255,220,230,0.6)"
+              textShadow: isTop
+                ? "0 2px 22px rgba(255,180,140,0.65), 0 0 1px rgba(255,235,210,0.7)"
+                : isMid
+                ? "0 2px 12px rgba(255,150,180,0.40)"
                 : "0 2px 10px rgba(0,0,0,0.4)",
             }}
           >
@@ -329,7 +349,7 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
           <div
             className="font-tambyon"
             style={{
-              fontSize: tier.premium ? 32 : 26,
+              fontSize: isTop ? 34 : tier.premium ? 30 : 26,
               color: kanjiColor,
               opacity: 0.95,
             }}
@@ -348,11 +368,17 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
             style={{
               background: tier.premium ? "rgba(30,8,16,0.7)" : "rgba(20,5,12,0.6)",
               color: p === "18+" ? "#ff8aa0" : tier.premium ? "#ffe8ee" : "#fbe0e7",
-              border: tier.premium
-                ? "1px solid rgba(255,200,215,0.45)"
+              border: isTop
+                ? "1px solid rgba(255,215,170,0.55)"
+                : tier.premium
+                ? "1px solid rgba(255,200,215,0.38)"
                 : "1px solid rgba(255,180,200,0.30)",
               backdropFilter: "blur(4px)",
-              boxShadow: tier.premium ? "0 0 10px rgba(255,150,180,0.18)" : "none",
+              boxShadow: isTop
+                ? "0 0 14px rgba(255,180,140,0.28)"
+                : isMid
+                ? "0 0 8px rgba(255,150,180,0.12)"
+                : "none",
             }}
           >
             {p}

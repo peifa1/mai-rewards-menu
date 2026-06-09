@@ -5,6 +5,9 @@ import artSensu from "@/assets/art-sensu.jpg.asset.json";
 import artTomo from "@/assets/art-tomo.jpg.asset.json";
 import artOkami from "@/assets/art-okami.jpg.asset.json";
 import artDanna from "@/assets/art-danna.jpg.asset.json";
+import chibi from "@/assets/chibi.png.asset.json";
+import petal from "@/assets/petal.png.asset.json";
+import thankYou from "@/assets/thankyou.png.asset.json";
 
 
 export const Route = createFileRoute("/")({

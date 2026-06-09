@@ -851,12 +851,16 @@ function Editor({
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          updateSlot(t.key, idx, {
-                            src: URL.createObjectURL(file),
-                            zoom: 1,
-                            posX: 50,
-                            posY: 30,
-                          });
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            updateSlot(t.key, idx, {
+                              src: String(reader.result),
+                              zoom: 1,
+                              posX: 50,
+                              posY: 30,
+                            });
+                          };
+                          reader.readAsDataURL(file);
                         }}
                       />
                     </label>

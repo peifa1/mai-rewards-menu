@@ -300,10 +300,14 @@ function Canvas({ slots, onUpdateSlot }: { slots: SlotsMap; onUpdateSlot: SlotUp
 function AdjustOverlay({
   im,
   clipPath,
+  left,
+  width,
   onChange,
 }: {
   im: ImgSlot;
   clipPath: string;
+  left: number;
+  width: number;
   onChange: (next: Partial<ImgSlot>) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);

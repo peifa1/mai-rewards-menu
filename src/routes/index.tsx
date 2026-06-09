@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import { Mic, Move } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
+
 import artYokan from "@/assets/art-yokan.jpg.asset.json";
 import artSensu from "@/assets/art-sensu.jpg.asset.json";
 import artTomo from "@/assets/art-tomo.jpg.asset.json";
@@ -58,6 +58,13 @@ function Index() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
+  const updateSlot = (tierKey: string, idx: number, next: Partial<ImgSlot>) => {
+    setSlots((prev) => ({
+      ...prev,
+      [tierKey]: prev[tierKey].map((s, i) => (i === idx ? { ...s, ...next } : s)),
+    }));
+  };
+
   const handleExport = async () => {
     if (!canvasRef.current) return;
     setExporting(true);
@@ -67,6 +74,8 @@ function Index() {
         pixelRatio: 2,
         width: 1080,
         height: 1080,
+        filter: (node) =>
+          !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
       });
       const link = document.createElement("a");
       link.download = "iomaya-mai-monthly-rewards.png";
@@ -95,7 +104,7 @@ function Index() {
         {exporting ? "Exporting…" : "Export as Image"}
       </button>
       <CanvasScaler innerRef={canvasRef}>
-        <Canvas slots={slots} />
+        <Canvas slots={slots} onUpdateSlot={updateSlot} />
       </CanvasScaler>
       <Editor slots={slots} onChange={setSlots} />
     </div>
@@ -135,7 +144,9 @@ function CanvasScaler({ children, innerRef }: { children: React.ReactNode; inner
   );
 }
 
-function Canvas({ slots }: { slots: SlotsMap }) {
+type SlotUpdater = (tierKey: string, idx: number, next: Partial<ImgSlot>) => void;
+
+function Canvas({ slots, onUpdateSlot }: { slots: SlotsMap; onUpdateSlot: SlotUpdater }) {
   return (
     <div
       className="relative font-tambyon"
@@ -259,7 +270,7 @@ function Canvas({ slots }: { slots: SlotsMap }) {
       <div className="relative mt-2 flex flex-col" style={{ padding: "0 56px" }}>
         {TIERS.map((t, i) => (
           <div key={t.key}>
-            <TierRow tier={t} images={slots[t.key]} />
+            <TierRow tier={t} images={slots[t.key]} onUpdateSlot={onUpdateSlot} />
             {i < TIERS.length - 1 && (
               <div
                 className="my-1"
@@ -286,7 +297,7 @@ function Canvas({ slots }: { slots: SlotsMap }) {
   );
 }
 
-function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
+function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]; onUpdateSlot: SlotUpdater }) {
   const isTop = tier.key === "danna";
   const isMid = tier.key === "okami";
   const rowHeight = isTop ? 156 : tier.premium ? 142 : 128;
@@ -389,6 +400,75 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
           mixBlendMode: "multiply",
         }}
       />
+
+
+      {/* Interactive adjust overlay (excluded from export) */}
+      <div
+        data-export-ignore="true"
+        className="absolute top-0 right-0 h-full z-30"
+        style={{ width: `${groupWidthPct}%` }}
+      >
+        {images.slice(0, 2).map((im, idx) => {
+          const handleDown = (e: React.MouseEvent<HTMLDivElement>) => {
+            e.preventDefault();
+            const target = e.currentTarget;
+            const rect = target.getBoundingClientRect();
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startPosX = im.posX;
+            const startPosY = im.posY;
+            const onMove = (ev: MouseEvent) => {
+              const dx = ((ev.clientX - startX) / rect.width) * 100;
+              const dy = ((ev.clientY - startY) / rect.height) * 100;
+              onUpdateSlot(tier.key, idx, {
+                posX: Math.max(0, Math.min(100, startPosX - dx)),
+                posY: Math.max(0, Math.min(100, startPosY - dy)),
+              });
+            };
+            const onUp = () => {
+              window.removeEventListener("mousemove", onMove);
+              window.removeEventListener("mouseup", onUp);
+            };
+            window.addEventListener("mousemove", onMove);
+            window.addEventListener("mouseup", onUp);
+          };
+          const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+            e.preventDefault();
+            const delta = -e.deltaY * 0.002;
+            const next = Math.max(1, Math.min(4, im.zoom + delta));
+            onUpdateSlot(tier.key, idx, { zoom: next });
+          };
+          return (
+            <div
+              key={idx}
+              className="absolute inset-0 cursor-move group"
+              style={{
+                WebkitClipPath: polys[idx],
+                clipPath: polys[idx],
+              }}
+              onMouseDown={handleDown}
+              onWheel={handleWheel}
+              onDoubleClick={() => onUpdateSlot(tier.key, idx, { zoom: 1, posX: 50, posY: 30 })}
+              title="Drag to pan · Scroll to zoom · Double-click to reset"
+            >
+              <div
+                className="absolute opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold pointer-events-none"
+                style={{
+                  top: 8,
+                  right: 10,
+                  background: "rgba(0,0,0,0.6)",
+                  color: "#ffd6e0",
+                  border: "1px solid rgba(255,200,215,0.35)",
+                  backdropFilter: "blur(4px)",
+                }}
+              >
+                <Move size={11} />
+                <span>{im.zoom.toFixed(2)}×</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {/* Tier name */}
       <div className="relative h-full flex items-center z-10">
@@ -569,52 +649,13 @@ function Editor({
             </div>
             {slots[t.key].map((s, idx) => (
               <div key={idx} className="flex flex-col gap-1.5">
-                <div
-                  className="relative w-full aspect-square overflow-hidden rounded cursor-move select-none"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    const target = e.currentTarget;
-                    const rect = target.getBoundingClientRect();
-                    const startX = e.clientX;
-                    const startY = e.clientY;
-                    const startPosX = s.posX;
-                    const startPosY = s.posY;
-                    const onMove = (ev: MouseEvent) => {
-                      const dx = ((ev.clientX - startX) / rect.width) * 100;
-                      const dy = ((ev.clientY - startY) / rect.height) * 100;
-                      updateSlot(t.key, idx, {
-                        posX: Math.max(0, Math.min(100, startPosX - dx)),
-                        posY: Math.max(0, Math.min(100, startPosY - dy)),
-                      });
-                    };
-                    const onUp = () => {
-                      window.removeEventListener("mousemove", onMove);
-                      window.removeEventListener("mouseup", onUp);
-                    };
-                    window.addEventListener("mousemove", onMove);
-                    window.addEventListener("mouseup", onUp);
-                  }}
-                  title="Drag to adjust position"
-                >
+                <div className="relative w-full aspect-square overflow-hidden rounded">
                   <img
                     src={s.src}
                     alt=""
-                    className="w-full h-full pointer-events-none"
-                    style={{
-                      objectFit: "cover",
-                      objectPosition: `${s.posX}% ${s.posY}%`,
-                      transform: `scale(${s.zoom}) ${s.nsfw ? "scale(1.1)" : ""}`.trim(),
-                      transformOrigin: `${s.posX}% ${s.posY}%`,
-                      filter: s.nsfw ? "blur(8px)" : "none",
-                    }}
+                    className="w-full h-full object-cover"
+                    style={{ filter: s.nsfw ? "blur(8px)" : "none", transform: s.nsfw ? "scale(1.1)" : "none" }}
                   />
-                  <div
-                    className="absolute top-1 right-1 p-1 rounded-full pointer-events-none"
-                    style={{ background: "rgba(0,0,0,0.55)", color: "#ffd6e0" }}
-                    title="Adjustable"
-                  >
-                    <Move size={12} />
-                  </div>
                 </div>
                 <label className="text-[11px] cursor-pointer text-center py-1 rounded" style={{ background: "#c8132a", color: "#fff" }}>
                   Swap #{idx + 1}
@@ -625,31 +666,10 @@ function Editor({
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      updateSlot(t.key, idx, { src: URL.createObjectURL(file) });
+                      updateSlot(t.key, idx, { src: URL.createObjectURL(file), zoom: 1, posX: 50, posY: 30 });
                     }}
                   />
                 </label>
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[10px]" style={{ color: "#f0a8b8" }}>
-                    <span>Zoom</span>
-                    <span>{s.zoom.toFixed(2)}×</span>
-                  </div>
-                  <Slider
-                    min={1}
-                    max={4}
-                    step={0.05}
-                    value={[s.zoom]}
-                    onValueChange={(v) => updateSlot(t.key, idx, { zoom: v[0] })}
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="text-[10px] py-1 rounded"
-                  style={{ background: "rgba(255,180,200,0.12)", color: "#fbe0e7", border: "1px solid rgba(255,180,200,0.25)" }}
-                  onClick={() => updateSlot(t.key, idx, { zoom: 1, posX: 50, posY: 30 })}
-                >
-                  Reset framing
-                </button>
                 <label className="flex items-center justify-between text-[11px]" style={{ color: "#fbe0e7" }}>
                   <span>NSFW blur</span>
                   <input

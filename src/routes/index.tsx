@@ -355,12 +355,12 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
               style={{
                 fontSize: isTop ? 26 : 20,
                 color: isTop ? "#ffd28a" : "#ffc7a0",
-                letterSpacing: "0.3em",
+                letterSpacing: "-0.15em",
                 marginRight: 4,
                 textShadow: isTop ? "0 0 12px rgba(255,200,140,0.6)" : "none",
               }}
             >
-              {isTop ? "✦ ✦" : "✦"}
+              {isTop ? "✦✦" : "✦"}
             </div>
           )}
           <div

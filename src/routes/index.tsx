@@ -1,13 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import deco02 from "@/assets/deco-02.webp.asset.json";
-import deco03 from "@/assets/deco-03.webp.asset.json";
-import deco07 from "@/assets/deco-07.webp.asset.json";
 import artYokan from "@/assets/art-yokan.jpg.asset.json";
 import artSensu from "@/assets/art-sensu.jpg.asset.json";
 import artTomo from "@/assets/art-tomo.jpg.asset.json";
 import artOkami from "@/assets/art-okami.jpg.asset.json";
 import artDanna from "@/assets/art-danna.jpg.asset.json";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({

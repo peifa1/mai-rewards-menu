@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
-import { Mic, Move } from "lucide-react";
+import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines } from "lucide-react";
 
 import artYokan from "@/assets/art-yokan.jpg.asset.json";
 import artSensu from "@/assets/art-sensu.jpg.asset.json";
@@ -23,20 +23,79 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+type Perk = {
+  id: string;
+  label: string;
+  textColor?: string;
+  bgColor?: string;
+  borderColor?: string;
+  showMic?: boolean;
+  showVisualizer?: boolean;
+  badge?: string;
+  badgeBg?: string;
+  badgeTextColor?: string;
+};
+
 type Tier = {
   key: string;
   name: string;
   kanji: string;
   premium?: boolean;
-  perks: string[];
+  perks: Perk[];
 };
 
-const TIERS: Tier[] = [
-  { key: "yokan", name: "Yokan", kanji: "羊羹", perks: ["ART", "WALL"] },
-  { key: "sensu", name: "Sensu", kanji: "扇子", perks: ["18+", "BONUS"] },
-  { key: "tomo",  name: "Tomo",  kanji: "友",   perks: ["PHOTO", "ASMR", "AUDIO", "VOICE"] },
-  { key: "okami", name: "Okami", kanji: "女将", premium: true, perks: ["18+", "ASMR", "AUDIO", "VOTE"] },
-  { key: "danna", name: "Danna", kanji: "旦那", premium: true, perks: ["18+", "ASMR", "AUDIO", "EXCL"] },
+let _uid = 0;
+const uid = () => `p${++_uid}`;
+const p = (label: string, extra: Partial<Perk> = {}): Perk => ({ id: uid(), label, ...extra });
+
+const ACCENT_STD = "#ffb8c8";
+const ACCENT_MID = "#ffc7a0";
+const ACCENT_TOP = "#ffd28a";
+
+const PILL_MIC_BG = "linear-gradient(90deg, rgba(255,184,200,0.18) 0%, rgba(40,10,20,0.85) 45%, rgba(40,10,20,0.9) 100%)";
+const PILL_DEFAULT_BG = "rgba(20,5,12,0.6)";
+const PILL_DEFAULT_BORDER = "rgba(255,180,200,0.30)";
+const PILL_DEFAULT_TEXT = "#fbe0e7";
+
+const INITIAL_TIERS: Tier[] = [
+  {
+    key: "yokan", name: "Yokan", kanji: "羊羹",
+    perks: [p("ART"), p("WALL")],
+  },
+  {
+    key: "sensu", name: "Sensu", kanji: "扇子",
+    perks: [
+      p("18+", { textColor: "#ff8aa0", bgColor: "rgba(255,138,160,0.18)", borderColor: "rgba(255,138,160,0.55)" }),
+      p("BONUS"),
+    ],
+  },
+  {
+    key: "tomo", name: "Tomo", kanji: "友",
+    perks: [
+      p("PHOTO"),
+      p("ASMR", { showMic: true, showVisualizer: true, borderColor: ACCENT_STD }),
+      p("AUDIO", { showMic: true, showVisualizer: true, borderColor: ACCENT_STD }),
+      p("VOICE"),
+    ],
+  },
+  {
+    key: "okami", name: "Okami", kanji: "女将", premium: true,
+    perks: [
+      p("18+", { textColor: "#ff8aa0", bgColor: "rgba(255,138,160,0.18)", borderColor: "rgba(255,138,160,0.55)" }),
+      p("ASMR", { showMic: true, showVisualizer: true, borderColor: ACCENT_MID }),
+      p("AUDIO", { showMic: true, showVisualizer: true, borderColor: ACCENT_MID, badge: "+10 MIN", badgeBg: ACCENT_MID, badgeTextColor: "#2a0a14" }),
+      p("VOTE"),
+    ],
+  },
+  {
+    key: "danna", name: "Danna", kanji: "旦那", premium: true,
+    perks: [
+      p("18+", { textColor: "#ff8aa0", bgColor: "rgba(255,138,160,0.18)", borderColor: "rgba(255,138,160,0.55)" }),
+      p("ASMR", { showMic: true, showVisualizer: true, borderColor: ACCENT_TOP }),
+      p("AUDIO", { showMic: true, showVisualizer: true, borderColor: ACCENT_TOP, badge: "+20 MIN", badgeBg: ACCENT_TOP, badgeTextColor: "#2a0a14" }),
+      p("EXCL"),
+    ],
+  },
 ];
 
 type ImgSlot = { src: string; nsfw: boolean; zoom: number; posX: number; posY: number };
@@ -55,6 +114,7 @@ const DEFAULT_SLOTS: SlotsMap = {
 
 function Index() {
   const [slots, setSlots] = useState<SlotsMap>(DEFAULT_SLOTS);
+  const [tiers, setTiers] = useState<Tier[]>(INITIAL_TIERS);
   const [dateText, setDateText] = useState("MAY 2025");
   const canvasRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
@@ -105,9 +165,16 @@ function Index() {
         {exporting ? "Exporting…" : "Export as Image"}
       </button>
       <CanvasScaler innerRef={canvasRef}>
-        <Canvas slots={slots} onUpdateSlot={updateSlot} dateText={dateText} />
+        <Canvas tiers={tiers} slots={slots} onUpdateSlot={updateSlot} dateText={dateText} />
       </CanvasScaler>
-      <Editor slots={slots} onChange={setSlots} dateText={dateText} onDateChange={setDateText} />
+      <Editor
+        tiers={tiers}
+        onTiersChange={setTiers}
+        slots={slots}
+        onChange={setSlots}
+        dateText={dateText}
+        onDateChange={setDateText}
+      />
     </div>
   );
 }
@@ -147,7 +214,7 @@ function CanvasScaler({ children, innerRef }: { children: React.ReactNode; inner
 
 type SlotUpdater = (tierKey: string, idx: number, next: Partial<ImgSlot>) => void;
 
-function Canvas({ slots, onUpdateSlot, dateText }: { slots: SlotsMap; onUpdateSlot: SlotUpdater; dateText: string }) {
+function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots: SlotsMap; onUpdateSlot: SlotUpdater; dateText: string }) {
   return (
     <div
       className="relative font-tambyon"
@@ -177,72 +244,68 @@ function Canvas({ slots, onUpdateSlot, dateText }: { slots: SlotsMap; onUpdateSl
       />
 
 
-      {/* Header petals — crisp, brighter */}
       {[
         { x: 60, y: 60, r: -18, s: 0.65, o: 0.6 },
         { x: 180, y: 150, r: 30, s: 0.55, o: 0.5 },
         { x: 320, y: 70, r: -45, s: 0.5, o: 0.45 },
         { x: 90, y: 175, r: 55, s: 0.45, o: 0.4 },
-      ].map((p, i) => (
+      ].map((pt, i) => (
         <img
           key={`h${i}`}
           src={petal.url}
           alt=""
           className="absolute pointer-events-none select-none"
           style={{
-            left: p.x, top: p.y, width: 90 * p.s, height: "auto",
-            transform: `rotate(${p.r}deg)`, opacity: p.o,
+            left: pt.x, top: pt.y, width: 90 * pt.s, height: "auto",
+            transform: `rotate(${pt.r}deg)`, opacity: pt.o,
             filter: "drop-shadow(0 2px 6px rgba(255,140,170,0.3))",
             zIndex: 1,
           }}
         />
       ))}
 
-      {/* Footer petals — crisp */}
       {[
         { x: 120, y: 960, r: 20, s: 0.7, o: 0.55 },
         { x: 260, y: 1010, r: -35, s: 0.55, o: 0.45 },
         { x: 820, y: 980, r: 48, s: 0.6, o: 0.5 },
         { x: 940, y: 1020, r: -12, s: 0.5, o: 0.45 },
         { x: 60, y: 1030, r: 65, s: 0.45, o: 0.4 },
-      ].map((p, i) => (
+      ].map((pt, i) => (
         <img
           key={`f${i}`}
           src={petal.url}
           alt=""
           className="absolute pointer-events-none select-none"
           style={{
-            left: p.x, top: p.y, width: 90 * p.s, height: "auto",
-            transform: `rotate(${p.r}deg)`, opacity: p.o,
+            left: pt.x, top: pt.y, width: 90 * pt.s, height: "auto",
+            transform: `rotate(${pt.r}deg)`, opacity: pt.o,
             filter: "drop-shadow(0 2px 6px rgba(255,140,170,0.3))",
             zIndex: 1,
           }}
         />
       ))}
 
-      {/* Behind-rows petals — blurred & faint, kept to far-left margin so they never sit over tier text */}
       {[
         { x: 18, y: 320, r: -22, s: 0.55, o: 0.18 },
         { x: 8, y: 470, r: 40, s: 0.45, o: 0.15 },
         { x: 30, y: 610, r: -50, s: 0.5, o: 0.16 },
         { x: 10, y: 780, r: 25, s: 0.4, o: 0.14 },
         { x: 36, y: 880, r: 60, s: 0.5, o: 0.16 },
-      ].map((p, i) => (
+      ].map((pt, i) => (
         <img
           key={`b${i}`}
           src={petal.url}
           alt=""
           className="absolute pointer-events-none select-none"
           style={{
-            left: p.x, top: p.y, width: 90 * p.s, height: "auto",
-            transform: `rotate(${p.r}deg)`, opacity: p.o,
+            left: pt.x, top: pt.y, width: 90 * pt.s, height: "auto",
+            transform: `rotate(${pt.r}deg)`, opacity: pt.o,
             filter: "blur(3px)",
             zIndex: 0,
           }}
         />
       ))}
 
-      {/* Chibi + thank you in top right (compact) */}
       <img
         src={chibi.url}
         alt=""
@@ -269,10 +332,10 @@ function Canvas({ slots, onUpdateSlot, dateText }: { slots: SlotsMap; onUpdateSl
       </div>
 
       <div className="relative mt-2 flex flex-col" style={{ padding: "0 56px" }}>
-        {TIERS.map((t, i) => (
+        {tiers.map((t, i) => (
           <div key={t.key}>
-            <TierRow tier={t} images={slots[t.key]} onUpdateSlot={onUpdateSlot} />
-            {i < TIERS.length - 1 && (
+            <TierRow tier={t} images={slots[t.key]} onUpdateSlot={onUpdateSlot} index={i} total={tiers.length} />
+            {i < tiers.length - 1 && (
               <div
                 className="my-1"
                 style={{
@@ -312,11 +375,9 @@ function AdjustOverlay({
   onChange: (next: Partial<ImgSlot>) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  // Keep latest im in a ref so wheel/drag handlers always read current values
   const imRef = useRef(im);
   imRef.current = im;
 
-  // Attach a non-passive wheel listener so we can preventDefault (page won't scroll)
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -338,7 +399,6 @@ function AdjustOverlay({
     const startY = e.clientY;
     const startPosX = imRef.current.posX;
     const startPosY = imRef.current.posY;
-    // Sensitivity: dampen overall, and reduce more as zoom grows
     const sens = 0.35;
     const onMove = (ev: MouseEvent) => {
       const z = Math.max(1, imRef.current.zoom);
@@ -379,7 +439,6 @@ function AdjustOverlay({
           background: "rgba(0,0,0,0.6)",
           color: "#ffd6e0",
           border: "1px solid rgba(255,200,215,0.35)",
-          backdropFilter: "blur(4px)",
         }}
       >
         <Move size={11} />
@@ -389,22 +448,19 @@ function AdjustOverlay({
   );
 }
 
-function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]; onUpdateSlot: SlotUpdater }) {
-  const isTop = tier.key === "danna";
-  const isMid = tier.key === "okami";
+function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; images: ImgSlot[]; onUpdateSlot: SlotUpdater; index: number; total: number }) {
+  const isTop = index === total - 1;
+  const isMid = index === total - 2 && tier.premium;
   const rowHeight = isTop ? 156 : tier.premium ? 142 : 128;
   const nameColor = tier.premium ? "#fff8fa" : "#f7dde4";
   const kanjiColor = tier.premium ? "#ffd6e0" : "#e8a8b8";
 
-  // 2-image panoramic strip with diagonal cut.
-  // Each image gets its OWN bounding box (its own slice of the strip),
-  // so pan/zoom act within that slice instead of the whole strip.
   const groupWidthPct = 64;
   const mid = 50;
   const skew = 6;
-  const s0Width = mid + skew;       // 56
-  const s1Left = mid - skew;        // 44
-  const s1Width = 100 - s1Left;     // 56
+  const s0Width = mid + skew;
+  const s1Left = mid - skew;
+  const s1Width = 100 - s1Left;
   const slices = [
     { left: 0, width: s0Width },
     { left: s1Left, width: s1Width },
@@ -414,7 +470,6 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
     `polygon(${((mid + skew - s1Left) / s1Width) * 100}% 0, 100% 0, 100% 100%, 0 100%)`,
   ];
 
-  // Prestige treatment — Danna (top) > Okami (mid) > rest
   const prestigeBg: React.CSSProperties | undefined = isTop
     ? {
         background:
@@ -429,7 +484,7 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
       }
     : undefined;
 
-  const borderColor = isTop ? "#ffd28a" : isMid ? "#ffb3c4" : "transparent";
+  const tierBorderColor = isTop ? ACCENT_TOP : isMid ? ACCENT_MID : "transparent";
   const borderWidth = isTop ? 4 : tier.premium ? 3 : 3;
 
   return (
@@ -437,12 +492,11 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
       className="relative w-full overflow-hidden"
       style={{
         height: rowHeight,
-        borderLeft: `${borderWidth}px solid ${borderColor}`,
+        borderLeft: `${borderWidth}px solid ${tierBorderColor}`,
         paddingLeft: 18,
         ...prestigeBg,
       }}
     >
-      {/* Premium prestige left glow accent */}
       {tier.premium && (
         <div
           className="absolute left-0 top-0 h-full pointer-events-none"
@@ -455,7 +509,6 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
         />
       )}
 
-      {/* Image panoramic strip with mask */}
       <div
         className="absolute top-0 right-0 h-full pointer-events-none"
         style={{
@@ -493,7 +546,6 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
         ))}
       </div>
 
-      {/* Crimson tint overlay on the image area */}
       <div
         className="absolute top-0 right-0 h-full pointer-events-none"
         style={{
@@ -504,8 +556,6 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
         }}
       />
 
-
-      {/* Interactive adjust overlay (excluded from export) */}
       <div
         data-export-ignore="true"
         className="absolute top-0 right-0 h-full z-30"
@@ -523,7 +573,6 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
         ))}
       </div>
 
-      {/* Tier name */}
       <div className="relative h-full flex items-center z-10">
         <div className="flex items-baseline gap-4">
           {tier.premium && (
@@ -531,7 +580,7 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
               className="font-tambyon"
               style={{
                 fontSize: isTop ? 26 : 20,
-                color: isTop ? "#ffd28a" : "#ffc7a0",
+                color: isTop ? ACCENT_TOP : ACCENT_MID,
                 letterSpacing: "-0.15em",
                 marginRight: 4,
                 textShadow: isTop ? "0 0 12px rgba(255,200,140,0.6)" : "none",
@@ -569,120 +618,81 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
         </div>
       </div>
 
-      {/* Perk pills */}
       <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end gap-1.5 z-20">
-        {tier.perks.map((p) => {
-          const isAudio = p === "AUDIO";
-          const isAsmr = p === "ASMR";
-          const hasMic = isAudio || isAsmr;
-          const accent = isTop ? "#ffd28a" : isMid ? "#ffc7a0" : "#ffb8c8";
-          const audioMinutes = isAudio ? (tier.key === "okami" ? 10 : tier.key === "danna" ? 20 : 0) : 0;
-          // Static "audio visualizer" bar heights (deterministic per pill type)
-          const bars = isAudio
-            ? [3, 6, 9, 5, 8, 4, 7, 10, 6, 3]
-            : [4, 7, 5, 9, 6, 8, 4, 7, 5, 3];
-          return (
-            <div
-              key={p}
-              className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest inline-flex items-center gap-1.5"
-              style={{
-                background: hasMic
-                  ? isTop
-                    ? `linear-gradient(90deg, ${accent}35 0%, rgba(50,15,22,0.88) 40%, rgba(40,10,20,0.92) 100%)`
-                    : `linear-gradient(90deg, ${accent}22 0%, rgba(40,10,20,0.85) 45%, rgba(40,10,20,0.9) 100%)`
-                  : tier.premium ? "rgba(30,8,16,0.7)" : "rgba(20,5,12,0.6)",
-                color: p === "18+" ? "#ff8aa0" : hasMic ? "#fff4e0" : tier.premium ? "#ffe8ee" : "#fbe0e7",
-                border: hasMic
-                  ? isTop
-                    ? `1.5px solid ${accent}`
-                    : `1px solid ${accent}`
-                  : isTop
-                  ? "1px solid rgba(255,215,170,0.55)"
-                  : tier.premium
-                  ? "1px solid rgba(255,200,215,0.38)"
-                  : "1px solid rgba(255,180,200,0.30)",
-                boxShadow: hasMic
-                  ? isTop
-                    ? `0 0 20px ${accent}88, inset 0 0 12px ${accent}44`
-                    : `0 0 14px ${accent}66, inset 0 0 8px ${accent}33`
-                  : isTop
-                  ? "0 0 14px rgba(255,180,140,0.28)"
-                  : isMid
-                  ? "0 0 8px rgba(255,150,180,0.12)"
-                  : "none",
-                textShadow: hasMic
-                  ? isTop
-                    ? `0 0 10px ${accent}cc, 0 0 4px ${accent}88`
-                    : `0 0 6px ${accent}aa`
-                  : undefined,
-              }}
-            >
-              {hasMic && (
-                <Mic
-                  size={10}
-                  strokeWidth={2.5}
-                  style={{ color: accent, filter: `drop-shadow(0 0 4px ${accent}aa)` }}
-                />
-              )}
-              {hasMic && (
-                <span className="inline-flex items-end gap-[1.5px] h-[11px]">
-                  {bars.map((h, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        width: 1.5,
-                        height: h,
-                        background: `linear-gradient(180deg, ${accent}, ${accent}66)`,
-                        borderRadius: 1,
-                        boxShadow: `0 0 3px ${accent}88`,
-                      }}
-                    />
-                  ))}
-                </span>
-              )}
-              <span>{p}</span>
-              {isAudio && audioMinutes > 0 && (
-                <span
-                  className="ml-0.5 px-1.5 rounded-full text-[8px] leading-none py-[2px] font-bold"
-                  style={{
-                    background: `linear-gradient(135deg, ${accent}, ${accent}aa)`,
-                    color: "#2a0a14",
-                    letterSpacing: "0.05em",
-                    boxShadow: `0 0 6px ${accent}88`,
-                  }}
-                >
-                  +{audioMinutes} MIN
-                </span>
-              )}
-              {isAudio && (
-                <span
-                  className="ml-0.5 px-1 rounded-sm text-[8px] leading-none py-[1px]"
-                  style={{
-                    background: "rgba(255,138,160,0.18)",
-                    color: "#ff8aa0",
-                    border: "1px solid rgba(255,138,160,0.5)",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  18+
-                </span>
-              )}
-            </div>
-          );
-        })}
+        {tier.perks.map((perk) => (
+          <PerkPill key={perk.id} perk={perk} />
+        ))}
       </div>
+    </div>
+  );
+}
 
+function PerkPill({ perk }: { perk: Perk }) {
+  const bars = [3, 6, 9, 5, 8, 4, 7, 10, 6, 3];
+  const accent = perk.borderColor || ACCENT_STD;
+  const bg = perk.bgColor || (perk.showMic || perk.showVisualizer ? PILL_MIC_BG : PILL_DEFAULT_BG);
+  const border = perk.borderColor || PILL_DEFAULT_BORDER;
+  const color = perk.textColor || PILL_DEFAULT_TEXT;
+  return (
+    <div
+      className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest inline-flex items-center gap-1.5"
+      style={{
+        background: bg,
+        color,
+        border: `1px solid ${border}`,
+        boxShadow: perk.borderColor ? `0 0 10px ${accent}55` : "none",
+      }}
+    >
+      {perk.showMic && (
+        <Mic size={10} strokeWidth={2.5} style={{ color: accent, filter: `drop-shadow(0 0 4px ${accent}aa)` }} />
+      )}
+      {perk.showVisualizer && (
+        <span className="inline-flex items-end gap-[1.5px] h-[11px]">
+          {bars.map((h, i) => (
+            <span
+              key={i}
+              style={{
+                width: 1.5,
+                height: h,
+                background: `linear-gradient(180deg, ${accent}, ${accent}66)`,
+                borderRadius: 1,
+                boxShadow: `0 0 3px ${accent}88`,
+              }}
+            />
+          ))}
+        </span>
+      )}
+      <span>{perk.label}</span>
+      {perk.badge && (
+        <span
+          className="ml-0.5 px-1.5 rounded-full text-[8px] leading-none py-[2px] font-bold"
+          style={{
+            background: perk.badgeBg
+              ? `linear-gradient(135deg, ${perk.badgeBg}, ${perk.badgeBg}aa)`
+              : "rgba(255,255,255,0.15)",
+            color: perk.badgeTextColor || "#2a0a14",
+            letterSpacing: "0.05em",
+            boxShadow: perk.badgeBg ? `0 0 6px ${perk.badgeBg}88` : "none",
+          }}
+        >
+          {perk.badge}
+        </span>
+      )}
     </div>
   );
 }
 
 
 function Editor({
+  tiers,
+  onTiersChange,
   slots,
   onChange,
   dateText,
   onDateChange,
 }: {
+  tiers: Tier[];
+  onTiersChange: (t: Tier[]) => void;
   slots: SlotsMap;
   onChange: (s: SlotsMap) => void;
   dateText: string;
@@ -691,6 +701,39 @@ function Editor({
   const updateSlot = (tierKey: string, idx: number, next: Partial<ImgSlot>) => {
     const arr = slots[tierKey].map((s, i) => (i === idx ? { ...s, ...next } : s));
     onChange({ ...slots, [tierKey]: arr });
+  };
+
+  const moveTier = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= tiers.length) return;
+    const next = [...tiers];
+    [next[i], next[j]] = [next[j], next[i]];
+    onTiersChange(next);
+  };
+
+  const updateTier = (i: number, next: Partial<Tier>) => {
+    onTiersChange(tiers.map((t, idx) => (idx === i ? { ...t, ...next } : t)));
+  };
+
+  const updatePerk = (ti: number, pi: number, next: Partial<Perk>) => {
+    const newPerks = tiers[ti].perks.map((p2, j) => (j === pi ? { ...p2, ...next } : p2));
+    updateTier(ti, { perks: newPerks });
+  };
+
+  const movePerk = (ti: number, pi: number, dir: -1 | 1) => {
+    const arr = [...tiers[ti].perks];
+    const j = pi + dir;
+    if (j < 0 || j >= arr.length) return;
+    [arr[pi], arr[j]] = [arr[j], arr[pi]];
+    updateTier(ti, { perks: arr });
+  };
+
+  const addPerk = (ti: number) => {
+    updateTier(ti, { perks: [...tiers[ti].perks, p("NEW")] });
+  };
+
+  const removePerk = (ti: number, pi: number) => {
+    updateTier(ti, { perks: tiers[ti].perks.filter((_, j) => j !== pi) });
   };
 
   return (
@@ -719,28 +762,47 @@ function Editor({
       </div>
 
       <div className="flex flex-col gap-3">
-        {TIERS.map((t) => (
+        {tiers.map((t, ti) => (
           <div
             key={t.key}
-            className="flex flex-col md:flex-row gap-3 p-3 rounded"
+            className="flex flex-col gap-3 p-3 rounded"
             style={{ background: "rgba(20,5,12,0.5)", border: "1px solid rgba(255,180,200,0.18)" }}
           >
-            {/* Tier label column */}
-            <div
-              className="flex md:flex-col md:items-start items-baseline gap-2 md:gap-1 md:w-32 md:py-2 md:px-2 md:border-r"
-              style={{ borderColor: "rgba(255,180,200,0.18)" }}
-            >
-              <span className="font-semibold text-base" style={{ color: "#fff0f4" }}>
-                {t.premium ? "✦ " : ""}{t.name}
-              </span>
-              <span className="text-sm" style={{ color: "#f0a8b8" }}>{t.kanji}</span>
-              <span className="text-[10px] tracking-widest uppercase opacity-60" style={{ color: "#f0a8b8" }}>
-                {t.premium ? "Premium" : "Standard"}
-              </span>
+            {/* Tier header with reorder */}
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-1">
+                <button
+                  onClick={() => moveTier(ti, -1)}
+                  disabled={ti === 0}
+                  className="p-1 rounded disabled:opacity-30 hover:bg-white/10"
+                  title="Move up"
+                  style={{ color: "#f0a8b8" }}
+                >
+                  <ArrowUp size={12} />
+                </button>
+                <button
+                  onClick={() => moveTier(ti, 1)}
+                  disabled={ti === tiers.length - 1}
+                  className="p-1 rounded disabled:opacity-30 hover:bg-white/10"
+                  title="Move down"
+                  style={{ color: "#f0a8b8" }}
+                >
+                  <ArrowDown size={12} />
+                </button>
+              </div>
+              <div className="flex items-baseline gap-2 flex-1">
+                <span className="font-semibold text-base" style={{ color: "#fff0f4" }}>
+                  {t.premium ? "✦ " : ""}{t.name}
+                </span>
+                <span className="text-sm" style={{ color: "#f0a8b8" }}>{t.kanji}</span>
+                <span className="text-[10px] tracking-widest uppercase opacity-60" style={{ color: "#f0a8b8" }}>
+                  {t.premium ? "Premium" : "Standard"} · #{ti + 1}
+                </span>
+              </div>
             </div>
 
-            {/* Left / Right images horizontally */}
-            <div className="flex-1 grid grid-cols-2 gap-3">
+            {/* Left / Right images */}
+            <div className="grid grid-cols-2 gap-3">
               {slots[t.key].map((s, idx) => {
                 const side = idx === 0 ? "LEFT" : "RIGHT";
                 return (
@@ -813,9 +875,170 @@ function Editor({
                 );
               })}
             </div>
+
+            {/* Descriptions / perks editor */}
+            <div
+              className="p-2 rounded flex flex-col gap-2"
+              style={{ background: "rgba(255,240,244,0.04)", border: "1px dashed rgba(255,180,200,0.25)" }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: "#f0a8b8" }}>
+                  Descriptions
+                </span>
+                <button
+                  onClick={() => addPerk(ti)}
+                  className="text-[10px] font-semibold inline-flex items-center gap-1 px-2 py-1 rounded"
+                  style={{ background: "#c8132a", color: "#fff" }}
+                >
+                  <Plus size={11} /> Add
+                </button>
+              </div>
+
+              {/* Live preview */}
+              <div className="flex flex-wrap items-center gap-1.5 p-2 rounded" style={{ background: "rgba(20,5,12,0.6)" }}>
+                {t.perks.length === 0 && (
+                  <span className="text-[10px] opacity-50" style={{ color: "#fbe0e7" }}>No descriptions</span>
+                )}
+                {t.perks.map((perk) => <PerkPill key={perk.id} perk={perk} />)}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {t.perks.map((perk, pi) => (
+                  <PerkEditor
+                    key={perk.id}
+                    perk={perk}
+                    canUp={pi > 0}
+                    canDown={pi < t.perks.length - 1}
+                    onMove={(dir) => movePerk(ti, pi, dir)}
+                    onChange={(next) => updatePerk(ti, pi, next)}
+                    onRemove={() => removePerk(ti, pi)}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function PerkEditor({
+  perk,
+  canUp,
+  canDown,
+  onMove,
+  onChange,
+  onRemove,
+}: {
+  perk: Perk;
+  canUp: boolean;
+  canDown: boolean;
+  onMove: (dir: -1 | 1) => void;
+  onChange: (next: Partial<Perk>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div
+      className="flex flex-wrap items-center gap-2 p-2 rounded"
+      style={{ background: "rgba(20,5,12,0.5)", border: "1px solid rgba(255,180,200,0.15)" }}
+    >
+      <div className="flex flex-col gap-0.5">
+        <button onClick={() => onMove(-1)} disabled={!canUp} className="p-0.5 disabled:opacity-30" style={{ color: "#f0a8b8" }} title="Move up">
+          <ArrowUp size={11} />
+        </button>
+        <button onClick={() => onMove(1)} disabled={!canDown} className="p-0.5 disabled:opacity-30" style={{ color: "#f0a8b8" }} title="Move down">
+          <ArrowDown size={11} />
+        </button>
+      </div>
+
+      <input
+        type="text"
+        value={perk.label}
+        onChange={(e) => onChange({ label: e.target.value })}
+        placeholder="Label"
+        className="px-2 py-1 rounded text-[12px] outline-none w-24"
+        style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.25)", color: "#fff0f4" }}
+      />
+
+      <ColorField label="Text" value={perk.textColor} onChange={(v) => onChange({ textColor: v })} />
+      <ColorField label="BG" value={perk.bgColor} onChange={(v) => onChange({ bgColor: v })} allowGradient />
+      <ColorField label="Border" value={perk.borderColor} onChange={(v) => onChange({ borderColor: v })} />
+
+      <label className="flex items-center gap-1 text-[10px]" style={{ color: "#fbe0e7" }} title="Microphone icon">
+        <input type="checkbox" checked={!!perk.showMic} onChange={(e) => onChange({ showMic: e.target.checked })} />
+        <Mic size={11} />
+      </label>
+      <label className="flex items-center gap-1 text-[10px]" style={{ color: "#fbe0e7" }} title="Audio visualizer">
+        <input type="checkbox" checked={!!perk.showVisualizer} onChange={(e) => onChange({ showVisualizer: e.target.checked })} />
+        <AudioLines size={11} />
+      </label>
+
+      <input
+        type="text"
+        value={perk.badge || ""}
+        onChange={(e) => onChange({ badge: e.target.value || undefined })}
+        placeholder="Badge (e.g. +20 MIN)"
+        className="px-2 py-1 rounded text-[11px] outline-none w-32"
+        style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.25)", color: "#fff0f4" }}
+      />
+      <ColorField label="Badge BG" value={perk.badgeBg} onChange={(v) => onChange({ badgeBg: v })} />
+
+      <button
+        onClick={onRemove}
+        className="ml-auto p-1.5 rounded hover:bg-white/10"
+        style={{ color: "#ff8aa0" }}
+        title="Remove"
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
+  );
+}
+
+function ColorField({
+  label,
+  value,
+  onChange,
+  allowGradient,
+}: {
+  label: string;
+  value?: string;
+  onChange: (v: string | undefined) => void;
+  allowGradient?: boolean;
+}) {
+  // Extract a hex from value if present, else default
+  const hexMatch = value?.match(/#([0-9a-fA-F]{6})/);
+  const hex = hexMatch ? `#${hexMatch[1]}` : "#ffb8c8";
+  return (
+    <div className="flex items-center gap-1 text-[10px]" style={{ color: "#fbe0e7" }} title={label}>
+      <span className="opacity-70 uppercase tracking-wider">{label}</span>
+      <input
+        type="color"
+        value={hex}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
+      />
+      {allowGradient && value && (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value || undefined)}
+          placeholder="rgba/css"
+          className="px-1 py-0.5 rounded text-[10px] outline-none w-20"
+          style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.2)", color: "#fff0f4" }}
+        />
+      )}
+      {value && (
+        <button
+          onClick={() => onChange(undefined)}
+          className="opacity-60 hover:opacity-100"
+          title="Clear"
+          style={{ color: "#f0a8b8" }}
+        >
+          ×
+        </button>
+      )}
     </div>
   );
 }

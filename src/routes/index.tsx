@@ -506,6 +506,8 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
             key={idx}
             im={im}
             clipPath={polys[idx]}
+            left={slices[idx].left}
+            width={slices[idx].width}
             onChange={(next) => onUpdateSlot(tier.key, idx, next)}
           />
         ))}

@@ -336,7 +336,7 @@ function AdjustOverlay({
     // Sensitivity: dampen overall, and reduce more as zoom grows
     const sens = 0.35;
     const onMove = (ev: MouseEvent) => {
-      const z = Math.max(0.5, imRef.current.zoom);
+      const z = Math.max(1, imRef.current.zoom);
       const dx = ((ev.clientX - startX) / rect.width) * 100 * (sens / z);
       const dy = ((ev.clientY - startY) / rect.height) * 100 * (sens / z);
       onChange({

@@ -34,8 +34,8 @@ const TIERS: Tier[] = [
   { key: "yokan", name: "Yokan", kanji: "羊羹", perks: ["ART", "WALL"] },
   { key: "sensu", name: "Sensu", kanji: "扇子", perks: ["18+", "BONUS"] },
   { key: "tomo",  name: "Tomo",  kanji: "友",   perks: ["PHOTO", "ASMR", "AUDIO", "VOICE"] },
-  { key: "okami", name: "Okami", kanji: "女将", premium: true, perks: ["18+", "ASMR", "AUDIO", "+10 MIN", "VOTE"] },
-  { key: "danna", name: "Danna", kanji: "旦那", premium: true, perks: ["18+", "ASMR", "AUDIO", "+20 MIN", "EXCL"] },
+  { key: "okami", name: "Okami", kanji: "女将", premium: true, perks: ["18+", "ASMR", "AUDIO", "VOTE"] },
+  { key: "danna", name: "Danna", kanji: "旦那", premium: true, perks: ["18+", "ASMR", "AUDIO", "EXCL"] },
 ];
 
 type ImgSlot = { src: string; nsfw: boolean };

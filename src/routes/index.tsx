@@ -58,6 +58,13 @@ function Index() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
+  const updateSlot = (tierKey: string, idx: number, next: Partial<ImgSlot>) => {
+    setSlots((prev) => ({
+      ...prev,
+      [tierKey]: prev[tierKey].map((s, i) => (i === idx ? { ...s, ...next } : s)),
+    }));
+  };
+
   const handleExport = async () => {
     if (!canvasRef.current) return;
     setExporting(true);
@@ -67,6 +74,8 @@ function Index() {
         pixelRatio: 2,
         width: 1080,
         height: 1080,
+        filter: (node) =>
+          !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
       });
       const link = document.createElement("a");
       link.download = "iomaya-mai-monthly-rewards.png";
@@ -95,7 +104,7 @@ function Index() {
         {exporting ? "Exporting…" : "Export as Image"}
       </button>
       <CanvasScaler innerRef={canvasRef}>
-        <Canvas slots={slots} />
+        <Canvas slots={slots} onUpdateSlot={updateSlot} />
       </CanvasScaler>
       <Editor slots={slots} onChange={setSlots} />
     </div>

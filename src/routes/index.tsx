@@ -357,18 +357,25 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
         {images.slice(0, 2).map((im, idx) => (
           <div
             key={idx}
-            className="absolute inset-0"
+            className="absolute inset-0 overflow-hidden"
             style={{
-              backgroundImage: `url(${im.src})`,
-              backgroundSize: `${100 * im.zoom}% auto`,
-              backgroundPosition: `${im.posX}% ${im.posY}%`,
-              backgroundRepeat: "no-repeat",
-              filter: im.nsfw ? "blur(16px) saturate(1.1)" : "none",
-              transform: im.nsfw ? "scale(1.1)" : "none",
               WebkitClipPath: polys[idx],
               clipPath: polys[idx],
             }}
-          />
+          >
+            <img
+              src={im.src}
+              alt=""
+              className="absolute inset-0 w-full h-full"
+              style={{
+                objectFit: "cover",
+                objectPosition: `${im.posX}% ${im.posY}%`,
+                transform: `scale(${im.zoom}) ${im.nsfw ? "scale(1.1)" : ""}`.trim(),
+                transformOrigin: `${im.posX}% ${im.posY}%`,
+                filter: im.nsfw ? "blur(16px) saturate(1.1)" : "none",
+              }}
+            />
+          </div>
         ))}
       </div>
 

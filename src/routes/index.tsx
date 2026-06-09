@@ -360,8 +360,9 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
             className="absolute inset-0"
             style={{
               backgroundImage: `url(${im.src})`,
-              backgroundSize: "cover",
-              backgroundPosition: `${idx === 0 ? 30 : 70}% 30%`,
+              backgroundSize: `${100 * im.zoom}% auto`,
+              backgroundPosition: `${im.posX}% ${im.posY}%`,
+              backgroundRepeat: "no-repeat",
               filter: im.nsfw ? "blur(16px) saturate(1.1)" : "none",
               transform: im.nsfw ? "scale(1.1)" : "none",
               WebkitClipPath: polys[idx],

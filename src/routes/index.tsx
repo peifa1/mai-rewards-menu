@@ -458,11 +458,15 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
               className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest inline-flex items-center gap-1.5"
               style={{
                 background: hasMic
-                  ? `linear-gradient(90deg, ${accent}22 0%, rgba(40,10,20,0.85) 45%, rgba(40,10,20,0.9) 100%)`
+                  ? isTop
+                    ? `linear-gradient(90deg, ${accent}35 0%, rgba(50,15,22,0.88) 40%, rgba(40,10,20,0.92) 100%)`
+                    : `linear-gradient(90deg, ${accent}22 0%, rgba(40,10,20,0.85) 45%, rgba(40,10,20,0.9) 100%)`
                   : tier.premium ? "rgba(30,8,16,0.7)" : "rgba(20,5,12,0.6)",
                 color: p === "18+" ? "#ff8aa0" : hasMic ? "#fff4e0" : tier.premium ? "#ffe8ee" : "#fbe0e7",
                 border: hasMic
-                  ? `1px solid ${accent}`
+                  ? isTop
+                    ? `1.5px solid ${accent}`
+                    : `1px solid ${accent}`
                   : isTop
                   ? "1px solid rgba(255,215,170,0.55)"
                   : tier.premium
@@ -470,13 +474,19 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
                   : "1px solid rgba(255,180,200,0.30)",
                 backdropFilter: "blur(4px)",
                 boxShadow: hasMic
-                  ? `0 0 14px ${accent}66, inset 0 0 8px ${accent}33`
+                  ? isTop
+                    ? `0 0 20px ${accent}88, inset 0 0 12px ${accent}44`
+                    : `0 0 14px ${accent}66, inset 0 0 8px ${accent}33`
                   : isTop
                   ? "0 0 14px rgba(255,180,140,0.28)"
                   : isMid
                   ? "0 0 8px rgba(255,150,180,0.12)"
                   : "none",
-                textShadow: hasMic ? `0 0 6px ${accent}aa` : undefined,
+                textShadow: hasMic
+                  ? isTop
+                    ? `0 0 10px ${accent}cc, 0 0 4px ${accent}88`
+                    : `0 0 6px ${accent}aa`
+                  : undefined,
               }}
             >
               {hasMic && (

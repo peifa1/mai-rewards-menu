@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toPng } from "html-to-image";
 import artYokan from "@/assets/art-yokan.jpg.asset.json";
 import artSensu from "@/assets/art-sensu.jpg.asset.json";
 import artTomo from "@/assets/art-tomo.jpg.asset.json";

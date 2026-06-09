@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
-import { Mic } from "lucide-react";
+import { Mic, Move } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import artYokan from "@/assets/art-yokan.jpg.asset.json";
 import artSensu from "@/assets/art-sensu.jpg.asset.json";
 import artTomo from "@/assets/art-tomo.jpg.asset.json";
@@ -38,30 +39,17 @@ const TIERS: Tier[] = [
   { key: "danna", name: "Danna", kanji: "旦那", premium: true, perks: ["18+", "ASMR", "AUDIO", "EXCL"] },
 ];
 
-type ImgSlot = { src: string; nsfw: boolean };
+type ImgSlot = { src: string; nsfw: boolean; zoom: number; posX: number; posY: number };
 type SlotsMap = Record<string, ImgSlot[]>;
 
+const mk = (src: string, nsfw = false): ImgSlot => ({ src, nsfw, zoom: 1, posX: 50, posY: 30 });
+
 const DEFAULT_SLOTS: SlotsMap = {
-  yokan: [
-    { src: artYokan.url, nsfw: false },
-    { src: artTomo.url,  nsfw: false },
-  ],
-  sensu: [
-    { src: artSensu.url, nsfw: true },
-    { src: artYokan.url, nsfw: false },
-  ],
-  tomo: [
-    { src: artTomo.url,  nsfw: false },
-    { src: artOkami.url, nsfw: false },
-  ],
-  okami: [
-    { src: artOkami.url, nsfw: false },
-    { src: artDanna.url, nsfw: false },
-  ],
-  danna: [
-    { src: artDanna.url, nsfw: false },
-    { src: artSensu.url, nsfw: true },
-  ],
+  yokan: [mk(artYokan.url), mk(artTomo.url)],
+  sensu: [mk(artSensu.url, true), mk(artYokan.url)],
+  tomo: [mk(artTomo.url), mk(artOkami.url)],
+  okami: [mk(artOkami.url), mk(artDanna.url)],
+  danna: [mk(artDanna.url), mk(artSensu.url, true)],
 };
 
 
@@ -369,17 +357,25 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
         {images.slice(0, 2).map((im, idx) => (
           <div
             key={idx}
-            className="absolute inset-0"
+            className="absolute inset-0 overflow-hidden"
             style={{
-              backgroundImage: `url(${im.src})`,
-              backgroundSize: "cover",
-              backgroundPosition: `${idx === 0 ? 30 : 70}% 30%`,
-              filter: im.nsfw ? "blur(16px) saturate(1.1)" : "none",
-              transform: im.nsfw ? "scale(1.1)" : "none",
               WebkitClipPath: polys[idx],
               clipPath: polys[idx],
             }}
-          />
+          >
+            <img
+              src={im.src}
+              alt=""
+              className="absolute inset-0 w-full h-full"
+              style={{
+                objectFit: "cover",
+                objectPosition: `${im.posX}% ${im.posY}%`,
+                transform: `scale(${im.zoom}) ${im.nsfw ? "scale(1.1)" : ""}`.trim(),
+                transformOrigin: `${im.posX}% ${im.posY}%`,
+                filter: im.nsfw ? "blur(16px) saturate(1.1)" : "none",
+              }}
+            />
+          </div>
         ))}
       </div>
 
@@ -573,13 +569,52 @@ function Editor({
             </div>
             {slots[t.key].map((s, idx) => (
               <div key={idx} className="flex flex-col gap-1.5">
-                <div className="relative w-full aspect-square overflow-hidden rounded">
+                <div
+                  className="relative w-full aspect-square overflow-hidden rounded cursor-move select-none"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const target = e.currentTarget;
+                    const rect = target.getBoundingClientRect();
+                    const startX = e.clientX;
+                    const startY = e.clientY;
+                    const startPosX = s.posX;
+                    const startPosY = s.posY;
+                    const onMove = (ev: MouseEvent) => {
+                      const dx = ((ev.clientX - startX) / rect.width) * 100;
+                      const dy = ((ev.clientY - startY) / rect.height) * 100;
+                      updateSlot(t.key, idx, {
+                        posX: Math.max(0, Math.min(100, startPosX - dx)),
+                        posY: Math.max(0, Math.min(100, startPosY - dy)),
+                      });
+                    };
+                    const onUp = () => {
+                      window.removeEventListener("mousemove", onMove);
+                      window.removeEventListener("mouseup", onUp);
+                    };
+                    window.addEventListener("mousemove", onMove);
+                    window.addEventListener("mouseup", onUp);
+                  }}
+                  title="Drag to adjust position"
+                >
                   <img
                     src={s.src}
                     alt=""
-                    className="w-full h-full object-cover"
-                    style={{ filter: s.nsfw ? "blur(8px)" : "none", transform: s.nsfw ? "scale(1.1)" : "none" }}
+                    className="w-full h-full pointer-events-none"
+                    style={{
+                      objectFit: "cover",
+                      objectPosition: `${s.posX}% ${s.posY}%`,
+                      transform: `scale(${s.zoom}) ${s.nsfw ? "scale(1.1)" : ""}`.trim(),
+                      transformOrigin: `${s.posX}% ${s.posY}%`,
+                      filter: s.nsfw ? "blur(8px)" : "none",
+                    }}
                   />
+                  <div
+                    className="absolute top-1 right-1 p-1 rounded-full pointer-events-none"
+                    style={{ background: "rgba(0,0,0,0.55)", color: "#ffd6e0" }}
+                    title="Adjustable"
+                  >
+                    <Move size={12} />
+                  </div>
                 </div>
                 <label className="text-[11px] cursor-pointer text-center py-1 rounded" style={{ background: "#c8132a", color: "#fff" }}>
                   Swap #{idx + 1}
@@ -594,6 +629,27 @@ function Editor({
                     }}
                   />
                 </label>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-[10px]" style={{ color: "#f0a8b8" }}>
+                    <span>Zoom</span>
+                    <span>{s.zoom.toFixed(2)}×</span>
+                  </div>
+                  <Slider
+                    min={1}
+                    max={4}
+                    step={0.05}
+                    value={[s.zoom]}
+                    onValueChange={(v) => updateSlot(t.key, idx, { zoom: v[0] })}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="text-[10px] py-1 rounded"
+                  style={{ background: "rgba(255,180,200,0.12)", color: "#fbe0e7", border: "1px solid rgba(255,180,200,0.25)" }}
+                  onClick={() => updateSlot(t.key, idx, { zoom: 1, posX: 50, posY: 30 })}
+                >
+                  Reset framing
+                </button>
                 <label className="flex items-center justify-between text-[11px]" style={{ color: "#fbe0e7" }}>
                   <span>NSFW blur</span>
                   <input

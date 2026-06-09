@@ -39,30 +39,17 @@ const TIERS: Tier[] = [
   { key: "danna", name: "Danna", kanji: "旦那", premium: true, perks: ["18+", "ASMR", "AUDIO", "EXCL"] },
 ];
 
-type ImgSlot = { src: string; nsfw: boolean };
+type ImgSlot = { src: string; nsfw: boolean; zoom: number; posX: number; posY: number };
 type SlotsMap = Record<string, ImgSlot[]>;
 
+const mk = (src: string, nsfw = false): ImgSlot => ({ src, nsfw, zoom: 1, posX: 50, posY: 30 });
+
 const DEFAULT_SLOTS: SlotsMap = {
-  yokan: [
-    { src: artYokan.url, nsfw: false },
-    { src: artTomo.url,  nsfw: false },
-  ],
-  sensu: [
-    { src: artSensu.url, nsfw: true },
-    { src: artYokan.url, nsfw: false },
-  ],
-  tomo: [
-    { src: artTomo.url,  nsfw: false },
-    { src: artOkami.url, nsfw: false },
-  ],
-  okami: [
-    { src: artOkami.url, nsfw: false },
-    { src: artDanna.url, nsfw: false },
-  ],
-  danna: [
-    { src: artDanna.url, nsfw: false },
-    { src: artSensu.url, nsfw: true },
-  ],
+  yokan: [mk(artYokan.url), mk(artTomo.url)],
+  sensu: [mk(artSensu.url, true), mk(artYokan.url)],
+  tomo: [mk(artTomo.url), mk(artOkami.url)],
+  okami: [mk(artOkami.url), mk(artDanna.url)],
+  danna: [mk(artDanna.url), mk(artSensu.url, true)],
 };
 
 

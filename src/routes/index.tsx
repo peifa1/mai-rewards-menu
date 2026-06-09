@@ -207,7 +207,6 @@ function Canvas({ slots }: { slots: SlotsMap }) {
         className="absolute pointer-events-none select-none"
         style={{ top: 40, right: 158, width: 92, transform: "rotate(-10deg)", filter: "drop-shadow(0 2px 10px rgba(255,140,170,0.45))", zIndex: 3 }}
       />
-      />
 
       <div className="relative flex flex-col items-center pt-14 pb-4">
         <div className="text-[12px] tracking-[0.6em] uppercase" style={{ color: "#f0a8b8" }}>

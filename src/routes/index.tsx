@@ -55,6 +55,7 @@ const DEFAULT_SLOTS: SlotsMap = {
 
 function Index() {
   const [slots, setSlots] = useState<SlotsMap>(DEFAULT_SLOTS);
+  const [dateText, setDateText] = useState("MAY 2025");
   const canvasRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
@@ -104,9 +105,9 @@ function Index() {
         {exporting ? "Exporting…" : "Export as Image"}
       </button>
       <CanvasScaler innerRef={canvasRef}>
-        <Canvas slots={slots} onUpdateSlot={updateSlot} />
+        <Canvas slots={slots} onUpdateSlot={updateSlot} dateText={dateText} />
       </CanvasScaler>
-      <Editor slots={slots} onChange={setSlots} />
+      <Editor slots={slots} onChange={setSlots} dateText={dateText} onDateChange={setDateText} />
     </div>
   );
 }
@@ -146,7 +147,7 @@ function CanvasScaler({ children, innerRef }: { children: React.ReactNode; inner
 
 type SlotUpdater = (tierKey: string, idx: number, next: Partial<ImgSlot>) => void;
 
-function Canvas({ slots, onUpdateSlot }: { slots: SlotsMap; onUpdateSlot: SlotUpdater }) {
+function Canvas({ slots, onUpdateSlot, dateText }: { slots: SlotsMap; onUpdateSlot: SlotUpdater; dateText: string }) {
   return (
     <div
       className="relative font-tambyon"
@@ -287,7 +288,7 @@ function Canvas({ slots, onUpdateSlot }: { slots: SlotsMap; onUpdateSlot: SlotUp
 
       <div className="absolute bottom-7 left-0 right-0 flex flex-col items-center">
         <div className="font-tambyon text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
-          MAY 2025
+          {dateText}
         </div>
         <div className="font-tambyon text-[14px] tracking-[0.6em] mt-1" style={{ color: "#d98aa0" }}>
           月間リワード
@@ -600,7 +601,6 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
                   : tier.premium
                   ? "1px solid rgba(255,200,215,0.38)"
                   : "1px solid rgba(255,180,200,0.30)",
-                backdropFilter: "blur(4px)",
                 boxShadow: hasMic
                   ? isTop
                     ? `0 0 20px ${accent}88, inset 0 0 12px ${accent}44`
@@ -680,9 +680,13 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
 function Editor({
   slots,
   onChange,
+  dateText,
+  onDateChange,
 }: {
   slots: SlotsMap;
   onChange: (s: SlotsMap) => void;
+  dateText: string;
+  onDateChange: (s: string) => void;
 }) {
   const updateSlot = (tierKey: string, idx: number, next: Partial<ImgSlot>) => {
     const arr = slots[tierKey].map((s, i) => (i === idx ? { ...s, ...next } : s));
@@ -690,48 +694,125 @@ function Editor({
   };
 
   return (
-    <div className="w-full max-w-[1080px] rounded-lg p-6" style={{ background: "rgba(255,240,244,0.06)", border: "1px solid rgba(255,180,200,0.18)" }}>
-      <h2 className="text-sm tracking-[0.3em] uppercase mb-4" style={{ color: "#f0a8b8" }}>Editor</h2>
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+    <div
+      className="w-full max-w-[1080px] rounded-lg p-6 flex flex-col gap-5"
+      style={{ background: "rgba(255,240,244,0.06)", border: "1px solid rgba(255,180,200,0.18)" }}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-sm tracking-[0.3em] uppercase" style={{ color: "#f0a8b8" }}>Editor</h2>
+        <label className="flex items-center gap-2 text-[12px]" style={{ color: "#fbe0e7" }}>
+          <span className="tracking-[0.2em] uppercase" style={{ color: "#f0a8b8" }}>Date</span>
+          <input
+            type="text"
+            value={dateText}
+            onChange={(e) => onDateChange(e.target.value)}
+            placeholder="MAY 2025"
+            className="px-3 py-1.5 rounded text-[12px] tracking-[0.2em] uppercase outline-none focus:ring-2"
+            style={{
+              background: "rgba(20,5,12,0.7)",
+              border: "1px solid rgba(255,180,200,0.3)",
+              color: "#fff0f4",
+              minWidth: 160,
+            }}
+          />
+        </label>
+      </div>
+
+      <div className="flex flex-col gap-3">
         {TIERS.map((t) => (
-          <div key={t.key} className="flex flex-col gap-2 p-3 rounded" style={{ background: "rgba(20,5,12,0.5)", border: "1px solid rgba(255,180,200,0.18)" }}>
-            <div className="flex items-baseline justify-between">
-              <span className="font-semibold" style={{ color: "#fff0f4" }}>{t.name}</span>
-              <span style={{ color: "#f0a8b8" }}>{t.kanji}</span>
+          <div
+            key={t.key}
+            className="flex flex-col md:flex-row gap-3 p-3 rounded"
+            style={{ background: "rgba(20,5,12,0.5)", border: "1px solid rgba(255,180,200,0.18)" }}
+          >
+            {/* Tier label column */}
+            <div
+              className="flex md:flex-col md:items-start items-baseline gap-2 md:gap-1 md:w-32 md:py-2 md:px-2 md:border-r"
+              style={{ borderColor: "rgba(255,180,200,0.18)" }}
+            >
+              <span className="font-semibold text-base" style={{ color: "#fff0f4" }}>
+                {t.premium ? "✦ " : ""}{t.name}
+              </span>
+              <span className="text-sm" style={{ color: "#f0a8b8" }}>{t.kanji}</span>
+              <span className="text-[10px] tracking-widest uppercase opacity-60" style={{ color: "#f0a8b8" }}>
+                {t.premium ? "Premium" : "Standard"}
+              </span>
             </div>
-            {slots[t.key].map((s, idx) => (
-              <div key={idx} className="flex flex-col gap-1.5">
-                <div className="relative w-full aspect-square overflow-hidden rounded">
-                  <img
-                    src={s.src}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    style={{ filter: s.nsfw ? "blur(8px)" : "none", transform: s.nsfw ? "scale(1.1)" : "none" }}
-                  />
-                </div>
-                <label className="text-[11px] cursor-pointer text-center py-1 rounded" style={{ background: "#c8132a", color: "#fff" }}>
-                  Swap #{idx + 1}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      updateSlot(t.key, idx, { src: URL.createObjectURL(file), zoom: 1, posX: 50, posY: 30 });
+
+            {/* Left / Right images horizontally */}
+            <div className="flex-1 grid grid-cols-2 gap-3">
+              {slots[t.key].map((s, idx) => {
+                const side = idx === 0 ? "LEFT" : "RIGHT";
+                return (
+                  <div
+                    key={idx}
+                    className="flex flex-col gap-1.5 p-2 rounded"
+                    style={{
+                      background: "rgba(255,240,244,0.04)",
+                      border: "1px dashed rgba(255,180,200,0.25)",
                     }}
-                  />
-                </label>
-                <label className="flex items-center justify-between text-[11px]" style={{ color: "#fbe0e7" }}>
-                  <span>NSFW blur</span>
-                  <input
-                    type="checkbox"
-                    checked={s.nsfw}
-                    onChange={(e) => updateSlot(t.key, idx, { nsfw: e.target.checked })}
-                  />
-                </label>
-              </div>
-            ))}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-[10px] font-bold tracking-[0.2em] px-2 py-0.5 rounded"
+                        style={{
+                          background: idx === 0 ? "rgba(200,19,42,0.85)" : "rgba(255,180,140,0.85)",
+                          color: "#2a0a14",
+                        }}
+                      >
+                        {side}
+                      </span>
+                      <span className="text-[10px] opacity-60" style={{ color: "#fbe0e7" }}>
+                        Image #{idx + 1}
+                      </span>
+                    </div>
+                    <div className="relative w-full aspect-video overflow-hidden rounded">
+                      <img
+                        src={s.src}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        style={{
+                          filter: s.nsfw ? "blur(8px)" : "none",
+                          transform: s.nsfw ? "scale(1.1)" : "none",
+                        }}
+                      />
+                    </div>
+                    <label
+                      className="text-[11px] cursor-pointer text-center py-1 rounded"
+                      style={{ background: "#c8132a", color: "#fff" }}
+                    >
+                      Swap {side}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          updateSlot(t.key, idx, {
+                            src: URL.createObjectURL(file),
+                            zoom: 1,
+                            posX: 50,
+                            posY: 30,
+                          });
+                        }}
+                      />
+                    </label>
+                    <label
+                      className="flex items-center justify-between text-[11px]"
+                      style={{ color: "#fbe0e7" }}
+                    >
+                      <span>NSFW blur</span>
+                      <input
+                        type="checkbox"
+                        checked={s.nsfw}
+                        onChange={(e) => updateSlot(t.key, idx, { nsfw: e.target.checked })}
+                      />
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ))}
       </div>

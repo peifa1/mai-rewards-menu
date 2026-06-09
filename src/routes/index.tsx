@@ -447,17 +447,22 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
           const isAsmr = p === "ASMR";
           const hasMic = isAudio || isAsmr;
           const accent = isTop ? "#ffd28a" : isMid ? "#ffc7a0" : "#ffb8c8";
+          const audioMinutes = isAudio ? (tier.key === "okami" ? 10 : tier.key === "danna" ? 20 : 0) : 0;
+          // Static "audio visualizer" bar heights (deterministic per pill type)
+          const bars = isAudio
+            ? [3, 6, 9, 5, 8, 4, 7, 10, 6, 3]
+            : [4, 7, 5, 9, 6, 8, 4, 7, 5, 3];
           return (
             <div
               key={p}
               className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest inline-flex items-center gap-1.5"
               style={{
                 background: hasMic
-                  ? "rgba(40,10,20,0.78)"
+                  ? `linear-gradient(90deg, ${accent}22 0%, rgba(40,10,20,0.85) 45%, rgba(40,10,20,0.9) 100%)`
                   : tier.premium ? "rgba(30,8,16,0.7)" : "rgba(20,5,12,0.6)",
-                color: p === "18+" ? "#ff8aa0" : tier.premium ? "#ffe8ee" : "#fbe0e7",
+                color: p === "18+" ? "#ff8aa0" : hasMic ? "#fff4e0" : tier.premium ? "#ffe8ee" : "#fbe0e7",
                 border: hasMic
-                  ? `1px solid ${accent}88`
+                  ? `1px solid ${accent}`
                   : isTop
                   ? "1px solid rgba(255,215,170,0.55)"
                   : tier.premium
@@ -465,22 +470,52 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
                   : "1px solid rgba(255,180,200,0.30)",
                 backdropFilter: "blur(4px)",
                 boxShadow: hasMic
-                  ? `0 0 10px ${accent}44`
+                  ? `0 0 14px ${accent}66, inset 0 0 8px ${accent}33`
                   : isTop
                   ? "0 0 14px rgba(255,180,140,0.28)"
                   : isMid
                   ? "0 0 8px rgba(255,150,180,0.12)"
                   : "none",
+                textShadow: hasMic ? `0 0 6px ${accent}aa` : undefined,
               }}
             >
               {hasMic && (
                 <Mic
                   size={10}
                   strokeWidth={2.5}
-                  style={{ color: accent, filter: `drop-shadow(0 0 4px ${accent}66)` }}
+                  style={{ color: accent, filter: `drop-shadow(0 0 4px ${accent}aa)` }}
                 />
               )}
+              {hasMic && (
+                <span className="inline-flex items-end gap-[1.5px] h-[11px]">
+                  {bars.map((h, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        width: 1.5,
+                        height: h,
+                        background: `linear-gradient(180deg, ${accent}, ${accent}66)`,
+                        borderRadius: 1,
+                        boxShadow: `0 0 3px ${accent}88`,
+                      }}
+                    />
+                  ))}
+                </span>
+              )}
               <span>{p}</span>
+              {isAudio && audioMinutes > 0 && (
+                <span
+                  className="ml-0.5 px-1.5 rounded-full text-[8px] leading-none py-[2px] font-bold"
+                  style={{
+                    background: `linear-gradient(135deg, ${accent}, ${accent}aa)`,
+                    color: "#2a0a14",
+                    letterSpacing: "0.05em",
+                    boxShadow: `0 0 6px ${accent}88`,
+                  }}
+                >
+                  +{audioMinutes} MIN
+                </span>
+              )}
               {isAudio && (
                 <span
                   className="ml-0.5 px-1 rounded-sm text-[8px] leading-none py-[1px]"
@@ -498,6 +533,7 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
           );
         })}
       </div>
+
     </div>
   );
 }

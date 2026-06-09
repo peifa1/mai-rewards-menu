@@ -147,7 +147,7 @@ function CanvasScaler({ children, innerRef }: { children: React.ReactNode; inner
 
 type SlotUpdater = (tierKey: string, idx: number, next: Partial<ImgSlot>) => void;
 
-function Canvas({ slots, onUpdateSlot }: { slots: SlotsMap; onUpdateSlot: SlotUpdater }) {
+function Canvas({ slots, onUpdateSlot, dateText }: { slots: SlotsMap; onUpdateSlot: SlotUpdater; dateText: string }) {
   return (
     <div
       className="relative font-tambyon"

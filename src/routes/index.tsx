@@ -459,8 +459,10 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
         {images.slice(0, 2).map((im, idx) => (
           <div
             key={idx}
-            className="absolute inset-0 overflow-hidden"
+            className="absolute top-0 h-full overflow-hidden"
             style={{
+              left: `${slices[idx].left}%`,
+              width: `${slices[idx].width}%`,
               WebkitClipPath: polys[idx],
               clipPath: polys[idx],
             }}

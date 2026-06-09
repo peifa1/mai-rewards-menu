@@ -119,6 +119,43 @@ function Index() {
   const [dateText, setDateText] = useState("MAY 2025");
   const canvasRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load shared state once on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("app_state")
+        .select("data")
+        .eq("id", "singleton")
+        .maybeSingle();
+      if (cancelled) return;
+      const payload = data?.data as { slots?: SlotsMap; tiers?: Tier[]; dateText?: string } | undefined;
+      if (payload) {
+        if (payload.slots) setSlots(payload.slots);
+        if (payload.tiers) setTiers(payload.tiers);
+        if (payload.dateText) setDateText(payload.dateText);
+      }
+      setLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Debounced save on changes (after initial load)
+  useEffect(() => {
+    if (!loaded) return;
+    const handle = setTimeout(() => {
+      supabase
+        .from("app_state")
+        .upsert({ id: "singleton", data: { slots, tiers, dateText }, updated_at: new Date().toISOString() })
+        .then(({ error }) => {
+          if (error) console.error("Save failed:", error);
+        });
+    }, 600);
+    return () => clearTimeout(handle);
+  }, [slots, tiers, dateText, loaded]);
+
 
   const updateSlot = (tierKey: string, idx: number, next: Partial<ImgSlot>) => {
     setSlots((prev) => ({

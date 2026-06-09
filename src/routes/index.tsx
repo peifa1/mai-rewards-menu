@@ -319,7 +319,7 @@ function AdjustOverlay({
       e.preventDefault();
       const cur = imRef.current;
       const delta = -e.deltaY * 0.0015;
-      const next = Math.max(0.5, Math.min(4, cur.zoom + delta));
+      const next = Math.max(1, Math.min(6, cur.zoom + delta));
       onChange({ zoom: parseFloat(next.toFixed(3)) });
     };
     el.addEventListener("wheel", onWheel, { passive: false });

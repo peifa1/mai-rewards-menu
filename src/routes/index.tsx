@@ -297,7 +297,7 @@ function Canvas({ slots, onUpdateSlot }: { slots: SlotsMap; onUpdateSlot: SlotUp
   );
 }
 
-function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
+function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]; onUpdateSlot: SlotUpdater }) {
   const isTop = tier.key === "danna";
   const isMid = tier.key === "okami";
   const rowHeight = isTop ? 156 : tier.premium ? 142 : 128;

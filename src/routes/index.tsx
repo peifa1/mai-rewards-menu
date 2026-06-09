@@ -199,13 +199,13 @@ function Canvas({ slots }: { slots: SlotsMap }) {
         src={chibi.url}
         alt=""
         className="absolute pointer-events-none select-none"
-        style={{ top: 24, right: 28, width: 140, filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.45))", zIndex: 3 }}
+        style={{ top: 24, right: 56, width: 140, filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.45))", zIndex: 3 }}
       />
       <img
         src={thankYou.url}
         alt="thank you"
         className="absolute pointer-events-none select-none"
-        style={{ top: 40, right: 158, width: 92, transform: "rotate(-10deg)", filter: "drop-shadow(0 2px 10px rgba(255,140,170,0.45))", zIndex: 3 }}
+        style={{ top: 40, right: 186, width: 92, transform: "rotate(-10deg)", filter: "drop-shadow(0 2px 10px rgba(255,140,170,0.45))", zIndex: 3 }}
       />
 
       <div className="relative flex flex-col items-center pt-14 pb-4">

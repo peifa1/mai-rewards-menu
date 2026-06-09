@@ -600,7 +600,6 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
                   : tier.premium
                   ? "1px solid rgba(255,200,215,0.38)"
                   : "1px solid rgba(255,180,200,0.30)",
-                backdropFilter: "blur(4px)",
                 boxShadow: hasMic
                   ? isTop
                     ? `0 0 20px ${accent}88, inset 0 0 12px ${accent}44`

@@ -55,6 +55,7 @@ const DEFAULT_SLOTS: SlotsMap = {
 
 function Index() {
   const [slots, setSlots] = useState<SlotsMap>(DEFAULT_SLOTS);
+  const [dateText, setDateText] = useState("MAY 2025");
   const canvasRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
@@ -104,9 +105,9 @@ function Index() {
         {exporting ? "Exporting…" : "Export as Image"}
       </button>
       <CanvasScaler innerRef={canvasRef}>
-        <Canvas slots={slots} onUpdateSlot={updateSlot} />
+        <Canvas slots={slots} onUpdateSlot={updateSlot} dateText={dateText} />
       </CanvasScaler>
-      <Editor slots={slots} onChange={setSlots} />
+      <Editor slots={slots} onChange={setSlots} dateText={dateText} onDateChange={setDateText} />
     </div>
   );
 }

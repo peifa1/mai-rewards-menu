@@ -288,7 +288,7 @@ function Canvas({ slots, onUpdateSlot, dateText }: { slots: SlotsMap; onUpdateSl
 
       <div className="absolute bottom-7 left-0 right-0 flex flex-col items-center">
         <div className="font-tambyon text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
-          MAY 2025
+          {dateText}
         </div>
         <div className="font-tambyon text-[14px] tracking-[0.6em] mt-1" style={{ color: "#d98aa0" }}>
           月間リワード

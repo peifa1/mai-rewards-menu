@@ -129,50 +129,83 @@ function Canvas({ slots }: { slots: SlotsMap }) {
       />
 
 
-      {/* Scattered sakura petals */}
+      {/* Header petals — crisp, brighter */}
       {[
-        { x: 60, y: 220, r: -18, s: 0.7, o: 0.55 },
-        { x: 140, y: 520, r: 35, s: 0.95, o: 0.5 },
-        { x: 40, y: 820, r: 12, s: 0.6, o: 0.45 },
-        { x: 250, y: 960, r: -28, s: 0.8, o: 0.55 },
-        { x: 480, y: 180, r: 50, s: 0.55, o: 0.4 },
-        { x: 560, y: 720, r: -42, s: 0.75, o: 0.5 },
-        { x: 760, y: 920, r: 22, s: 0.85, o: 0.55 },
-        { x: 900, y: 580, r: -10, s: 0.65, o: 0.45 },
-        { x: 980, y: 280, r: 60, s: 0.7, o: 0.5 },
-        { x: 360, y: 420, r: -55, s: 0.5, o: 0.35 },
-        { x: 700, y: 360, r: 18, s: 0.6, o: 0.4 },
-        { x: 200, y: 700, r: 70, s: 0.55, o: 0.4 },
+        { x: 60, y: 60, r: -18, s: 0.65, o: 0.6 },
+        { x: 180, y: 150, r: 30, s: 0.55, o: 0.5 },
+        { x: 320, y: 70, r: -45, s: 0.5, o: 0.45 },
+        { x: 90, y: 175, r: 55, s: 0.45, o: 0.4 },
       ].map((p, i) => (
         <img
-          key={i}
+          key={`h${i}`}
           src={petal.url}
           alt=""
           className="absolute pointer-events-none select-none"
           style={{
-            left: p.x,
-            top: p.y,
-            width: 90 * p.s,
-            height: "auto",
-            transform: `rotate(${p.r}deg)`,
-            opacity: p.o,
-            filter: "drop-shadow(0 2px 6px rgba(255,140,170,0.25))",
+            left: p.x, top: p.y, width: 90 * p.s, height: "auto",
+            transform: `rotate(${p.r}deg)`, opacity: p.o,
+            filter: "drop-shadow(0 2px 6px rgba(255,140,170,0.3))",
+            zIndex: 1,
           }}
         />
       ))}
 
-      {/* Chibi + thank you in top right */}
-      <img
-        src={thankYou.url}
-        alt="thank you"
-        className="absolute pointer-events-none select-none"
-        style={{ top: 60, right: 230, width: 150, transform: "rotate(-8deg)", filter: "drop-shadow(0 2px 10px rgba(255,140,170,0.4))" }}
-      />
+      {/* Footer petals — crisp */}
+      {[
+        { x: 120, y: 960, r: 20, s: 0.7, o: 0.55 },
+        { x: 260, y: 1010, r: -35, s: 0.55, o: 0.45 },
+        { x: 820, y: 980, r: 48, s: 0.6, o: 0.5 },
+        { x: 940, y: 1020, r: -12, s: 0.5, o: 0.45 },
+        { x: 60, y: 1030, r: 65, s: 0.45, o: 0.4 },
+      ].map((p, i) => (
+        <img
+          key={`f${i}`}
+          src={petal.url}
+          alt=""
+          className="absolute pointer-events-none select-none"
+          style={{
+            left: p.x, top: p.y, width: 90 * p.s, height: "auto",
+            transform: `rotate(${p.r}deg)`, opacity: p.o,
+            filter: "drop-shadow(0 2px 6px rgba(255,140,170,0.3))",
+            zIndex: 1,
+          }}
+        />
+      ))}
+
+      {/* Behind-rows petals — blurred & faint, kept to far-left margin so they never sit over tier text */}
+      {[
+        { x: 18, y: 320, r: -22, s: 0.55, o: 0.18 },
+        { x: 8, y: 470, r: 40, s: 0.45, o: 0.15 },
+        { x: 30, y: 610, r: -50, s: 0.5, o: 0.16 },
+        { x: 10, y: 780, r: 25, s: 0.4, o: 0.14 },
+        { x: 36, y: 880, r: 60, s: 0.5, o: 0.16 },
+      ].map((p, i) => (
+        <img
+          key={`b${i}`}
+          src={petal.url}
+          alt=""
+          className="absolute pointer-events-none select-none"
+          style={{
+            left: p.x, top: p.y, width: 90 * p.s, height: "auto",
+            transform: `rotate(${p.r}deg)`, opacity: p.o,
+            filter: "blur(3px)",
+            zIndex: 0,
+          }}
+        />
+      ))}
+
+      {/* Chibi + thank you in top right (compact) */}
       <img
         src={chibi.url}
         alt=""
         className="absolute pointer-events-none select-none"
-        style={{ top: 30, right: 36, width: 200, filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.45))" }}
+        style={{ top: 24, right: 28, width: 140, filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.45))", zIndex: 3 }}
+      />
+      <img
+        src={thankYou.url}
+        alt="thank you"
+        className="absolute pointer-events-none select-none"
+        style={{ top: 40, right: 158, width: 92, transform: "rotate(-10deg)", filter: "drop-shadow(0 2px 10px rgba(255,140,170,0.45))", zIndex: 3 }}
       />
 
       <div className="relative flex flex-col items-center pt-14 pb-4">

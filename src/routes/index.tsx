@@ -24,14 +24,15 @@ type Tier = {
   name: string;
   kanji: string;
   premium?: boolean;
+  perks: string[];
 };
 
 const TIERS: Tier[] = [
-  { key: "yokan", name: "Yokan", kanji: "羊羹" },
-  { key: "sensu", name: "Sensu", kanji: "扇子" },
-  { key: "tomo",  name: "Tomo",  kanji: "友" },
-  { key: "okami", name: "Okami", kanji: "女将", premium: true },
-  { key: "danna", name: "Danna", kanji: "旦那", premium: true },
+  { key: "yokan", name: "Yokan", kanji: "羊羹", perks: ["ART", "WALL"] },
+  { key: "sensu", name: "Sensu", kanji: "扇子", perks: ["18+", "BONUS"] },
+  { key: "tomo",  name: "Tomo",  kanji: "友",   perks: ["PHOTO", "ASMR", "VOICE"] },
+  { key: "okami", name: "Okami", kanji: "女将", premium: true, perks: ["18+", "+10 MIN", "VOTE"] },
+  { key: "danna", name: "Danna", kanji: "旦那", premium: true, perks: ["18+", "+20 MIN", "RP", "EXCL"] },
 ];
 
 type ImgSlot = { src: string; nsfw: boolean };
@@ -41,29 +42,25 @@ const DEFAULT_SLOTS: SlotsMap = {
   yokan: [
     { src: artYokan.url, nsfw: false },
     { src: artTomo.url,  nsfw: false },
-    { src: artOkami.url, nsfw: false },
   ],
   sensu: [
     { src: artSensu.url, nsfw: true },
     { src: artYokan.url, nsfw: false },
-    { src: artDanna.url, nsfw: false },
   ],
   tomo: [
     { src: artTomo.url,  nsfw: false },
     { src: artOkami.url, nsfw: false },
-    { src: artYokan.url, nsfw: false },
   ],
   okami: [
     { src: artOkami.url, nsfw: false },
     { src: artDanna.url, nsfw: false },
-    { src: artSensu.url, nsfw: true },
   ],
   danna: [
     { src: artDanna.url, nsfw: false },
     { src: artSensu.url, nsfw: true },
-    { src: artYokan.url, nsfw: false },
   ],
 };
+
 
 function Index() {
   const [slots, setSlots] = useState<SlotsMap>(DEFAULT_SLOTS);

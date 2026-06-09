@@ -300,10 +300,14 @@ function Canvas({ slots, onUpdateSlot }: { slots: SlotsMap; onUpdateSlot: SlotUp
 function AdjustOverlay({
   im,
   clipPath,
+  left,
+  width,
   onChange,
 }: {
   im: ImgSlot;
   clipPath: string;
+  left: number;
+  width: number;
   onChange: (next: Partial<ImgSlot>) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -355,8 +359,13 @@ function AdjustOverlay({
   return (
     <div
       ref={ref}
-      className="absolute inset-0 cursor-move group"
-      style={{ WebkitClipPath: clipPath, clipPath }}
+      className="absolute top-0 h-full cursor-move group"
+      style={{
+        left: `${left}%`,
+        width: `${width}%`,
+        WebkitClipPath: clipPath,
+        clipPath,
+      }}
       onMouseDown={handleDown}
       onDoubleClick={() => onChange({ zoom: 1, posX: 50, posY: 30 })}
       title="Drag to pan · Scroll to zoom · Double-click to reset"
@@ -387,12 +396,21 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
   const kanjiColor = tier.premium ? "#ffd6e0" : "#e8a8b8";
 
   // 2-image panoramic strip with diagonal cut.
+  // Each image gets its OWN bounding box (its own slice of the strip),
+  // so pan/zoom act within that slice instead of the whole strip.
   const groupWidthPct = 64;
   const mid = 50;
   const skew = 6;
+  const s0Width = mid + skew;       // 56
+  const s1Left = mid - skew;        // 44
+  const s1Width = 100 - s1Left;     // 56
+  const slices = [
+    { left: 0, width: s0Width },
+    { left: s1Left, width: s1Width },
+  ];
   const polys = [
-    `polygon(0 0, ${mid + skew}% 0, ${mid - skew}% 100%, 0 100%)`,
-    `polygon(${mid + skew}% 0, 100% 0, 100% 100%, ${mid - skew}% 100%)`,
+    `polygon(0 0, 100% 0, ${((mid - skew) / s0Width) * 100}% 100%, 0 100%)`,
+    `polygon(${((mid + skew - s1Left) / s1Width) * 100}% 0, 100% 0, 100% 100%, 0 100%)`,
   ];
 
   // Prestige treatment — Danna (top) > Okami (mid) > rest
@@ -450,8 +468,10 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
         {images.slice(0, 2).map((im, idx) => (
           <div
             key={idx}
-            className="absolute inset-0 overflow-hidden"
+            className="absolute top-0 h-full overflow-hidden"
             style={{
+              left: `${slices[idx].left}%`,
+              width: `${slices[idx].width}%`,
               WebkitClipPath: polys[idx],
               clipPath: polys[idx],
             }}
@@ -495,6 +515,8 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
             key={idx}
             im={im}
             clipPath={polys[idx]}
+            left={slices[idx].left}
+            width={slices[idx].width}
             onChange={(next) => onUpdateSlot(tier.key, idx, next)}
           />
         ))}

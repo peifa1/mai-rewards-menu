@@ -170,49 +170,69 @@ function Canvas({ slots }: { slots: SlotsMap }) {
 }
 
 function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
-  const rowHeight = tier.premium ? 144 : 128;
-  const nameColor = tier.premium ? "#fff4f7" : "#f7dde4";
-  const kanjiColor = tier.premium ? "#ffc8d4" : "#e8a8b8";
+  const rowHeight = tier.premium ? 150 : 128;
+  const nameColor = tier.premium ? "#fff8fa" : "#f7dde4";
+  const kanjiColor = tier.premium ? "#ffd6e0" : "#e8a8b8";
 
-  // 3-image panoramic strip with diagonal cuts.
-  const groupWidthPct = 62;
-  const t1 = 34;
-  const t2 = 67;
-  const skew = 5; // percent, half of diagonal spread
+  // 2-image panoramic strip with diagonal cut.
+  const groupWidthPct = 64;
+  const mid = 50;
+  const skew = 6; // percent, half of diagonal spread
   const polys = [
-    `polygon(0 0, ${t1 + skew}% 0, ${t1 - skew}% 100%, 0 100%)`,
-    `polygon(${t1 + skew}% 0, ${t2 + skew}% 0, ${t2 - skew}% 100%, ${t1 - skew}% 100%)`,
-    `polygon(${t2 + skew}% 0, 100% 0, 100% 100%, ${t2 - skew}% 100%)`,
+    `polygon(0 0, ${mid + skew}% 0, ${mid - skew}% 100%, 0 100%)`,
+    `polygon(${mid + skew}% 0, 100% 0, 100% 100%, ${mid - skew}% 100%)`,
   ];
+
+  // Prestige treatment for Okami/Danna
+  const prestigeBg: React.CSSProperties | undefined = tier.premium
+    ? {
+        background:
+          "linear-gradient(90deg, rgba(255,170,190,0.10) 0%, rgba(255,140,165,0.06) 35%, transparent 70%)",
+        boxShadow: "inset 0 0 40px rgba(255,140,170,0.10)",
+      }
+    : undefined;
 
   return (
     <div
       className="relative w-full overflow-hidden"
       style={{
         height: rowHeight,
-        borderLeft: tier.premium ? "3px solid #ff6a86" : "3px solid transparent",
+        borderLeft: tier.premium ? "3px solid #ffb3c4" : "3px solid transparent",
         paddingLeft: 18,
+        ...prestigeBg,
       }}
     >
+      {/* Premium prestige left glow accent */}
+      {tier.premium && (
+        <div
+          className="absolute left-0 top-0 h-full pointer-events-none"
+          style={{
+            width: 90,
+            background:
+              "linear-gradient(90deg, rgba(255,180,200,0.22) 0%, transparent 100%)",
+          }}
+        />
+      )}
+
       {/* Image panoramic strip with mask */}
       <div
         className="absolute top-0 right-0 h-full pointer-events-none"
         style={{
           width: `${groupWidthPct}%`,
           WebkitMaskImage:
-            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.8) 55%, #000 100%)",
+            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.85) 55%, #000 100%)",
           maskImage:
-            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.8) 55%, #000 100%)",
+            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.85) 55%, #000 100%)",
         }}
       >
-        {images.slice(0, 3).map((im, idx) => (
+        {images.slice(0, 2).map((im, idx) => (
           <div
             key={idx}
             className="absolute inset-0"
             style={{
               backgroundImage: `url(${im.src})`,
               backgroundSize: "cover",
-              backgroundPosition: `${idx === 0 ? 20 : idx === 1 ? 50 : 80}% 30%`,
+              backgroundPosition: `${idx === 0 ? 30 : 70}% 30%`,
               filter: im.nsfw ? "blur(16px) saturate(1.1)" : "none",
               transform: im.nsfw ? "scale(1.1)" : "none",
               WebkitClipPath: polys[idx],
@@ -228,7 +248,7 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
         style={{
           width: `${groupWidthPct}%`,
           background:
-            "linear-gradient(90deg, transparent 0%, rgba(74,12,34,0.30) 55%, rgba(74,12,34,0.45) 100%)",
+            "linear-gradient(90deg, transparent 0%, rgba(74,12,34,0.28) 55%, rgba(74,12,34,0.42) 100%)",
           mixBlendMode: "multiply",
         }}
       />
@@ -236,14 +256,24 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
       {/* Tier name */}
       <div className="relative h-full flex items-center z-10">
         <div className="flex items-baseline gap-4">
+          {tier.premium && (
+            <div
+              className="font-tambyon"
+              style={{ fontSize: 22, color: "#ffd28a", letterSpacing: "0.3em", marginRight: 4 }}
+            >
+              ✦
+            </div>
+          )}
           <div
             className="font-tambyon"
             style={{
-              fontSize: tier.premium ? 60 : 50,
+              fontSize: tier.premium ? 62 : 50,
               color: nameColor,
               lineHeight: 1,
               letterSpacing: "0.04em",
-              textShadow: tier.premium ? "0 2px 14px rgba(255,120,150,0.35)" : "0 2px 10px rgba(0,0,0,0.4)",
+              textShadow: tier.premium
+                ? "0 2px 18px rgba(255,150,180,0.55), 0 0 1px rgba(255,220,230,0.6)"
+                : "0 2px 10px rgba(0,0,0,0.4)",
             }}
           >
             {tier.name}
@@ -260,9 +290,31 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
           </div>
         </div>
       </div>
+
+      {/* Perk pills */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end gap-1.5 z-20">
+        {tier.perks.map((p) => (
+          <div
+            key={p}
+            className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest"
+            style={{
+              background: tier.premium ? "rgba(30,8,16,0.7)" : "rgba(20,5,12,0.6)",
+              color: p === "18+" ? "#ff8aa0" : tier.premium ? "#ffe8ee" : "#fbe0e7",
+              border: tier.premium
+                ? "1px solid rgba(255,200,215,0.45)"
+                : "1px solid rgba(255,180,200,0.30)",
+              backdropFilter: "blur(4px)",
+              boxShadow: tier.premium ? "0 0 10px rgba(255,150,180,0.18)" : "none",
+            }}
+          >
+            {p}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
+
 
 function Editor({
   slots,

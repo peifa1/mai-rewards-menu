@@ -129,6 +129,51 @@ function Canvas({ slots }: { slots: SlotsMap }) {
       />
 
 
+      {/* Scattered sakura petals */}
+      {[
+        { x: 60, y: 220, r: -18, s: 0.7, o: 0.55 },
+        { x: 140, y: 520, r: 35, s: 0.95, o: 0.5 },
+        { x: 40, y: 820, r: 12, s: 0.6, o: 0.45 },
+        { x: 250, y: 960, r: -28, s: 0.8, o: 0.55 },
+        { x: 480, y: 180, r: 50, s: 0.55, o: 0.4 },
+        { x: 560, y: 720, r: -42, s: 0.75, o: 0.5 },
+        { x: 760, y: 920, r: 22, s: 0.85, o: 0.55 },
+        { x: 900, y: 580, r: -10, s: 0.65, o: 0.45 },
+        { x: 980, y: 280, r: 60, s: 0.7, o: 0.5 },
+        { x: 360, y: 420, r: -55, s: 0.5, o: 0.35 },
+        { x: 700, y: 360, r: 18, s: 0.6, o: 0.4 },
+        { x: 200, y: 700, r: 70, s: 0.55, o: 0.4 },
+      ].map((p, i) => (
+        <img
+          key={i}
+          src={petal.url}
+          alt=""
+          className="absolute pointer-events-none select-none"
+          style={{
+            left: p.x,
+            top: p.y,
+            width: 90 * p.s,
+            height: "auto",
+            transform: `rotate(${p.r}deg)`,
+            opacity: p.o,
+            filter: "drop-shadow(0 2px 6px rgba(255,140,170,0.25))",
+          }}
+        />
+      ))}
+
+      {/* Chibi + thank you in top right */}
+      <img
+        src={thankYou.url}
+        alt="thank you"
+        className="absolute pointer-events-none select-none"
+        style={{ top: 60, right: 230, width: 150, transform: "rotate(-8deg)", filter: "drop-shadow(0 2px 10px rgba(255,140,170,0.4))" }}
+      />
+      <img
+        src={chibi.url}
+        alt=""
+        className="absolute pointer-events-none select-none"
+        style={{ top: 30, right: 36, width: 200, filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.45))" }}
+      />
 
       <div className="relative flex flex-col items-center pt-14 pb-4">
         <div className="text-[12px] tracking-[0.6em] uppercase" style={{ color: "#f0a8b8" }}>

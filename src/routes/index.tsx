@@ -181,11 +181,16 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
   const nameColor = tier.premium ? "#fff4f7" : "#f7dde4";
   const kanjiColor = tier.premium ? "#ffc8d4" : "#e8a8b8";
 
-  // 3-image spread occupies right ~62% of row, fading L→R.
+  // 3-image panoramic strip with diagonal cuts.
   const groupWidthPct = 62;
-  const imgW = 180;
-  const imgH = rowHeight - 16;
-  const gap = 10;
+  const t1 = 34;
+  const t2 = 67;
+  const skew = 5; // percent, half of diagonal spread
+  const polys = [
+    `polygon(0 0, ${t1 + skew}% 0, ${t1 - skew}% 100%, 0 100%)`,
+    `polygon(${t1 + skew}% 0, ${t2 + skew}% 0, ${t2 - skew}% 100%, ${t1 - skew}% 100%)`,
+    `polygon(${t2 + skew}% 0, 100% 0, 100% 100%, ${t2 - skew}% 100%)`,
+  ];
 
   return (
     <div
@@ -196,44 +201,32 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
         paddingLeft: 18,
       }}
     >
-      {/* Image spread group with mask */}
+      {/* Image panoramic strip with mask */}
       <div
         className="absolute top-0 right-0 h-full pointer-events-none"
         style={{
           width: `${groupWidthPct}%`,
           WebkitMaskImage:
-            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.75) 55%, #000 100%)",
+            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.8) 55%, #000 100%)",
           maskImage:
-            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.75) 55%, #000 100%)",
+            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.2) 18%, rgba(0,0,0,0.8) 55%, #000 100%)",
         }}
       >
-        <div
-          className="absolute top-1/2 right-2 -translate-y-1/2 flex"
-          style={{ gap }}
-        >
-          {images.slice(0, 3).map((im, idx) => (
-            <div
-              key={idx}
-              className="overflow-hidden rounded-[3px]"
-              style={{
-                width: imgW,
-                height: imgH,
-                boxShadow: "0 4px 16px rgba(0,0,0,0.45)",
-                border: "1px solid rgba(255,200,212,0.18)",
-              }}
-            >
-              <img
-                src={im.src}
-                alt=""
-                className="w-full h-full object-cover"
-                style={{
-                  filter: im.nsfw ? "blur(16px) saturate(1.1)" : "none",
-                  transform: im.nsfw ? "scale(1.15)" : "none",
-                }}
-              />
-            </div>
-          ))}
-        </div>
+        {images.slice(0, 3).map((im, idx) => (
+          <div
+            key={idx}
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${im.src})`,
+              backgroundSize: "cover",
+              backgroundPosition: `${idx === 0 ? 20 : idx === 1 ? 50 : 80}% 30%`,
+              filter: im.nsfw ? "blur(16px) saturate(1.1)" : "none",
+              transform: im.nsfw ? "scale(1.1)" : "none",
+              WebkitClipPath: polys[idx],
+              clipPath: polys[idx],
+            }}
+          />
+        ))}
       </div>
 
       {/* Crimson tint overlay on the image area */}

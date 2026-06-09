@@ -1,61 +1,64 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import deco02 from "@/assets/deco-02.webp.asset.json";
 import deco03 from "@/assets/deco-03.webp.asset.json";
 import deco07 from "@/assets/deco-07.webp.asset.json";
+import artYokan from "@/assets/art-yokan.jpg.asset.json";
+import artSensu from "@/assets/art-sensu.jpg.asset.json";
+import artTomo from "@/assets/art-tomo.jpg.asset.json";
+import artOkami from "@/assets/art-okami.jpg.asset.json";
+import artDanna from "@/assets/art-danna.jpg.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Iomaya Mai — Monthly Rewards" },
       { name: "description", content: "Iomaya Mai's monthly Patreon reward menu — a Japanese-style omakase card of tiers." },
-      { property: "og:title", content: "Iomaya Mai — Monthly Rewards" },
-      { property: "og:description", content: "A Japanese-style monthly reward menu for Iomaya Mai's Patreon." },
     ],
   }),
   component: Index,
 });
 
+type Perk = string;
 type Tier = {
   key: string;
   name: string;
   kanji: string;
-  desc: string;
-  premium?: "silver" | "crimson";
+  premium?: boolean;
+  perks: Perk[];
+  variant?: "image" | "visualizer";
 };
 
 const TIERS: Tier[] = [
-  { key: "yokan",  name: "Yokan",  kanji: "羊羹", desc: "SFW & NSFW art · sketches · wallpapers" },
-  { key: "sensu",  name: "Sensu",  kanji: "扇子", desc: "Extra monthly art + bonus NSFW pieces" },
-  { key: "tomo",   name: "Tomo",   kanji: "友",   desc: "Full photo sets · cosplay · ASMR & voice notes" },
-  { key: "okami",  name: "Okami",  kanji: "女将", desc: "+10min NSFW audio · priority voting", premium: "silver" },
-  { key: "danna",  name: "Danna",  kanji: "旦那", desc: "+20min audio · personalised RP · exclusives", premium: "crimson" },
+  { key: "yokan", name: "Yokan", kanji: "羊羹", perks: ["ART", "WALL"] },
+  { key: "sensu", name: "Sensu", kanji: "扇子", perks: ["18+", "ART", "BONUS"] },
+  { key: "tomo",  name: "Tomo",  kanji: "友",   perks: ["PHOTO", "ASMR", "VOICE"] },
+  { key: "okami", name: "Okami", kanji: "女将", premium: true, variant: "visualizer", perks: ["18+", "+10 MIN", "VOTE"] },
+  { key: "danna", name: "Danna", kanji: "旦那", premium: true, variant: "visualizer", perks: ["18+", "+20 MIN", "RP", "EXCL"] },
 ];
 
 const DEFAULT_IMAGES: Record<string, { src: string; nsfw: boolean }> = {
-  yokan: { src: "/images/ahri.jpg", nsfw: false },
-  sensu: { src: "/images/ahri-nsfw.jpg", nsfw: true },
-  tomo:  { src: "/images/cosplay.jpg", nsfw: false },
-  okami: { src: "/images/cosplay-nsfw.jpg", nsfw: true },
-  danna: { src: "/images/ahri-nsfw.jpg", nsfw: true },
+  yokan: { src: artYokan.url, nsfw: false },
+  sensu: { src: artSensu.url, nsfw: true },
+  tomo:  { src: artTomo.url,  nsfw: false },
+  okami: { src: artOkami.url, nsfw: false },
+  danna: { src: artDanna.url, nsfw: false },
 };
 
 function Index() {
   const [slots, setSlots] = useState(DEFAULT_IMAGES);
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center gap-10 py-10 px-4" style={{ background: "#f3dde2" }}>
+    <div className="min-h-screen w-full flex flex-col items-center gap-10 py-10 px-4" style={{ background: "#2a0a14" }}>
       <CanvasScaler>
         <Canvas slots={slots} />
       </CanvasScaler>
-
       <Editor slots={slots} onChange={setSlots} />
     </div>
   );
 }
 
 function CanvasScaler({ children }: { children: React.ReactNode }) {
-  // Scale the fixed 1080 canvas to fit viewport width on small screens, never above 1.
   const [scale, setScale] = useState(1);
   useEffect(() => {
     const update = () => {
@@ -80,173 +83,273 @@ function CanvasScaler({ children }: { children: React.ReactNode }) {
 
 function Canvas({ slots }: { slots: typeof DEFAULT_IMAGES }) {
   return (
-    <div className="washi relative font-tambyon" style={{ width: 1080, height: 1080, overflow: "hidden" }}>
+    <div
+      className="relative font-tambyon"
+      style={{
+        width: 1080,
+        height: 1080,
+        overflow: "hidden",
+        background:
+          "radial-gradient(ellipse at 30% 20%, #6b1230 0%, #4a0c22 35%, #2a0712 70%, #1a040c 100%)",
+        color: "#f7e2e8",
+      }}
+    >
+      {/* Washi grain overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='9'/><feColorMatrix values='0 0 0 0 0.95  0 0 0 0 0.7  0 0 0 0 0.78  0 0 0 0.35 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+        }}
+      />
+      {/* Inner border frame */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          inset: 24,
+          border: "1px solid rgba(255,180,200,0.22)",
+          boxShadow: "inset 0 0 80px rgba(0,0,0,0.45)",
+        }}
+      />
+
+      {/* Sakura sprinkles */}
+      <img src={deco07.url} alt="" className="absolute top-8 left-8 w-20 h-20 opacity-80 -rotate-12 pointer-events-none" />
+      <img src={deco02.url} alt="" className="absolute top-10 right-10 w-16 h-16 opacity-80 rotate-12 pointer-events-none" />
+      <img src={deco03.url} alt="" className="absolute bottom-24 right-10 w-20 h-20 opacity-80 rotate-3 pointer-events-none" />
+
       {/* Header */}
-      <div className="flex flex-col items-center pt-12 pb-6 relative">
-        <div className="text-[13px] tracking-[0.5em] text-[#a36b76] uppercase">Iomaya Mai · Patreon</div>
-        <div className="font-tambyon text-[64px] leading-none mt-3 text-[#3a1f26]">月間リワード</div>
-        <div className="font-tambyon text-[22px] mt-2 text-[#7a4855] italic">— Monthly Reward Menu —</div>
+      <div className="relative flex flex-col items-center pt-14 pb-4">
+        <div className="text-[12px] tracking-[0.6em] uppercase" style={{ color: "#f0a8b8" }}>
+          Patreon.com / Iomaya Mai
+        </div>
+        <div className="font-tambyon text-[68px] leading-none mt-3" style={{ color: "#fff0f4", textShadow: "0 2px 18px rgba(255,120,150,0.35)" }}>
+          月間リワード
+        </div>
+        <div className="font-tambyon italic text-[22px] mt-2" style={{ color: "#f0a8b8" }}>
+          — Monthly Reward Menu —
+        </div>
       </div>
 
-      {/* Sakura corner sprinkles */}
-      <img src={deco07.url} alt="" className="absolute top-6 left-6 w-20 h-20 opacity-90 -rotate-12 pointer-events-none" />
-      <img src={deco02.url} alt="" className="absolute top-8 right-8 w-16 h-16 opacity-90 rotate-12 pointer-events-none" />
-      <img src={deco03.url} alt="" className="absolute bottom-8 right-8 w-20 h-20 opacity-90 rotate-3 pointer-events-none" />
-
-      {/* Menu rows */}
-      <div className="px-16 mt-2 flex flex-col">
+      {/* Tier rows */}
+      <div className="relative mt-2 flex flex-col" style={{ padding: "0 56px" }}>
         {TIERS.map((t, i) => (
           <div key={t.key}>
             <TierRow tier={t} slot={slots[t.key]} />
-            {i < TIERS.length - 1 && <div className="divider-dots my-2" />}
+            {i < TIERS.length - 1 && (
+              <div
+                className="my-1"
+                style={{
+                  height: 1,
+                  background:
+                    "linear-gradient(90deg, transparent 0%, rgba(255,180,200,0.18) 30%, rgba(255,180,200,0.28) 50%, rgba(255,180,200,0.18) 70%, transparent 100%)",
+                }}
+              />
+            )}
           </div>
         ))}
       </div>
 
       {/* Footer */}
-      <div className="absolute bottom-5 left-0 right-0 flex flex-col items-center">
-        <div className="font-tambyon text-[20px] tracking-[0.4em] text-[#7a4855]">MAY 2025</div>
-        <div className="font-tambyon text-[14px] tracking-[0.6em] text-[#a36b76] mt-1">月間リワード</div>
+      <div className="absolute bottom-7 left-0 right-0 flex flex-col items-center">
+        <div className="font-tambyon text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
+          MAY 2025
+        </div>
+        <div className="font-tambyon text-[14px] tracking-[0.6em] mt-1" style={{ color: "#d98aa0" }}>
+          月間リワード
+        </div>
       </div>
     </div>
   );
 }
 
 function TierRow({ tier, slot }: { tier: Tier; slot: { src: string; nsfw: boolean } }) {
-  const isPremium = Boolean(tier.premium);
-  const rowHeight = isPremium ? 150 : 118;
-
-  const bgStyle: React.CSSProperties =
-    tier.premium === "silver"
-      ? {
-          background:
-            "linear-gradient(105deg, rgba(210,210,225,0.70) 0%, rgba(240,242,250,0.45) 25%, rgba(255,255,255,0.65) 45%, rgba(230,232,245,0.50) 55%, rgba(210,215,230,0.75) 75%, rgba(230,230,245,0.55) 100%)",
-          boxShadow: "inset 0 0 60px rgba(255,255,255,0.50), 0 0 18px rgba(200,205,220,0.30)",
-        }
-      : tier.premium === "crimson"
-      ? {
-          background:
-            "linear-gradient(105deg, rgba(160,35,45,0.32) 0%, rgba(200,55,65,0.18) 25%, rgba(240,90,100,0.42) 45%, rgba(170,40,50,0.28) 55%, rgba(130,25,35,0.35) 75%, rgba(150,30,40,0.22) 100%)",
-          boxShadow: "inset 0 0 60px rgba(255,210,210,0.22), 0 0 18px rgba(200,60,70,0.20)",
-        }
-      : {};
-
-  const nameColor = tier.premium === "crimson" ? "#6b1620" : tier.premium === "silver" ? "#3a3f4a" : "#3a1f26";
+  const rowHeight = tier.premium ? 144 : 124;
+  const nameColor = tier.premium ? "#fff4f7" : "#f7dde4";
+  const kanjiColor = tier.premium ? "#ffc8d4" : "#e8a8b8";
 
   return (
     <div
-      className="flex items-center gap-6 px-5 rounded-md relative"
+      className="relative w-full overflow-hidden"
       style={{
         height: rowHeight,
-        ...bgStyle,
-        border:
-          tier.premium === "silver"
-            ? "1px solid rgba(200,205,220,0.45)"
-            : tier.premium === "crimson"
-            ? "1px solid rgba(200,70,80,0.30)"
-            : isPremium
-            ? "1px solid rgba(0,0,0,0.06)"
-            : "none",
+        borderLeft: tier.premium ? "3px solid #ff6a86" : "3px solid transparent",
+        paddingLeft: 18,
       }}
     >
-      {/* Left: name + kanji */}
-      <div className="flex-1 flex items-baseline gap-5">
-        <div className="font-tambyon" style={{ fontSize: isPremium ? 56 : 44, color: nameColor, lineHeight: 1 }}>
-          {tier.name}
-        </div>
-        <div style={{ fontSize: isPremium ? 36 : 28, color: nameColor, opacity: 0.65 }}>{tier.kanji}</div>
-      </div>
-
-      {/* Description */}
-      <div className="hidden" />
-      <div className="max-w-[360px] text-right">
-        <div className="font-tambyon italic" style={{ fontSize: isPremium ? 19 : 17, color: "#5a2d38" }}>
-          {tier.desc}
-        </div>
-      </div>
-
-      {/* Image preview stack */}
-      {(() => {
-        const stackCount = tier.key === "yokan" ? 0 : tier.key === "sensu" || tier.key === "tomo" ? 2 : 3;
-        const mainSize = isPremium ? 130 : 96;
-        const peek = isPremium ? 14 : 11;
-        const borderColor = tier.premium === "crimson" ? "#6b1620" : tier.premium === "silver" ? "#b8bcc8" : "#ffffff";
-        const totalWidth = mainSize + stackCount * peek;
-        return (
-          <div className="relative shrink-0" style={{ width: totalWidth, height: mainSize }}>
-            {Array.from({ length: stackCount }).map((_, i) => {
-              const idx = stackCount - i; // farthest first
-              const shrink = idx * 6;
-              const size = mainSize - shrink;
-              return (
-                <div
-                  key={i}
-                  className="absolute overflow-hidden rounded-sm bg-[#f1d9df]"
-                  style={{
-                    width: size,
-                    height: size,
-                    left: idx * peek,
-                    top: (mainSize - size) / 2,
-                    border: `2px solid ${borderColor}`,
-                    boxShadow: "0 3px 10px rgba(90,30,50,0.18)",
-                    opacity: 0.85 - idx * 0.05,
-                    zIndex: i,
-                  }}
-                >
-                  <img
-                    src={slot.src}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    style={{ filter: slot.nsfw ? "blur(10px) saturate(1.1)" : "grayscale(8%) brightness(0.95)", transform: slot.nsfw ? "scale(1.15)" : "none" }}
-                  />
-                </div>
-              );
-            })}
-            <div
-              className="absolute overflow-hidden rounded-sm"
-              style={{
-                width: mainSize,
-                height: mainSize,
-                left: 0,
-                top: 0,
-                boxShadow: "0 4px 14px rgba(90,30,50,0.25)",
-                border: `2px solid ${borderColor}`,
-                zIndex: stackCount + 1,
-              }}
-            >
-              <img
-                src={slot.src}
-                alt={tier.name}
-                className="w-full h-full object-cover"
-                style={{ filter: slot.nsfw ? "blur(14px) saturate(1.1)" : "none", transform: slot.nsfw ? "scale(1.15)" : "none" }}
-              />
-              {slot.nsfw && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="px-2 py-0.5 text-[11px] font-bold tracking-wider rounded-sm" style={{ background: "#c8132a", color: "#fff" }}>
-                    🔞 NSFW
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Hanko stamp for premium */}
-      {isPremium && (
+      {/* Image fading from right to left */}
+      <div className="absolute inset-0 pointer-events-none">
+        {tier.variant === "visualizer" ? (
+          <AudioVisualizer src={slot.src} premium />
+        ) : (
+          <div
+            className="absolute right-0 top-0 h-full"
+            style={{
+              width: "62%",
+              backgroundImage: `url(${slot.src})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center 30%",
+              filter: slot.nsfw ? "blur(18px) saturate(1.1)" : "none",
+              transform: slot.nsfw ? "scale(1.1)" : "none",
+              WebkitMaskImage:
+                "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.25) 25%, rgba(0,0,0,0.75) 60%, #000 100%)",
+              maskImage:
+                "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.25) 25%, rgba(0,0,0,0.75) 60%, #000 100%)",
+            }}
+          />
+        )}
+        {/* Crimson tint on top of image */}
         <div
-          className="absolute -top-2 -left-2 w-14 h-14 rounded-sm flex items-center justify-center font-tambyon text-white text-[11px] leading-tight text-center rotate-[-14deg]"
-          style={{ background: "#c8132a", boxShadow: "0 2px 6px rgba(0,0,0,0.2)", border: "2px solid #fff" }}
-        >
-          認<br/>定
+          className="absolute right-0 top-0 h-full"
+          style={{
+            width: "62%",
+            background:
+              "linear-gradient(90deg, transparent 0%, rgba(74,12,34,0.35) 60%, rgba(74,12,34,0.55) 100%)",
+            mixBlendMode: "multiply",
+          }}
+        />
+      </div>
+
+      {/* NSFW label */}
+      {slot.nsfw && tier.variant !== "visualizer" && (
+        <div className="absolute top-1/2 -translate-y-1/2" style={{ right: 140 }}>
+          <div
+            className="px-2.5 py-1 text-[12px] font-bold tracking-widest rounded-sm"
+            style={{ background: "#c8132a", color: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.35)" }}
+          >
+            🔞 NSFW
+          </div>
         </div>
       )}
+
+      {/* Left: tier name */}
+      <div className="relative h-full flex items-center">
+        <div className="flex items-baseline gap-4">
+          <div
+            className="font-tambyon"
+            style={{
+              fontSize: tier.premium ? 60 : 50,
+              color: nameColor,
+              lineHeight: 1,
+              letterSpacing: "0.04em",
+              textShadow: tier.premium ? "0 2px 14px rgba(255,120,150,0.35)" : "0 2px 10px rgba(0,0,0,0.4)",
+            }}
+          >
+            {tier.name}
+          </div>
+          <div
+            className="font-tambyon"
+            style={{
+              fontSize: tier.premium ? 32 : 26,
+              color: kanjiColor,
+              opacity: 0.95,
+            }}
+          >
+            ({tier.kanji})
+          </div>
+        </div>
+      </div>
+
+      {/* Right: perk pills */}
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-end gap-1.5 z-10">
+        {tier.perks.map((p) => (
+          <div
+            key={p}
+            className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest"
+            style={{
+              background: "rgba(20,5,12,0.55)",
+              color: p === "18+" ? "#ff8aa0" : "#fbe0e7",
+              border: "1px solid rgba(255,180,200,0.30)",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            {p}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function Sakura({ className = "" }: { className?: string }) {
-  return <span className={className} aria-hidden>🌸</span>;
+function AudioVisualizer({ src, premium }: { src: string; premium?: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+    const size = c.width;
+    const cx = size / 2;
+    const cy = size / 2;
+    const baseR = size * 0.32;
+    ctx.clearRect(0, 0, size, size);
+
+    // outer glow ring
+    const glow = ctx.createRadialGradient(cx, cy, baseR * 0.9, cx, cy, baseR * 1.6);
+    glow.addColorStop(0, "rgba(255,120,150,0.0)");
+    glow.addColorStop(0.5, "rgba(255,120,150,0.25)");
+    glow.addColorStop(1, "rgba(255,120,150,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, size, size);
+
+    // bars
+    const bars = 96;
+    let seed = premium ? 7 : 3;
+    const rand = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    for (let i = 0; i < bars; i++) {
+      const a = (i / bars) * Math.PI * 2;
+      const t = i / bars;
+      // gentle wave
+      const w = 0.55 + 0.45 * Math.abs(Math.sin(t * Math.PI * 6 + (premium ? 0.6 : 0)));
+      const len = (premium ? 26 : 20) + w * (premium ? 34 : 26) + rand() * 6;
+      const r1 = baseR + 6;
+      const r2 = r1 + len;
+      const x1 = cx + Math.cos(a) * r1;
+      const y1 = cy + Math.sin(a) * r1;
+      const x2 = cx + Math.cos(a) * r2;
+      const y2 = cy + Math.sin(a) * r2;
+      const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+      grad.addColorStop(0, premium ? "rgba(255,200,212,0.95)" : "rgba(255,160,180,0.9)");
+      grad.addColorStop(1, "rgba(255,90,120,0.05)");
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = premium ? 2.2 : 1.8;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    // inner ring
+    ctx.strokeStyle = "rgba(255,180,200,0.55)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, baseR + 3, 0, Math.PI * 2);
+    ctx.stroke();
+  }, [premium]);
+
+  const ringSize = 200;
+  return (
+    <div className="absolute right-6 top-1/2 -translate-y-1/2" style={{ width: ringSize, height: ringSize }}>
+      {/* avatar in center */}
+      <div
+        className="absolute rounded-full overflow-hidden"
+        style={{
+          left: ringSize * 0.18,
+          top: ringSize * 0.18,
+          width: ringSize * 0.64,
+          height: ringSize * 0.64,
+          border: "2px solid rgba(255,200,212,0.7)",
+          boxShadow: "0 0 28px rgba(255,120,150,0.45), inset 0 0 14px rgba(0,0,0,0.35)",
+        }}
+      >
+        <img src={src} alt="" className="w-full h-full object-cover" />
+      </div>
+      <canvas ref={canvasRef} width={ringSize} height={ringSize} className="absolute inset-0" />
+    </div>
+  );
 }
 
 function Editor({
@@ -257,16 +360,16 @@ function Editor({
   onChange: (s: typeof DEFAULT_IMAGES) => void;
 }) {
   return (
-    <div className="w-full max-w-[1080px] bg-white/70 backdrop-blur rounded-lg p-6 shadow-sm">
-      <h2 className="text-sm tracking-[0.3em] uppercase text-[#7a4855] mb-4">Editor</h2>
+    <div className="w-full max-w-[1080px] bg-white/8 backdrop-blur rounded-lg p-6" style={{ background: "rgba(255,240,244,0.06)", border: "1px solid rgba(255,180,200,0.18)" }}>
+      <h2 className="text-sm tracking-[0.3em] uppercase mb-4" style={{ color: "#f0a8b8" }}>Editor</h2>
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {TIERS.map((t) => {
           const slot = slots[t.key];
           return (
-            <div key={t.key} className="flex flex-col items-stretch gap-2 p-3 rounded border border-[#e7c8d0] bg-[#fff7f9]">
+            <div key={t.key} className="flex flex-col items-stretch gap-2 p-3 rounded" style={{ background: "rgba(20,5,12,0.5)", border: "1px solid rgba(255,180,200,0.18)" }}>
               <div className="flex items-baseline justify-between">
-                <span className="font-semibold text-[#3a1f26]">{t.name}</span>
-                <span className="text-[#a36b76]">{t.kanji}</span>
+                <span className="font-semibold" style={{ color: "#fff0f4" }}>{t.name}</span>
+                <span style={{ color: "#f0a8b8" }}>{t.kanji}</span>
               </div>
               <div className="relative w-full aspect-square overflow-hidden rounded">
                 <img
@@ -281,7 +384,7 @@ function Editor({
                   </div>
                 )}
               </div>
-              <label className="text-xs cursor-pointer text-center bg-[#f5b8c4] hover:bg-[#f0a3b2] text-[#3a1f26] py-1.5 rounded">
+              <label className="text-xs cursor-pointer text-center py-1.5 rounded" style={{ background: "#c8132a", color: "#fff" }}>
                 Swap image
                 <input
                   type="file"
@@ -295,7 +398,7 @@ function Editor({
                   }}
                 />
               </label>
-              <label className="flex items-center justify-between text-xs text-[#3a1f26]">
+              <label className="flex items-center justify-between text-xs" style={{ color: "#fbe0e7" }}>
                 <span>NSFW blur</span>
                 <input
                   type="checkbox"

@@ -297,6 +297,88 @@ function Canvas({ slots, onUpdateSlot }: { slots: SlotsMap; onUpdateSlot: SlotUp
   );
 }
 
+function AdjustOverlay({
+  im,
+  clipPath,
+  onChange,
+}: {
+  im: ImgSlot;
+  clipPath: string;
+  onChange: (next: Partial<ImgSlot>) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  // Keep latest im in a ref so wheel/drag handlers always read current values
+  const imRef = useRef(im);
+  imRef.current = im;
+
+  // Attach a non-passive wheel listener so we can preventDefault (page won't scroll)
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const cur = imRef.current;
+      const delta = -e.deltaY * 0.0015;
+      const next = Math.max(0.5, Math.min(4, cur.zoom + delta));
+      onChange({ zoom: parseFloat(next.toFixed(3)) });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [onChange]);
+
+  const handleDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startPosX = imRef.current.posX;
+    const startPosY = imRef.current.posY;
+    // Sensitivity: dampen overall, and reduce more as zoom grows
+    const sens = 0.35;
+    const onMove = (ev: MouseEvent) => {
+      const z = Math.max(0.5, imRef.current.zoom);
+      const dx = ((ev.clientX - startX) / rect.width) * 100 * (sens / z);
+      const dy = ((ev.clientY - startY) / rect.height) * 100 * (sens / z);
+      onChange({
+        posX: Math.max(0, Math.min(100, startPosX - dx)),
+        posY: Math.max(0, Math.min(100, startPosY - dy)),
+      });
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  return (
+    <div
+      ref={ref}
+      className="absolute inset-0 cursor-move group"
+      style={{ WebkitClipPath: clipPath, clipPath }}
+      onMouseDown={handleDown}
+      onDoubleClick={() => onChange({ zoom: 1, posX: 50, posY: 30 })}
+      title="Drag to pan · Scroll to zoom · Double-click to reset"
+    >
+      <div
+        className="absolute opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold pointer-events-none"
+        style={{
+          top: 8,
+          right: 10,
+          background: "rgba(0,0,0,0.6)",
+          color: "#ffd6e0",
+          border: "1px solid rgba(255,200,215,0.35)",
+          backdropFilter: "blur(4px)",
+        }}
+      >
+        <Move size={11} />
+        <span>{im.zoom.toFixed(2)}×</span>
+      </div>
+    </div>
+  );
+}
+
 function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]; onUpdateSlot: SlotUpdater }) {
   const isTop = tier.key === "danna";
   const isMid = tier.key === "okami";
@@ -408,66 +490,14 @@ function TierRow({ tier, images, onUpdateSlot }: { tier: Tier; images: ImgSlot[]
         className="absolute top-0 right-0 h-full z-30"
         style={{ width: `${groupWidthPct}%` }}
       >
-        {images.slice(0, 2).map((im, idx) => {
-          const handleDown = (e: React.MouseEvent<HTMLDivElement>) => {
-            e.preventDefault();
-            const target = e.currentTarget;
-            const rect = target.getBoundingClientRect();
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const startPosX = im.posX;
-            const startPosY = im.posY;
-            const onMove = (ev: MouseEvent) => {
-              const dx = ((ev.clientX - startX) / rect.width) * 100;
-              const dy = ((ev.clientY - startY) / rect.height) * 100;
-              onUpdateSlot(tier.key, idx, {
-                posX: Math.max(0, Math.min(100, startPosX - dx)),
-                posY: Math.max(0, Math.min(100, startPosY - dy)),
-              });
-            };
-            const onUp = () => {
-              window.removeEventListener("mousemove", onMove);
-              window.removeEventListener("mouseup", onUp);
-            };
-            window.addEventListener("mousemove", onMove);
-            window.addEventListener("mouseup", onUp);
-          };
-          const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-            e.preventDefault();
-            const delta = -e.deltaY * 0.002;
-            const next = Math.max(1, Math.min(4, im.zoom + delta));
-            onUpdateSlot(tier.key, idx, { zoom: next });
-          };
-          return (
-            <div
-              key={idx}
-              className="absolute inset-0 cursor-move group"
-              style={{
-                WebkitClipPath: polys[idx],
-                clipPath: polys[idx],
-              }}
-              onMouseDown={handleDown}
-              onWheel={handleWheel}
-              onDoubleClick={() => onUpdateSlot(tier.key, idx, { zoom: 1, posX: 50, posY: 30 })}
-              title="Drag to pan · Scroll to zoom · Double-click to reset"
-            >
-              <div
-                className="absolute opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold pointer-events-none"
-                style={{
-                  top: 8,
-                  right: 10,
-                  background: "rgba(0,0,0,0.6)",
-                  color: "#ffd6e0",
-                  border: "1px solid rgba(255,200,215,0.35)",
-                  backdropFilter: "blur(4px)",
-                }}
-              >
-                <Move size={11} />
-                <span>{im.zoom.toFixed(2)}×</span>
-              </div>
-            </div>
-          );
-        })}
+        {images.slice(0, 2).map((im, idx) => (
+          <AdjustOverlay
+            key={idx}
+            im={im}
+            clipPath={polys[idx]}
+            onChange={(next) => onUpdateSlot(tier.key, idx, next)}
+          />
+        ))}
       </div>
 
       {/* Tier name */}

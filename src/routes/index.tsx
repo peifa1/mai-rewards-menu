@@ -125,9 +125,7 @@ function Canvas({ slots }: { slots: SlotsMap }) {
         }}
       />
 
-      <img src={deco07.url} alt="" className="absolute top-8 left-8 w-20 h-20 opacity-80 -rotate-12 pointer-events-none" />
-      <img src={deco02.url} alt="" className="absolute top-10 right-10 w-16 h-16 opacity-80 rotate-12 pointer-events-none" />
-      <img src={deco03.url} alt="" className="absolute bottom-24 right-10 w-20 h-20 opacity-80 rotate-3 pointer-events-none" />
+
 
       <div className="relative flex flex-col items-center pt-14 pb-4">
         <div className="text-[12px] tracking-[0.6em] uppercase" style={{ color: "#f0a8b8" }}>

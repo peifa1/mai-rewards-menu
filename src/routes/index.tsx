@@ -442,29 +442,61 @@ function TierRow({ tier, images }: { tier: Tier; images: ImgSlot[] }) {
 
       {/* Perk pills */}
       <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end gap-1.5 z-20">
-        {tier.perks.map((p) => (
-          <div
-            key={p}
-            className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest"
-            style={{
-              background: tier.premium ? "rgba(30,8,16,0.7)" : "rgba(20,5,12,0.6)",
-              color: p === "18+" ? "#ff8aa0" : tier.premium ? "#ffe8ee" : "#fbe0e7",
-              border: isTop
-                ? "1px solid rgba(255,215,170,0.55)"
-                : tier.premium
-                ? "1px solid rgba(255,200,215,0.38)"
-                : "1px solid rgba(255,180,200,0.30)",
-              backdropFilter: "blur(4px)",
-              boxShadow: isTop
-                ? "0 0 14px rgba(255,180,140,0.28)"
-                : isMid
-                ? "0 0 8px rgba(255,150,180,0.12)"
-                : "none",
-            }}
-          >
-            {p}
-          </div>
-        ))}
+        {tier.perks.map((p) => {
+          const isAudio = p === "AUDIO";
+          const isAsmr = p === "ASMR";
+          const hasMic = isAudio || isAsmr;
+          const accent = isTop ? "#ffd28a" : isMid ? "#ffc7a0" : "#ffb8c8";
+          return (
+            <div
+              key={p}
+              className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest inline-flex items-center gap-1.5"
+              style={{
+                background: hasMic
+                  ? "rgba(40,10,20,0.78)"
+                  : tier.premium ? "rgba(30,8,16,0.7)" : "rgba(20,5,12,0.6)",
+                color: p === "18+" ? "#ff8aa0" : tier.premium ? "#ffe8ee" : "#fbe0e7",
+                border: hasMic
+                  ? `1px solid ${accent}88`
+                  : isTop
+                  ? "1px solid rgba(255,215,170,0.55)"
+                  : tier.premium
+                  ? "1px solid rgba(255,200,215,0.38)"
+                  : "1px solid rgba(255,180,200,0.30)",
+                backdropFilter: "blur(4px)",
+                boxShadow: hasMic
+                  ? `0 0 10px ${accent}44`
+                  : isTop
+                  ? "0 0 14px rgba(255,180,140,0.28)"
+                  : isMid
+                  ? "0 0 8px rgba(255,150,180,0.12)"
+                  : "none",
+              }}
+            >
+              {hasMic && (
+                <Mic
+                  size={10}
+                  strokeWidth={2.5}
+                  style={{ color: accent, filter: `drop-shadow(0 0 4px ${accent}66)` }}
+                />
+              )}
+              <span>{p}</span>
+              {isAudio && (
+                <span
+                  className="ml-0.5 px-1 rounded-sm text-[8px] leading-none py-[1px]"
+                  style={{
+                    background: "rgba(255,138,160,0.18)",
+                    color: "#ff8aa0",
+                    border: "1px solid rgba(255,138,160,0.5)",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  18+
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

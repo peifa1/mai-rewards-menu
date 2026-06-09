@@ -1,73 +1,66 @@
-## Goal
-Move the frontend to a free Vercel `.vercel.app` subdomain while keeping the backend (database / persistence) on Lovable Cloud. Then fix the critical security issue so randoms can't overwrite your data.
+# Fix the Vercel 404 + finish env var setup
 
----
+## Why the 404 happens
 
-## Part 1 — Deploy frontend to Vercel (free)
+Your project uses **TanStack Start**, which is an SSR framework — not a plain static Vite site. The current `vite.config.ts` builds the server bundle for **Cloudflare Workers** (the default in `@lovable.dev/vite-tanstack-config`).
 
-You do this yourself in the browser — no code changes needed. The project is already configured to talk to Lovable Cloud from anywhere.
+When Vercel runs the build, it gets a Cloudflare-shaped output and doesn't know how to serve it → every URL returns **404 NOT_FOUND**. That's exactly the screenshot you sent.
 
-### Step-by-step
+I confirmed your app code does **not** actually use any server functions — all data goes browser → Lovable Cloud directly. That's good news: switching the build target is safe and won't break anything.
 
-1. **Get the code onto GitHub**
-   - In Lovable: top-right → **GitHub** → **Connect to GitHub** → authorize → **Create Repository**.
-   - This pushes your project to a new GitHub repo (free, private by default).
+## Plan
 
-2. **Create a Vercel account**
-   - Go to https://vercel.com/signup → **Continue with GitHub** (easiest).
-   - Free "Hobby" plan — no credit card required.
+### Step 1 — Change the build target to Vercel (1 file edit)
 
-3. **Import the project**
-   - Vercel dashboard → **Add New** → **Project** → pick the GitHub repo Lovable just created → **Import**.
-   - Framework preset: Vercel should auto-detect **Vite**. Leave build command and output dir as defaults.
+Update `vite.config.ts` to tell the underlying `nitro` builder to output Vercel's serverless format instead of Cloudflare's:
 
-4. **Add environment variables** (critical — without these the app can't reach the backend)
+```ts
+import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-   In the Vercel import screen, expand **Environment Variables** and add:
+export default defineConfig({
+  tanstackStart: {
+    server: { entry: "server" },
+  },
+  nitro: {
+    preset: "vercel",
+  },
+});
+```
 
-   ```
-   VITE_SUPABASE_URL              = https://aqoxkmxkbsvofhgnszjr.supabase.co
-   VITE_SUPABASE_PUBLISHABLE_KEY  = <the anon key from your current .env>
-   VITE_SUPABASE_PROJECT_ID       = aqoxkmxkbsvofhgnszjr
-   ```
+This produces a `.vercel/output/` directory that Vercel auto-detects and serves correctly — SSR pages, static assets, and routing all work.
 
-   I'll print the exact values from your `.env` once we're in build mode so you can copy-paste.
+### Step 2 — You add the env vars in Vercel (UI, no code)
 
-5. **Deploy** — click **Deploy**. ~1 minute later you get a free URL like `your-project-name.vercel.app`.
+In Vercel left sidebar → **Environment Variables** → add three, all environments checked:
 
-6. **Auto-redeploys**: every time Lovable pushes to GitHub (which happens on every edit), Vercel rebuilds automatically. Nothing else to wire up.
+```
+VITE_SUPABASE_URL              = https://aqoxkmxkbsvofhgnszjr.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY  = <the anon key from your .env>
+VITE_SUPABASE_PROJECT_ID       = aqoxkmxkbsvofhgnszjr
+```
 
-### What stays the same
-- Backend (database, persistence) keeps running on Lovable Cloud at no extra setup cost.
-- Your data is preserved — same database, same rows.
-- You can keep editing in Lovable; changes flow GitHub → Vercel automatically.
+(I'll paste the full key value in chat once we switch to build mode.)
 
-### Caveats
-- TanStack Start server functions (`createServerFn`) run on Vercel's serverless runtime — they'll work, but they call back to Lovable Cloud for data. Fine for your 1–3 uses/month.
-- The Lovable preview URL still works too; you'll just also have the Vercel one.
+### Step 3 — Trigger a fresh redeploy
 
----
+Vercel auto-deploys when Lovable pushes the `vite.config.ts` change to GitHub. But to be safe and pick up the new env vars:
+- **Deployments** tab → latest deployment → **⋯** menu → **Redeploy** → **uncheck** "Use existing build cache" → **Redeploy**.
 
-## Part 2 — Fix the critical security issue (after Vercel is live)
+### Step 4 — Verify
 
-The scanner flagged that **anyone on the internet can overwrite your `app_state` table**. For a single-user personal site, the simplest fix is an **editor passphrase**:
+- Open `mai-rewards-menu.vercel.app` and `diablita.xyz` — both should load the showcase.
+- If anything fails, open DevTools (F12) → Console, and paste me any red error.
 
-- You set a secret passphrase (stored as a server secret, never in the frontend).
-- The editor UI asks for it once; it's saved in your browser.
-- All writes (image upload, description edits, date edits) go through a server function that checks the passphrase before touching the database.
-- Public visitors can still **read** the showcase (no passphrase needed).
+## What this changes
+- One file: `vite.config.ts` (adds 3 lines)
+- That's it. No data, no routes, no UI touched.
 
-This kills findings #1 and #3 (the `always-true` write policies). Finding #2 (Realtime) doesn't apply — we don't use Realtime.
+## What this does NOT do
+- Does not affect Lovable preview (Lovable still builds with its own config).
+- Does not change your Lovable Cloud backend.
+- Does not fix the **app_state public-write security issue** — that's still pending. After Vercel is working, we'll do the editor passphrase fix (Part 2 from the earlier plan).
 
-I'll detail the exact implementation plan in a second pass once Vercel is up and running, so we don't conflate the two changes.
+## Side note: your Vercel account
+The "Action Required: billing address missing" banner in your screenshot is unrelated to deployment — Vercel just wants you to complete your profile because you bought a domain. Hobby plan stays free; complete it when convenient.
 
----
-
-## What I'll do when you approve and switch to build mode
-
-For **Part 1**, there are basically no code changes — I'll just:
-1. Read your `.env` and give you the exact values to paste into Vercel.
-2. Confirm `package.json` build script is Vercel-compatible (it already is).
-3. Walk you through the GitHub → Vercel flow above as you click through it.
-
-Want me to proceed?
+Ready to apply? Approve the plan and I'll make the `vite.config.ts` edit + give you the exact env var values to paste.

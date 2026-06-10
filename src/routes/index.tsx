@@ -686,16 +686,16 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
 
       <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end gap-1.5 z-20">
         {tier.perks.map((perk) => (
-          <PerkPill key={perk.id} perk={perk} />
+          <PerkPill key={perk.id} perk={perk} tierAccent={TIER_ACCENT[tier.key] || ACCENT_STD} />
         ))}
       </div>
     </div>
   );
 }
 
-function PerkPill({ perk }: { perk: Perk }) {
+function PerkPill({ perk, tierAccent = ACCENT_STD }: { perk: Perk; tierAccent?: string }) {
   const bars = [3, 6, 9, 5, 8, 4, 7, 10, 6, 3];
-  const accent = perk.borderColor || ACCENT_STD;
+  const accent = perk.accentColor || tierAccent;
   const bg = perk.bgColor || (perk.showMic || perk.showVisualizer ? PILL_MIC_BG : PILL_DEFAULT_BG);
   const border = perk.borderColor || PILL_DEFAULT_BORDER;
   const color = perk.textColor || PILL_DEFAULT_TEXT;

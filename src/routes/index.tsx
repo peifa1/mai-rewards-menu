@@ -969,7 +969,7 @@ function Editor({
                 {t.perks.length === 0 && (
                   <span className="text-[10px] opacity-50" style={{ color: "#fbe0e7" }}>No descriptions</span>
                 )}
-                {t.perks.map((perk) => <PerkPill key={perk.id} perk={perk} />)}
+                {t.perks.map((perk) => <PerkPill key={perk.id} perk={perk} tierAccent={TIER_ACCENT[t.key] || ACCENT_STD} />)}
               </div>
 
               <div className="flex flex-col gap-2">

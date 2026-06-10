@@ -996,6 +996,7 @@ function Editor({
 
 function PerkEditor({
   perk,
+  tierAccent,
   canUp,
   canDown,
   onMove,
@@ -1003,66 +1004,102 @@ function PerkEditor({
   onRemove,
 }: {
   perk: Perk;
+  tierAccent: string;
   canUp: boolean;
   canDown: boolean;
   onMove: (dir: -1 | 1) => void;
   onChange: (next: Partial<Perk>) => void;
   onRemove: () => void;
 }) {
+  const hasAudio = !!perk.showMic || !!perk.showVisualizer;
+  const effectiveAccent = perk.accentColor || tierAccent;
   return (
     <div
-      className="flex flex-wrap items-center gap-2 p-2 rounded"
-      style={{ background: "rgba(20,5,12,0.5)", border: "1px solid rgba(255,180,200,0.15)" }}
+      className="flex flex-col gap-2 p-3 rounded-md"
+      style={{ background: "rgba(20,5,12,0.55)", border: "1px solid rgba(255,180,200,0.18)" }}
     >
-      <div className="flex flex-col gap-0.5">
-        <button onClick={() => onMove(-1)} disabled={!canUp} className="p-0.5 disabled:opacity-30" style={{ color: "#f0a8b8" }} title="Move up">
-          <ArrowUp size={11} />
-        </button>
-        <button onClick={() => onMove(1)} disabled={!canDown} className="p-0.5 disabled:opacity-30" style={{ color: "#f0a8b8" }} title="Move down">
-          <ArrowDown size={11} />
+      {/* Row 1 — order, label, remove */}
+      <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-0.5">
+          <button onClick={() => onMove(-1)} disabled={!canUp} className="p-0.5 rounded disabled:opacity-30 hover:bg-white/10" style={{ color: "#f0a8b8" }} title="Move up">
+            <ArrowUp size={12} />
+          </button>
+          <button onClick={() => onMove(1)} disabled={!canDown} className="p-0.5 rounded disabled:opacity-30 hover:bg-white/10" style={{ color: "#f0a8b8" }} title="Move down">
+            <ArrowDown size={12} />
+          </button>
+        </div>
+        <input
+          type="text"
+          value={perk.label}
+          onChange={(e) => onChange({ label: e.target.value })}
+          placeholder="Description text"
+          className="flex-1 min-w-0 px-2.5 py-1.5 rounded text-[12px] outline-none focus:ring-1 focus:ring-pink-300/40"
+          style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.25)", color: "#fff0f4" }}
+        />
+        <button
+          onClick={onRemove}
+          className="p-1.5 rounded hover:bg-white/10"
+          style={{ color: "#ff8aa0" }}
+          title="Remove description"
+        >
+          <Trash2 size={13} />
         </button>
       </div>
 
-      <input
-        type="text"
-        value={perk.label}
-        onChange={(e) => onChange({ label: e.target.value })}
-        placeholder="Label"
-        className="px-2 py-1 rounded text-[12px] outline-none w-24"
-        style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.25)", color: "#fff0f4" }}
-      />
+      {/* Row 2 — pill colors */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-7">
+        <span className="text-[9px] tracking-[0.2em] uppercase opacity-60" style={{ color: "#f0a8b8" }}>Pill</span>
+        <ColorField label="Text" value={perk.textColor} onChange={(v) => onChange({ textColor: v })} />
+        <ColorField label="Fill" value={perk.bgColor} onChange={(v) => onChange({ bgColor: v })} allowGradient />
+        <ColorField label="Border" value={perk.borderColor} onChange={(v) => onChange({ borderColor: v })} />
+      </div>
 
-      <ColorField label="Text" value={perk.textColor} onChange={(v) => onChange({ textColor: v })} />
-      <ColorField label="BG" value={perk.bgColor} onChange={(v) => onChange({ bgColor: v })} allowGradient />
-      <ColorField label="Border" value={perk.borderColor} onChange={(v) => onChange({ borderColor: v })} />
+      {/* Row 3 — audio toggles */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-7">
+        <span className="text-[9px] tracking-[0.2em] uppercase opacity-60" style={{ color: "#f0a8b8" }}>Audio</span>
+        <label className="flex items-center gap-1.5 text-[11px] cursor-pointer" style={{ color: "#fbe0e7" }}>
+          <input type="checkbox" checked={!!perk.showMic} onChange={(e) => onChange({ showMic: e.target.checked })} />
+          <Mic size={12} /> Mic
+        </label>
+        <label className="flex items-center gap-1.5 text-[11px] cursor-pointer" style={{ color: "#fbe0e7" }}>
+          <input type="checkbox" checked={!!perk.showVisualizer} onChange={(e) => onChange({ showVisualizer: e.target.checked })} />
+          <AudioLines size={12} /> Visualizer
+        </label>
+        {hasAudio && (
+          <div className="flex items-center gap-2 ml-1 pl-2" style={{ borderLeft: "1px solid rgba(255,180,200,0.18)" }}>
+            <ColorField
+              label="Accent"
+              value={perk.accentColor}
+              onChange={(v) => onChange({ accentColor: v })}
+              fallbackHex={effectiveAccent}
+            />
+            {!perk.accentColor && (
+              <span className="text-[9px] opacity-60" style={{ color: "#f0a8b8" }}>
+                using tier default
+              </span>
+            )}
+          </div>
+        )}
+      </div>
 
-      <label className="flex items-center gap-1 text-[10px]" style={{ color: "#fbe0e7" }} title="Microphone icon">
-        <input type="checkbox" checked={!!perk.showMic} onChange={(e) => onChange({ showMic: e.target.checked })} />
-        <Mic size={11} />
-      </label>
-      <label className="flex items-center gap-1 text-[10px]" style={{ color: "#fbe0e7" }} title="Audio visualizer">
-        <input type="checkbox" checked={!!perk.showVisualizer} onChange={(e) => onChange({ showVisualizer: e.target.checked })} />
-        <AudioLines size={11} />
-      </label>
-
-      <input
-        type="text"
-        value={perk.badge || ""}
-        onChange={(e) => onChange({ badge: e.target.value || undefined })}
-        placeholder="Badge (e.g. +20 MIN)"
-        className="px-2 py-1 rounded text-[11px] outline-none w-32"
-        style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.25)", color: "#fff0f4" }}
-      />
-      <ColorField label="Badge BG" value={perk.badgeBg} onChange={(v) => onChange({ badgeBg: v })} />
-
-      <button
-        onClick={onRemove}
-        className="ml-auto p-1.5 rounded hover:bg-white/10"
-        style={{ color: "#ff8aa0" }}
-        title="Remove"
-      >
-        <Trash2 size={12} />
-      </button>
+      {/* Row 4 — badge */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-7">
+        <span className="text-[9px] tracking-[0.2em] uppercase opacity-60" style={{ color: "#f0a8b8" }}>Badge</span>
+        <input
+          type="text"
+          value={perk.badge || ""}
+          onChange={(e) => onChange({ badge: e.target.value || undefined })}
+          placeholder="optional, e.g. +20 MIN"
+          className="px-2 py-1 rounded text-[11px] outline-none w-44"
+          style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.25)", color: "#fff0f4" }}
+        />
+        {perk.badge && (
+          <>
+            <ColorField label="Fill" value={perk.badgeBg} onChange={(v) => onChange({ badgeBg: v })} />
+            <ColorField label="Text" value={perk.badgeTextColor} onChange={(v) => onChange({ badgeTextColor: v })} />
+          </>
+        )}
+      </div>
     </div>
   );
 }

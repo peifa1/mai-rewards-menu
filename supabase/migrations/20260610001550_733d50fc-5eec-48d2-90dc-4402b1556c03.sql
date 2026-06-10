@@ -1,0 +1,1 @@
+DELETE FROM public.app_state WHERE id = 'singleton';

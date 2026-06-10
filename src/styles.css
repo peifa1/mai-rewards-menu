@@ -8,8 +8,18 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "HakkouMincho";
+  src: url("/fonts/HakkouMincho.ttf") format("truetype");
+  font-display: swap;
+}
+
 .font-tambyon {
   font-family: "Tambyon", "Cormorant Garamond", "Times New Roman", serif;
+}
+
+.font-hakkou {
+  font-family: "HakkouMincho", "Tambyon", "Cormorant Garamond", serif;
 }
 
 /* Washi paper grain — subtle layered SVG noise + warm pink wash */

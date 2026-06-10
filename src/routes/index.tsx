@@ -7,11 +7,10 @@ import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines } from "lucide-
 const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
 const thankYou = { url: "/images/thank%20%20you!!_text.png" };
 const petal    = { url: "/images/petal.png" };
-const artYokan = { url: "/images/ahri.jpg" };
-const artTomo  = { url: "/images/cosplay.jpg" };
-const artOkami = { url: "/images/ahri.jpg" };
-const artSensu = { url: "/images/ahri-nsfw.jpg" };
-const artDanna = { url: "/images/cosplay-nsfw.jpg" };
+
+// Empty placeholder for tier images until the user uploads art via the Editor.
+const PLACEHOLDER_IMG =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='%234a0c22'/><stop offset='1' stop-color='%232a0712'/></linearGradient></defs><rect width='16' height='9' fill='url(%23g)'/><text x='8' y='5.2' font-family='serif' font-size='1.2' text-anchor='middle' fill='%23ffb8c8' opacity='0.45'>upload art</text></svg>";
 
 
 export const Route = createFileRoute("/")({
@@ -32,6 +31,7 @@ type Perk = {
   borderColor?: string;
   showMic?: boolean;
   showVisualizer?: boolean;
+  accentColor?: string; // color for mic + audio visualizer; overrides tier default
   badge?: string;
   badgeBg?: string;
   badgeTextColor?: string;
@@ -53,48 +53,76 @@ const ACCENT_STD = "#ffb8c8";
 const ACCENT_MID = "#ffc7a0";
 const ACCENT_TOP = "#ffd28a";
 
+// Default mic / visualizer accent per tier (Tomo pink, Okami warm, Danna gold).
+const TIER_ACCENT: Record<string, string> = {
+  yokan: ACCENT_STD,
+  sensu: ACCENT_STD,
+  tomo: ACCENT_STD,
+  okami: ACCENT_MID,
+  danna: ACCENT_TOP,
+};
+
 const PILL_MIC_BG = "linear-gradient(90deg, rgba(255,184,200,0.18) 0%, rgba(40,10,20,0.85) 45%, rgba(40,10,20,0.9) 100%)";
 const PILL_DEFAULT_BG = "rgba(20,5,12,0.6)";
 const PILL_DEFAULT_BORDER = "rgba(255,180,200,0.30)";
 const PILL_DEFAULT_TEXT = "#fbe0e7";
 
+// "Previous Tiers Rewards..." styling — intentionally muted so attention goes to the new perks.
+const PREV_STYLE: Partial<Perk> = {
+  textColor: "#b08a98",
+  bgColor: "rgba(20,5,12,0.35)",
+  borderColor: "rgba(255,180,200,0.18)",
+};
+const PREV_LABEL = "Previous Tiers Rewards…";
+
+const NSFW_STYLE: Partial<Perk> = {
+  textColor: "#ff8aa0",
+  bgColor: "rgba(255,138,160,0.18)",
+  borderColor: "rgba(255,138,160,0.55)",
+};
+
 const INITIAL_TIERS: Tier[] = [
   {
     key: "yokan", name: "Yokan", kanji: "羊羹",
-    perks: [p("ART"), p("WALL")],
+    perks: [
+      p("SFW + NSFW Art"),
+      p("Brushes"),
+      p("Sketches"),
+      p("Character Suggestion"),
+    ],
   },
   {
     key: "sensu", name: "Sensu", kanji: "扇子",
     perks: [
-      p("18+", { textColor: "#ff8aa0", bgColor: "rgba(255,138,160,0.18)", borderColor: "rgba(255,138,160,0.55)" }),
-      p("BONUS"),
+      p(PREV_LABEL, PREV_STYLE),
+      p("Character Polls"),
+      p("Extra Art!!"),
     ],
   },
   {
     key: "tomo", name: "Tomo", kanji: "友",
     perks: [
-      p("PHOTO"),
-      p("ASMR", { showMic: true, showVisualizer: true, borderColor: ACCENT_STD }),
-      p("AUDIO", { showMic: true, showVisualizer: true, borderColor: ACCENT_STD }),
-      p("VOICE"),
+      p(PREV_LABEL, PREV_STYLE),
+      p("RP Audio + ASMR / 18+", { ...NSFW_STYLE, showMic: true, showVisualizer: true }),
+      p("Voice Notes", { showMic: true }),
+      p("Cosplay"),
     ],
   },
   {
     key: "okami", name: "Okami", kanji: "女将", premium: true,
     perks: [
-      p("18+", { textColor: "#ff8aa0", bgColor: "rgba(255,138,160,0.18)", borderColor: "rgba(255,138,160,0.55)" }),
-      p("ASMR", { showMic: true, showVisualizer: true, borderColor: ACCENT_MID }),
-      p("AUDIO", { showMic: true, showVisualizer: true, borderColor: ACCENT_MID, badge: "+10 MIN", badgeBg: ACCENT_MID, badgeTextColor: "#2a0a14" }),
-      p("VOTE"),
+      p(PREV_LABEL, PREV_STYLE),
+      p("Art + Audio Voting", { showVisualizer: true }),
+      p("Art x Audio RP / +10 Min", { showMic: true, showVisualizer: true, badge: "+10 MIN", badgeBg: ACCENT_MID, badgeTextColor: "#2a0a14" }),
     ],
   },
   {
     key: "danna", name: "Danna", kanji: "旦那", premium: true,
     perks: [
-      p("18+", { textColor: "#ff8aa0", bgColor: "rgba(255,138,160,0.18)", borderColor: "rgba(255,138,160,0.55)" }),
-      p("ASMR", { showMic: true, showVisualizer: true, borderColor: ACCENT_TOP }),
-      p("AUDIO", { showMic: true, showVisualizer: true, borderColor: ACCENT_TOP, badge: "+20 MIN", badgeBg: ACCENT_TOP, badgeTextColor: "#2a0a14" }),
-      p("EXCL"),
+      p(PREV_LABEL, PREV_STYLE),
+      p("Climax / 18+", NSFW_STYLE),
+      p("Personalized content with ME"),
+      p("MORE PICS AND COSPLAYS!!!"),
     ],
   },
 ];
@@ -105,11 +133,11 @@ type SlotsMap = Record<string, ImgSlot[]>;
 const mk = (src: string, nsfw = false): ImgSlot => ({ src, nsfw, zoom: 1, posX: 50, posY: 30 });
 
 const DEFAULT_SLOTS: SlotsMap = {
-  yokan: [mk(artYokan.url), mk(artTomo.url)],
-  sensu: [mk(artSensu.url, true), mk(artYokan.url)],
-  tomo: [mk(artTomo.url), mk(artOkami.url)],
-  okami: [mk(artOkami.url), mk(artDanna.url)],
-  danna: [mk(artDanna.url), mk(artSensu.url, true)],
+  yokan: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
+  sensu: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
+  tomo:  [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
+  okami: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
+  danna: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
 };
 
 
@@ -303,11 +331,11 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       ))}
 
       {[
-        { x: 120, y: 960, r: 20, s: 0.7, o: 0.55 },
-        { x: 260, y: 1010, r: -35, s: 0.55, o: 0.45 },
-        { x: 820, y: 980, r: 48, s: 0.6, o: 0.5 },
-        { x: 940, y: 1020, r: -12, s: 0.5, o: 0.45 },
-        { x: 60, y: 1030, r: 65, s: 0.45, o: 0.4 },
+        { x: 120, y: 956, r: 20, s: 0.7, o: 0.55 },
+        { x: 260, y: 1006, r: -35, s: 0.55, o: 0.45 },
+        { x: 820, y: 976, r: 48, s: 0.6, o: 0.5 },
+        { x: 940, y: 1016, r: -12, s: 0.5, o: 0.45 },
+        { x: 60, y: 1026, r: 65, s: 0.45, o: 0.4 },
       ].map((pt, i) => (
         <img
           key={`f${i}`}
@@ -387,7 +415,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
         ))}
       </div>
 
-      <div className="absolute bottom-7 left-0 right-0 flex flex-col items-center">
+      <div className="absolute left-0 right-0 flex flex-col items-center" style={{ bottom: 48 }}>
         <div className="font-tambyon text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
           {dateText}
         </div>
@@ -658,16 +686,16 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
 
       <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end gap-1.5 z-20">
         {tier.perks.map((perk) => (
-          <PerkPill key={perk.id} perk={perk} />
+          <PerkPill key={perk.id} perk={perk} tierAccent={TIER_ACCENT[tier.key] || ACCENT_STD} />
         ))}
       </div>
     </div>
   );
 }
 
-function PerkPill({ perk }: { perk: Perk }) {
+function PerkPill({ perk, tierAccent = ACCENT_STD }: { perk: Perk; tierAccent?: string }) {
   const bars = [3, 6, 9, 5, 8, 4, 7, 10, 6, 3];
-  const accent = perk.borderColor || ACCENT_STD;
+  const accent = perk.accentColor || tierAccent;
   const bg = perk.bgColor || (perk.showMic || perk.showVisualizer ? PILL_MIC_BG : PILL_DEFAULT_BG);
   const border = perk.borderColor || PILL_DEFAULT_BORDER;
   const color = perk.textColor || PILL_DEFAULT_TEXT;
@@ -941,7 +969,7 @@ function Editor({
                 {t.perks.length === 0 && (
                   <span className="text-[10px] opacity-50" style={{ color: "#fbe0e7" }}>No descriptions</span>
                 )}
-                {t.perks.map((perk) => <PerkPill key={perk.id} perk={perk} />)}
+                {t.perks.map((perk) => <PerkPill key={perk.id} perk={perk} tierAccent={TIER_ACCENT[t.key] || ACCENT_STD} />)}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -949,6 +977,7 @@ function Editor({
                   <PerkEditor
                     key={perk.id}
                     perk={perk}
+                    tierAccent={TIER_ACCENT[t.key] || ACCENT_STD}
                     canUp={pi > 0}
                     canDown={pi < t.perks.length - 1}
                     onMove={(dir) => movePerk(ti, pi, dir)}
@@ -967,6 +996,7 @@ function Editor({
 
 function PerkEditor({
   perk,
+  tierAccent,
   canUp,
   canDown,
   onMove,
@@ -974,66 +1004,102 @@ function PerkEditor({
   onRemove,
 }: {
   perk: Perk;
+  tierAccent: string;
   canUp: boolean;
   canDown: boolean;
   onMove: (dir: -1 | 1) => void;
   onChange: (next: Partial<Perk>) => void;
   onRemove: () => void;
 }) {
+  const hasAudio = !!perk.showMic || !!perk.showVisualizer;
+  const effectiveAccent = perk.accentColor || tierAccent;
   return (
     <div
-      className="flex flex-wrap items-center gap-2 p-2 rounded"
-      style={{ background: "rgba(20,5,12,0.5)", border: "1px solid rgba(255,180,200,0.15)" }}
+      className="flex flex-col gap-2 p-3 rounded-md"
+      style={{ background: "rgba(20,5,12,0.55)", border: "1px solid rgba(255,180,200,0.18)" }}
     >
-      <div className="flex flex-col gap-0.5">
-        <button onClick={() => onMove(-1)} disabled={!canUp} className="p-0.5 disabled:opacity-30" style={{ color: "#f0a8b8" }} title="Move up">
-          <ArrowUp size={11} />
-        </button>
-        <button onClick={() => onMove(1)} disabled={!canDown} className="p-0.5 disabled:opacity-30" style={{ color: "#f0a8b8" }} title="Move down">
-          <ArrowDown size={11} />
+      {/* Row 1 — order, label, remove */}
+      <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-0.5">
+          <button onClick={() => onMove(-1)} disabled={!canUp} className="p-0.5 rounded disabled:opacity-30 hover:bg-white/10" style={{ color: "#f0a8b8" }} title="Move up">
+            <ArrowUp size={12} />
+          </button>
+          <button onClick={() => onMove(1)} disabled={!canDown} className="p-0.5 rounded disabled:opacity-30 hover:bg-white/10" style={{ color: "#f0a8b8" }} title="Move down">
+            <ArrowDown size={12} />
+          </button>
+        </div>
+        <input
+          type="text"
+          value={perk.label}
+          onChange={(e) => onChange({ label: e.target.value })}
+          placeholder="Description text"
+          className="flex-1 min-w-0 px-2.5 py-1.5 rounded text-[12px] outline-none focus:ring-1 focus:ring-pink-300/40"
+          style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.25)", color: "#fff0f4" }}
+        />
+        <button
+          onClick={onRemove}
+          className="p-1.5 rounded hover:bg-white/10"
+          style={{ color: "#ff8aa0" }}
+          title="Remove description"
+        >
+          <Trash2 size={13} />
         </button>
       </div>
 
-      <input
-        type="text"
-        value={perk.label}
-        onChange={(e) => onChange({ label: e.target.value })}
-        placeholder="Label"
-        className="px-2 py-1 rounded text-[12px] outline-none w-24"
-        style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.25)", color: "#fff0f4" }}
-      />
+      {/* Row 2 — pill colors */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-7">
+        <span className="text-[9px] tracking-[0.2em] uppercase opacity-60" style={{ color: "#f0a8b8" }}>Pill</span>
+        <ColorField label="Text" value={perk.textColor} onChange={(v) => onChange({ textColor: v })} />
+        <ColorField label="Fill" value={perk.bgColor} onChange={(v) => onChange({ bgColor: v })} allowGradient />
+        <ColorField label="Border" value={perk.borderColor} onChange={(v) => onChange({ borderColor: v })} />
+      </div>
 
-      <ColorField label="Text" value={perk.textColor} onChange={(v) => onChange({ textColor: v })} />
-      <ColorField label="BG" value={perk.bgColor} onChange={(v) => onChange({ bgColor: v })} allowGradient />
-      <ColorField label="Border" value={perk.borderColor} onChange={(v) => onChange({ borderColor: v })} />
+      {/* Row 3 — audio toggles */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-7">
+        <span className="text-[9px] tracking-[0.2em] uppercase opacity-60" style={{ color: "#f0a8b8" }}>Audio</span>
+        <label className="flex items-center gap-1.5 text-[11px] cursor-pointer" style={{ color: "#fbe0e7" }}>
+          <input type="checkbox" checked={!!perk.showMic} onChange={(e) => onChange({ showMic: e.target.checked })} />
+          <Mic size={12} /> Mic
+        </label>
+        <label className="flex items-center gap-1.5 text-[11px] cursor-pointer" style={{ color: "#fbe0e7" }}>
+          <input type="checkbox" checked={!!perk.showVisualizer} onChange={(e) => onChange({ showVisualizer: e.target.checked })} />
+          <AudioLines size={12} /> Visualizer
+        </label>
+        {hasAudio && (
+          <div className="flex items-center gap-2 ml-1 pl-2" style={{ borderLeft: "1px solid rgba(255,180,200,0.18)" }}>
+            <ColorField
+              label="Accent"
+              value={perk.accentColor}
+              onChange={(v) => onChange({ accentColor: v })}
+              fallbackHex={effectiveAccent}
+            />
+            {!perk.accentColor && (
+              <span className="text-[9px] opacity-60" style={{ color: "#f0a8b8" }}>
+                using tier default
+              </span>
+            )}
+          </div>
+        )}
+      </div>
 
-      <label className="flex items-center gap-1 text-[10px]" style={{ color: "#fbe0e7" }} title="Microphone icon">
-        <input type="checkbox" checked={!!perk.showMic} onChange={(e) => onChange({ showMic: e.target.checked })} />
-        <Mic size={11} />
-      </label>
-      <label className="flex items-center gap-1 text-[10px]" style={{ color: "#fbe0e7" }} title="Audio visualizer">
-        <input type="checkbox" checked={!!perk.showVisualizer} onChange={(e) => onChange({ showVisualizer: e.target.checked })} />
-        <AudioLines size={11} />
-      </label>
-
-      <input
-        type="text"
-        value={perk.badge || ""}
-        onChange={(e) => onChange({ badge: e.target.value || undefined })}
-        placeholder="Badge (e.g. +20 MIN)"
-        className="px-2 py-1 rounded text-[11px] outline-none w-32"
-        style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.25)", color: "#fff0f4" }}
-      />
-      <ColorField label="Badge BG" value={perk.badgeBg} onChange={(v) => onChange({ badgeBg: v })} />
-
-      <button
-        onClick={onRemove}
-        className="ml-auto p-1.5 rounded hover:bg-white/10"
-        style={{ color: "#ff8aa0" }}
-        title="Remove"
-      >
-        <Trash2 size={12} />
-      </button>
+      {/* Row 4 — badge */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-7">
+        <span className="text-[9px] tracking-[0.2em] uppercase opacity-60" style={{ color: "#f0a8b8" }}>Badge</span>
+        <input
+          type="text"
+          value={perk.badge || ""}
+          onChange={(e) => onChange({ badge: e.target.value || undefined })}
+          placeholder="optional, e.g. +20 MIN"
+          className="px-2 py-1 rounded text-[11px] outline-none w-44"
+          style={{ background: "rgba(20,5,12,0.7)", border: "1px solid rgba(255,180,200,0.25)", color: "#fff0f4" }}
+        />
+        {perk.badge && (
+          <>
+            <ColorField label="Fill" value={perk.badgeBg} onChange={(v) => onChange({ badgeBg: v })} />
+            <ColorField label="Text" value={perk.badgeTextColor} onChange={(v) => onChange({ badgeTextColor: v })} />
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -1043,15 +1109,17 @@ function ColorField({
   value,
   onChange,
   allowGradient,
+  fallbackHex,
 }: {
   label: string;
   value?: string;
   onChange: (v: string | undefined) => void;
   allowGradient?: boolean;
+  fallbackHex?: string;
 }) {
   // Extract a hex from value if present, else default
   const hexMatch = value?.match(/#([0-9a-fA-F]{6})/);
-  const hex = hexMatch ? `#${hexMatch[1]}` : "#ffb8c8";
+  const hex = hexMatch ? `#${hexMatch[1]}` : (fallbackHex || "#ffb8c8");
   return (
     <div className="flex items-center gap-1 text-[10px]" style={{ color: "#fbe0e7" }} title={label}>
       <span className="opacity-70 uppercase tracking-wider">{label}</span>

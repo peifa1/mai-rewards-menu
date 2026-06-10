@@ -415,7 +415,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
         ))}
       </div>
 
-      <div className="absolute bottom-7 left-0 right-0 flex flex-col items-center">
+      <div className="absolute left-0 right-0 flex flex-col items-center" style={{ bottom: 48 }}>
         <div className="font-tambyon text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
           {dateText}
         </div>

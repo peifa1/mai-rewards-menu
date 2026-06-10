@@ -419,7 +419,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
         <div className="font-tambyon text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
           {dateText}
         </div>
-        <div className="font-tambyon text-[14px] tracking-[0.6em] mt-1" style={{ color: "#d98aa0" }}>
+        <div className="font-hakkou text-[14px] tracking-[0.6em] mt-1" style={{ color: "#d98aa0" }}>
           月間リワード
         </div>
       </div>

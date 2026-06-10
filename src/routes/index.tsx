@@ -31,6 +31,7 @@ type Perk = {
   borderColor?: string;
   showMic?: boolean;
   showVisualizer?: boolean;
+  accentColor?: string; // color for mic + audio visualizer; overrides tier default
   badge?: string;
   badgeBg?: string;
   badgeTextColor?: string;
@@ -52,48 +53,76 @@ const ACCENT_STD = "#ffb8c8";
 const ACCENT_MID = "#ffc7a0";
 const ACCENT_TOP = "#ffd28a";
 
+// Default mic / visualizer accent per tier (Tomo pink, Okami warm, Danna gold).
+const TIER_ACCENT: Record<string, string> = {
+  yokan: ACCENT_STD,
+  sensu: ACCENT_STD,
+  tomo: ACCENT_STD,
+  okami: ACCENT_MID,
+  danna: ACCENT_TOP,
+};
+
 const PILL_MIC_BG = "linear-gradient(90deg, rgba(255,184,200,0.18) 0%, rgba(40,10,20,0.85) 45%, rgba(40,10,20,0.9) 100%)";
 const PILL_DEFAULT_BG = "rgba(20,5,12,0.6)";
 const PILL_DEFAULT_BORDER = "rgba(255,180,200,0.30)";
 const PILL_DEFAULT_TEXT = "#fbe0e7";
 
+// "Previous Tiers Rewards..." styling — intentionally muted so attention goes to the new perks.
+const PREV_STYLE: Partial<Perk> = {
+  textColor: "#b08a98",
+  bgColor: "rgba(20,5,12,0.35)",
+  borderColor: "rgba(255,180,200,0.18)",
+};
+const PREV_LABEL = "Previous Tiers Rewards…";
+
+const NSFW_STYLE: Partial<Perk> = {
+  textColor: "#ff8aa0",
+  bgColor: "rgba(255,138,160,0.18)",
+  borderColor: "rgba(255,138,160,0.55)",
+};
+
 const INITIAL_TIERS: Tier[] = [
   {
     key: "yokan", name: "Yokan", kanji: "羊羹",
-    perks: [p("ART"), p("WALL")],
+    perks: [
+      p("SFW + NSFW Art"),
+      p("Brushes"),
+      p("Sketches"),
+      p("Character Suggestion"),
+    ],
   },
   {
     key: "sensu", name: "Sensu", kanji: "扇子",
     perks: [
-      p("18+", { textColor: "#ff8aa0", bgColor: "rgba(255,138,160,0.18)", borderColor: "rgba(255,138,160,0.55)" }),
-      p("BONUS"),
+      p(PREV_LABEL, PREV_STYLE),
+      p("Character Polls"),
+      p("Extra Art!!"),
     ],
   },
   {
     key: "tomo", name: "Tomo", kanji: "友",
     perks: [
-      p("PHOTO"),
-      p("ASMR", { showMic: true, showVisualizer: true, borderColor: ACCENT_STD }),
-      p("AUDIO", { showMic: true, showVisualizer: true, borderColor: ACCENT_STD }),
-      p("VOICE"),
+      p(PREV_LABEL, PREV_STYLE),
+      p("RP Audio + ASMR / 18+", { ...NSFW_STYLE, showMic: true, showVisualizer: true }),
+      p("Voice Notes", { showMic: true }),
+      p("Cosplay"),
     ],
   },
   {
     key: "okami", name: "Okami", kanji: "女将", premium: true,
     perks: [
-      p("18+", { textColor: "#ff8aa0", bgColor: "rgba(255,138,160,0.18)", borderColor: "rgba(255,138,160,0.55)" }),
-      p("ASMR", { showMic: true, showVisualizer: true, borderColor: ACCENT_MID }),
-      p("AUDIO", { showMic: true, showVisualizer: true, borderColor: ACCENT_MID, badge: "+10 MIN", badgeBg: ACCENT_MID, badgeTextColor: "#2a0a14" }),
-      p("VOTE"),
+      p(PREV_LABEL, PREV_STYLE),
+      p("Art + Audio Voting", { showVisualizer: true }),
+      p("Art x Audio RP / +10 Min", { showMic: true, showVisualizer: true, badge: "+10 MIN", badgeBg: ACCENT_MID, badgeTextColor: "#2a0a14" }),
     ],
   },
   {
     key: "danna", name: "Danna", kanji: "旦那", premium: true,
     perks: [
-      p("18+", { textColor: "#ff8aa0", bgColor: "rgba(255,138,160,0.18)", borderColor: "rgba(255,138,160,0.55)" }),
-      p("ASMR", { showMic: true, showVisualizer: true, borderColor: ACCENT_TOP }),
-      p("AUDIO", { showMic: true, showVisualizer: true, borderColor: ACCENT_TOP, badge: "+20 MIN", badgeBg: ACCENT_TOP, badgeTextColor: "#2a0a14" }),
-      p("EXCL"),
+      p(PREV_LABEL, PREV_STYLE),
+      p("Climax / 18+", NSFW_STYLE),
+      p("Personalized content with ME"),
+      p("MORE PICS AND COSPLAYS!!!"),
     ],
   },
 ];
@@ -104,11 +133,11 @@ type SlotsMap = Record<string, ImgSlot[]>;
 const mk = (src: string, nsfw = false): ImgSlot => ({ src, nsfw, zoom: 1, posX: 50, posY: 30 });
 
 const DEFAULT_SLOTS: SlotsMap = {
-  yokan: [mk(artYokan.url), mk(artTomo.url)],
-  sensu: [mk(artSensu.url, true), mk(artYokan.url)],
-  tomo: [mk(artTomo.url), mk(artOkami.url)],
-  okami: [mk(artOkami.url), mk(artDanna.url)],
-  danna: [mk(artDanna.url), mk(artSensu.url, true)],
+  yokan: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
+  sensu: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
+  tomo:  [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
+  okami: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
+  danna: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
 };
 
 

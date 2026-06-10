@@ -389,7 +389,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
         <div className="text-[12px] tracking-[0.6em] uppercase" style={{ color: "#f0a8b8" }}>
           Patreon.com / Iomaya Mai
         </div>
-        <div className="font-tambyon text-[68px] leading-none mt-3" style={{ color: "#fff0f4", textShadow: "0 2px 18px rgba(255,120,150,0.35)" }}>
+        <div className="font-hakkou text-[68px] leading-none mt-3" style={{ color: "#fff0f4", textShadow: "0 2px 18px rgba(255,120,150,0.35)" }}>
           月間リワード
         </div>
         <div className="font-tambyon italic text-[22px] mt-2" style={{ color: "#f0a8b8" }}>

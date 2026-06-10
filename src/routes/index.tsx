@@ -1109,15 +1109,17 @@ function ColorField({
   value,
   onChange,
   allowGradient,
+  fallbackHex,
 }: {
   label: string;
   value?: string;
   onChange: (v: string | undefined) => void;
   allowGradient?: boolean;
+  fallbackHex?: string;
 }) {
   // Extract a hex from value if present, else default
   const hexMatch = value?.match(/#([0-9a-fA-F]{6})/);
-  const hex = hexMatch ? `#${hexMatch[1]}` : "#ffb8c8";
+  const hex = hexMatch ? `#${hexMatch[1]}` : (fallbackHex || "#ffb8c8");
   return (
     <div className="flex items-center gap-1 text-[10px]" style={{ color: "#fbe0e7" }} title={label}>
       <span className="opacity-70 uppercase tracking-wider">{label}</span>

@@ -331,11 +331,11 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       ))}
 
       {[
-        { x: 120, y: 956, r: 20, s: 0.7, o: 0.55 },
-        { x: 260, y: 1006, r: -35, s: 0.55, o: 0.45 },
-        { x: 820, y: 976, r: 48, s: 0.6, o: 0.5 },
-        { x: 940, y: 1016, r: -12, s: 0.5, o: 0.45 },
-        { x: 60, y: 1026, r: 65, s: 0.45, o: 0.4 },
+        { x: 120, y: 950, r: 20, s: 0.7, o: 0.55 },
+        { x: 260, y: 1000, r: -35, s: 0.55, o: 0.45 },
+        { x: 820, y: 970, r: 48, s: 0.6, o: 0.5 },
+        { x: 940, y: 1010, r: -12, s: 0.5, o: 0.45 },
+        { x: 60, y: 1020, r: 65, s: 0.45, o: 0.4 },
       ].map((pt, i) => (
         <img
           key={`f${i}`}
@@ -389,7 +389,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
         <div className="text-[12px] tracking-[0.6em] uppercase" style={{ color: "#f0a8b8" }}>
           Patreon.com / Iomaya Mai
         </div>
-        <div className="font-tambyon text-[68px] leading-none mt-3" style={{ color: "#fff0f4", textShadow: "0 2px 18px rgba(255,120,150,0.35)" }}>
+        <div className="font-hakkou text-[68px] leading-none mt-3" style={{ color: "#fff0f4", textShadow: "0 2px 18px rgba(255,120,150,0.35)" }}>
           月間リワード
         </div>
         <div className="font-tambyon italic text-[22px] mt-2" style={{ color: "#f0a8b8" }}>
@@ -419,7 +419,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
         <div className="font-tambyon text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
           {dateText}
         </div>
-        <div className="font-tambyon text-[14px] tracking-[0.6em] mt-1" style={{ color: "#d98aa0" }}>
+        <div className="font-hakkou text-[14px] tracking-[0.6em] mt-1" style={{ color: "#d98aa0" }}>
           月間リワード
         </div>
       </div>

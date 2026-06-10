@@ -7,11 +7,10 @@ import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines } from "lucide-
 const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
 const thankYou = { url: "/images/thank%20%20you!!_text.png" };
 const petal    = { url: "/images/petal.png" };
-const artYokan = { url: "/images/ahri.jpg" };
-const artTomo  = { url: "/images/cosplay.jpg" };
-const artOkami = { url: "/images/ahri.jpg" };
-const artSensu = { url: "/images/ahri-nsfw.jpg" };
-const artDanna = { url: "/images/cosplay-nsfw.jpg" };
+
+// Empty placeholder for tier images until the user uploads art via the Editor.
+const PLACEHOLDER_IMG =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='%234a0c22'/><stop offset='1' stop-color='%232a0712'/></linearGradient></defs><rect width='16' height='9' fill='url(%23g)'/><text x='8' y='5.2' font-family='serif' font-size='1.2' text-anchor='middle' fill='%23ffb8c8' opacity='0.45'>upload art</text></svg>";
 
 
 export const Route = createFileRoute("/")({

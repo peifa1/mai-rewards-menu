@@ -977,6 +977,7 @@ function Editor({
                   <PerkEditor
                     key={perk.id}
                     perk={perk}
+                    tierAccent={TIER_ACCENT[t.key] || ACCENT_STD}
                     canUp={pi > 0}
                     canDown={pi < t.perks.length - 1}
                     onMove={(dir) => movePerk(ti, pi, dir)}

@@ -931,11 +931,11 @@ function Editor({
                   <ArrowDown size={12} />
                 </button>
               </div>
-              <div className="flex items-baseline gap-2 flex-1">
-                <span className="font-semibold text-base" style={{ color: "#fff0f4" }}>
+              <div className="flex items-baseline gap-3 flex-1">
+                <span className="font-bold text-2xl tracking-wide" style={{ color: "#fff0f4" }}>
                   {t.premium ? "✦ " : ""}{t.name}
                 </span>
-                <span className="text-sm" style={{ color: "#f0a8b8" }}>{t.kanji}</span>
+                <span className="font-hakkou text-xl" style={{ color: "#ffb8c8" }}>{t.kanji}</span>
                 <span className="text-[10px] tracking-widest uppercase opacity-60" style={{ color: "#f0a8b8" }}>
                   {t.premium ? "Premium" : "Standard"} · #{ti + 1}
                 </span>

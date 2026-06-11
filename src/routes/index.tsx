@@ -254,19 +254,22 @@ function Index() {
 
 function SquiggleArrow({ flip = false, className = "" }: { flip?: boolean; className?: string }) {
   return (
-    <svg
-      viewBox="0 0 220 140"
+    <div
       className={className}
-      style={{ transform: flip ? "scaleX(-1)" : undefined, overflow: "visible" }}
-      fill="none"
-      stroke="#ffb8c8"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M 15 30 C 60 5, 95 35, 110 60 C 122 82, 95 95, 70 80 C 50 68, 80 45, 130 70 C 165 88, 185 100, 200 110" />
-      <path d="M 184 96 L 202 112 L 182 118" />
-    </svg>
+      style={{
+        transform: flip ? "scaleX(-1)" : undefined,
+        backgroundColor: "#ffb8c8",
+        WebkitMaskImage: `url(${squiggleArrowAsset.url})`,
+        maskImage: `url(${squiggleArrowAsset.url})`,
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
+        WebkitMaskPosition: "center",
+        maskPosition: "center",
+        filter: "drop-shadow(0 2px 12px rgba(255,140,170,0.35))",
+      }}
+    />
   );
 }
 

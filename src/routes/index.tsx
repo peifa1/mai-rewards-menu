@@ -981,10 +981,17 @@ function Editor({
                       />
                     </div>
                     <label
-                      className="text-[11px] cursor-pointer text-center py-1 rounded"
-                      style={{ background: "#c8132a", color: "#fff" }}
+                      className="text-[12px] font-semibold cursor-pointer text-center py-2 rounded inline-flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
+                      style={{
+                        background: "linear-gradient(135deg, #c8132a, #8a0a1c)",
+                        color: "#fff",
+                        border: "1px solid rgba(255,200,215,0.4)",
+                        boxShadow: "0 2px 10px rgba(200,19,42,0.35)",
+                      }}
+                      title={`Click to upload ${side.toLowerCase()} image`}
                     >
-                      Swap {side}
+                      <ImagePlus size={14} />
+                      Click to upload {side.toLowerCase()} image
                       <input
                         type="file"
                         accept="image/*"
@@ -1006,12 +1013,43 @@ function Editor({
                       />
                     </label>
                     <label
-                      className="flex items-center justify-between text-[11px]"
-                      style={{ color: "#fbe0e7" }}
+                      className="flex items-center justify-between gap-2 text-[12px] cursor-pointer px-2.5 py-1.5 rounded"
+                      style={{
+                        color: "#fbe0e7",
+                        background: s.nsfw ? "rgba(255,138,160,0.18)" : "rgba(20,5,12,0.4)",
+                        border: `1px solid ${s.nsfw ? "rgba(255,138,160,0.55)" : "rgba(255,180,200,0.2)"}`,
+                      }}
                     >
-                      <span>NSFW blur</span>
+                      <span className="font-semibold tracking-wide">NSFW blur</span>
+                      <span
+                        role="switch"
+                        aria-checked={s.nsfw}
+                        className="relative inline-block"
+                        style={{
+                          width: 36,
+                          height: 20,
+                          borderRadius: 999,
+                          background: s.nsfw ? "#ff5a78" : "rgba(255,255,255,0.15)",
+                          transition: "background 0.15s",
+                        }}
+                      >
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: 2,
+                            left: s.nsfw ? 18 : 2,
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            background: "#fff",
+                            transition: "left 0.15s",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                          }}
+                        />
+                      </span>
                       <input
                         type="checkbox"
+                        className="sr-only"
                         checked={s.nsfw}
                         onChange={(e) => updateSlot(t.key, idx, { nsfw: e.target.checked })}
                       />

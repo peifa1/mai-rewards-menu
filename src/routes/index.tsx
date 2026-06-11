@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toPng } from "html-to-image";
-import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines } from "lucide-react";
+import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 
 const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
 const thankYou = { url: "/images/thank%20%20you!!_text.png" };

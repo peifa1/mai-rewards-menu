@@ -278,7 +278,7 @@ function ShowcaseTip() {
   return (
     <div
       className="hidden xl:flex absolute top-24 flex-col items-end gap-2 pointer-events-none select-none"
-      style={{ left: "calc(50% - 720px)", width: 200, color: "#ffd0dc" }}
+      style={{ left: "calc(50% - 820px)", width: 220, color: "#ffd0dc" }}
     >
       <div
         className="font-tambyon italic text-right leading-tight"

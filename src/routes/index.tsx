@@ -252,6 +252,74 @@ function Index() {
   );
 }
 
+function SquiggleArrow({ flip = false, className = "" }: { flip?: boolean; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 220 140"
+      className={className}
+      style={{ transform: flip ? "scaleX(-1)" : undefined, overflow: "visible" }}
+      fill="none"
+      stroke="#ffb8c8"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M 15 30 C 60 5, 95 35, 110 60 C 122 82, 95 95, 70 80 C 50 68, 80 45, 130 70 C 165 88, 185 100, 200 110" />
+      <path d="M 184 96 L 202 112 L 182 118" />
+    </svg>
+  );
+}
+
+function ShowcaseTip() {
+  return (
+    <div
+      className="hidden xl:flex absolute top-24 flex-col items-end gap-2 pointer-events-none select-none"
+      style={{ left: "calc(50% - 720px)", width: 200, color: "#ffd0dc" }}
+    >
+      <div
+        className="font-tambyon italic text-right leading-tight"
+        style={{
+          fontSize: 18,
+          color: "#ffe2ea",
+          textShadow: "0 2px 12px rgba(255,140,170,0.4)",
+          transform: "rotate(-4deg)",
+        }}
+      >
+        psst — drag<br />images in the<br />tier panel below
+        <div className="text-[11px] tracking-[0.25em] uppercase mt-1 opacity-70">
+          position & zoom
+        </div>
+      </div>
+      <SquiggleArrow className="w-[180px] h-[110px] -mt-2 mr-2" />
+    </div>
+  );
+}
+
+function EditorTip() {
+  return (
+    <div
+      className="hidden lg:flex items-center gap-2 pointer-events-none select-none"
+      style={{ color: "#ffd0dc" }}
+    >
+      <SquiggleArrow flip className="w-[110px] h-[70px] -mb-3" />
+      <div
+        className="font-tambyon italic leading-tight"
+        style={{
+          fontSize: 14,
+          color: "#ffe2ea",
+          textShadow: "0 2px 10px rgba(255,140,170,0.35)",
+          transform: "rotate(2deg)",
+        }}
+      >
+        reorder descriptions<br />
+        <span className="text-[10px] tracking-[0.2em] uppercase opacity-70">
+          arrows on the left ↑↓
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function CanvasScaler({ children, innerRef }: { children: React.ReactNode; innerRef?: React.Ref<HTMLDivElement> }) {
   const [scale, setScale] = useState(1);
   useEffect(() => {

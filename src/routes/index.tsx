@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toPng } from "html-to-image";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
+import squiggleArrowAsset from "@/assets/squiggle-arrow.png.asset.json";
 
 const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
 const thankYou = { url: "/images/thank%20%20you!!_text.png" };
@@ -254,19 +255,22 @@ function Index() {
 
 function SquiggleArrow({ flip = false, className = "" }: { flip?: boolean; className?: string }) {
   return (
-    <svg
-      viewBox="0 0 220 140"
+    <div
       className={className}
-      style={{ transform: flip ? "scaleX(-1)" : undefined, overflow: "visible" }}
-      fill="none"
-      stroke="#ffb8c8"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M 15 30 C 60 5, 95 35, 110 60 C 122 82, 95 95, 70 80 C 50 68, 80 45, 130 70 C 165 88, 185 100, 200 110" />
-      <path d="M 184 96 L 202 112 L 182 118" />
-    </svg>
+      style={{
+        transform: flip ? "scaleX(-1)" : undefined,
+        backgroundColor: "#ffb8c8",
+        WebkitMaskImage: `url(${squiggleArrowAsset.url})`,
+        maskImage: `url(${squiggleArrowAsset.url})`,
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
+        WebkitMaskPosition: "center",
+        maskPosition: "center",
+        filter: "drop-shadow(0 2px 12px rgba(255,140,170,0.35))",
+      }}
+    />
   );
 }
 
@@ -274,7 +278,7 @@ function ShowcaseTip() {
   return (
     <div
       className="hidden xl:flex absolute top-24 flex-col items-end gap-2 pointer-events-none select-none"
-      style={{ left: "calc(50% - 720px)", width: 200, color: "#ffd0dc" }}
+      style={{ left: "calc(50% - 820px)", width: 220, color: "#ffd0dc" }}
     >
       <div
         className="font-tambyon italic text-right leading-tight"

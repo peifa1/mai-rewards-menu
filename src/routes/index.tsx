@@ -19,6 +19,10 @@ export const Route = createFileRoute("/")({
       { title: "Iomaya Mai — Monthly Rewards" },
       { name: "description", content: "Iomaya Mai's monthly Patreon reward menu — a Japanese-style omakase card of tiers." },
     ],
+    links: [
+      { rel: "icon", type: "image/png", href: "/images/Chibi%20art%20thank%20you.png" },
+      { rel: "apple-touch-icon", href: "/images/Chibi%20art%20thank%20you.png" },
+    ],
   }),
   component: Index,
 });

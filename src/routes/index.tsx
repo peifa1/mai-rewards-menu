@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toPng } from "html-to-image";
-import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines } from "lucide-react";
+import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 
 const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
 const thankYou = { url: "/images/thank%20%20you!!_text.png" };
@@ -18,6 +18,10 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "Iomaya Mai — Monthly Rewards" },
       { name: "description", content: "Iomaya Mai's monthly Patreon reward menu — a Japanese-style omakase card of tiers." },
+    ],
+    links: [
+      { rel: "icon", type: "image/png", href: "/images/Chibi%20art%20thank%20you.png" },
+      { rel: "apple-touch-icon", href: "/images/Chibi%20art%20thank%20you.png" },
     ],
   }),
   component: Index,
@@ -230,9 +234,12 @@ function Index() {
       >
         {exporting ? "Exporting…" : "Export as Image"}
       </button>
-      <CanvasScaler innerRef={canvasRef}>
-        <Canvas tiers={tiers} slots={slots} onUpdateSlot={updateSlot} dateText={dateText} />
-      </CanvasScaler>
+      <div className="relative w-full flex justify-center items-start">
+        <ShowcaseTip />
+        <CanvasScaler innerRef={canvasRef}>
+          <Canvas tiers={tiers} slots={slots} onUpdateSlot={updateSlot} dateText={dateText} />
+        </CanvasScaler>
+      </div>
       <Editor
         tiers={tiers}
         onTiersChange={setTiers}
@@ -241,6 +248,74 @@ function Index() {
         dateText={dateText}
         onDateChange={setDateText}
       />
+    </div>
+  );
+}
+
+function SquiggleArrow({ flip = false, className = "" }: { flip?: boolean; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 220 140"
+      className={className}
+      style={{ transform: flip ? "scaleX(-1)" : undefined, overflow: "visible" }}
+      fill="none"
+      stroke="#ffb8c8"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M 15 30 C 60 5, 95 35, 110 60 C 122 82, 95 95, 70 80 C 50 68, 80 45, 130 70 C 165 88, 185 100, 200 110" />
+      <path d="M 184 96 L 202 112 L 182 118" />
+    </svg>
+  );
+}
+
+function ShowcaseTip() {
+  return (
+    <div
+      className="hidden xl:flex absolute top-24 flex-col items-end gap-2 pointer-events-none select-none"
+      style={{ left: "calc(50% - 720px)", width: 200, color: "#ffd0dc" }}
+    >
+      <div
+        className="font-tambyon italic text-right leading-tight"
+        style={{
+          fontSize: 18,
+          color: "#ffe2ea",
+          textShadow: "0 2px 12px rgba(255,140,170,0.4)",
+          transform: "rotate(-4deg)",
+        }}
+      >
+        psst — drag<br />images in the<br />tier panel below
+        <div className="text-[11px] tracking-[0.25em] uppercase mt-1 opacity-70">
+          position & zoom
+        </div>
+      </div>
+      <SquiggleArrow className="w-[180px] h-[110px] -mt-2 mr-2" />
+    </div>
+  );
+}
+
+function EditorTip() {
+  return (
+    <div
+      className="hidden lg:flex items-center gap-2 pointer-events-none select-none"
+      style={{ color: "#ffd0dc" }}
+    >
+      <SquiggleArrow flip className="w-[110px] h-[70px] -mb-3" />
+      <div
+        className="font-tambyon italic leading-tight"
+        style={{
+          fontSize: 14,
+          color: "#ffe2ea",
+          textShadow: "0 2px 10px rgba(255,140,170,0.35)",
+          transform: "rotate(2deg)",
+        }}
+      >
+        reorder descriptions<br />
+        <span className="text-[10px] tracking-[0.2em] uppercase opacity-70">
+          arrows on the left ↑↓
+        </span>
+      </div>
     </div>
   );
 }
@@ -856,11 +931,11 @@ function Editor({
                   <ArrowDown size={12} />
                 </button>
               </div>
-              <div className="flex items-baseline gap-2 flex-1">
-                <span className="font-semibold text-base" style={{ color: "#fff0f4" }}>
+              <div className="flex items-baseline gap-3 flex-1">
+                <span className="font-bold text-2xl tracking-wide" style={{ color: "#fff0f4" }}>
                   {t.premium ? "✦ " : ""}{t.name}
                 </span>
-                <span className="text-sm" style={{ color: "#f0a8b8" }}>{t.kanji}</span>
+                <span className="font-hakkou text-xl" style={{ color: "#ffb8c8" }}>{t.kanji}</span>
                 <span className="text-[10px] tracking-widest uppercase opacity-60" style={{ color: "#f0a8b8" }}>
                   {t.premium ? "Premium" : "Standard"} · #{ti + 1}
                 </span>
@@ -906,10 +981,17 @@ function Editor({
                       />
                     </div>
                     <label
-                      className="text-[11px] cursor-pointer text-center py-1 rounded"
-                      style={{ background: "#c8132a", color: "#fff" }}
+                      className="text-[12px] font-semibold cursor-pointer text-center py-2 rounded inline-flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
+                      style={{
+                        background: "linear-gradient(135deg, #c8132a, #8a0a1c)",
+                        color: "#fff",
+                        border: "1px solid rgba(255,200,215,0.4)",
+                        boxShadow: "0 2px 10px rgba(200,19,42,0.35)",
+                      }}
+                      title={`Click to upload ${side.toLowerCase()} image`}
                     >
-                      Swap {side}
+                      <ImagePlus size={14} />
+                      Click to upload {side.toLowerCase()} image
                       <input
                         type="file"
                         accept="image/*"
@@ -931,12 +1013,43 @@ function Editor({
                       />
                     </label>
                     <label
-                      className="flex items-center justify-between text-[11px]"
-                      style={{ color: "#fbe0e7" }}
+                      className="flex items-center justify-between gap-2 text-[12px] cursor-pointer px-2.5 py-1.5 rounded"
+                      style={{
+                        color: "#fbe0e7",
+                        background: s.nsfw ? "rgba(255,138,160,0.18)" : "rgba(20,5,12,0.4)",
+                        border: `1px solid ${s.nsfw ? "rgba(255,138,160,0.55)" : "rgba(255,180,200,0.2)"}`,
+                      }}
                     >
-                      <span>NSFW blur</span>
+                      <span className="font-semibold tracking-wide">NSFW blur</span>
+                      <span
+                        role="switch"
+                        aria-checked={s.nsfw}
+                        className="relative inline-block"
+                        style={{
+                          width: 36,
+                          height: 20,
+                          borderRadius: 999,
+                          background: s.nsfw ? "#ff5a78" : "rgba(255,255,255,0.15)",
+                          transition: "background 0.15s",
+                        }}
+                      >
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: 2,
+                            left: s.nsfw ? 18 : 2,
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            background: "#fff",
+                            transition: "left 0.15s",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                          }}
+                        />
+                      </span>
                       <input
                         type="checkbox"
+                        className="sr-only"
                         checked={s.nsfw}
                         onChange={(e) => updateSlot(t.key, idx, { nsfw: e.target.checked })}
                       />
@@ -951,10 +1064,13 @@ function Editor({
               className="p-2 rounded flex flex-col gap-2"
               style={{ background: "rgba(255,240,244,0.04)", border: "1px dashed rgba(255,180,200,0.25)" }}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: "#f0a8b8" }}>
-                  Descriptions
-                </span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: "#f0a8b8" }}>
+                    Descriptions
+                  </span>
+                  <EditorTip />
+                </div>
                 <button
                   onClick={() => addPerk(ti)}
                   className="text-[10px] font-semibold inline-flex items-center gap-1 px-2 py-1 rounded"

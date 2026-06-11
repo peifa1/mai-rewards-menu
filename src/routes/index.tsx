@@ -234,9 +234,12 @@ function Index() {
       >
         {exporting ? "Exporting…" : "Export as Image"}
       </button>
-      <CanvasScaler innerRef={canvasRef}>
-        <Canvas tiers={tiers} slots={slots} onUpdateSlot={updateSlot} dateText={dateText} />
-      </CanvasScaler>
+      <div className="relative w-full flex justify-center items-start">
+        <ShowcaseTip />
+        <CanvasScaler innerRef={canvasRef}>
+          <Canvas tiers={tiers} slots={slots} onUpdateSlot={updateSlot} dateText={dateText} />
+        </CanvasScaler>
+      </div>
       <Editor
         tiers={tiers}
         onTiersChange={setTiers}

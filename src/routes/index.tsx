@@ -1064,10 +1064,13 @@ function Editor({
               className="p-2 rounded flex flex-col gap-2"
               style={{ background: "rgba(255,240,244,0.04)", border: "1px dashed rgba(255,180,200,0.25)" }}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: "#f0a8b8" }}>
-                  Descriptions
-                </span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: "#f0a8b8" }}>
+                    Descriptions
+                  </span>
+                  <EditorTip />
+                </div>
                 <button
                   onClick={() => addPerk(ti)}
                   className="text-[10px] font-semibold inline-flex items-center gap-1 px-2 py-1 rounded"

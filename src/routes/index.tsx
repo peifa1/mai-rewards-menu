@@ -1000,19 +1000,15 @@ function Editor({
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            updateSlot(t.key, idx, {
-                              src: String(reader.result),
-                              zoom: 1,
-                              posX: 50,
-                              posY: 30,
-                            });
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const src = await compressImage(file, 1200, 0.78);
+                            updateSlot(t.key, idx, { src, zoom: 1, posX: 50, posY: 30 });
+                          } catch (err) {
+                            console.error("Image compress failed:", err);
+                          }
                         }}
                       />
                     </label>

@@ -189,9 +189,8 @@ function Index() {
         .eq("id", "singleton")
         .maybeSingle();
       if (cancelled) return;
-      const payload = data?.data as { slots?: SlotsMap; tiers?: Tier[]; dateText?: string } | undefined;
+      const payload = data?.data as { tiers?: Tier[]; dateText?: string } | undefined;
       if (payload) {
-        if (payload.slots) setSlots(payload.slots);
         if (payload.tiers) setTiers(payload.tiers);
         if (payload.dateText) setDateText(payload.dateText);
       }

@@ -145,6 +145,31 @@ const DEFAULT_SLOTS: SlotsMap = {
   danna: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
 };
 
+// Resize + JPEG-encode an uploaded image so the persisted JSONB payload stays small.
+async function compressImage(file: File, maxDim = 1200, quality = 0.78): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(fr.error);
+    fr.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = reject;
+    i.src = dataUrl;
+  });
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const w = Math.round(img.width * scale);
+  const h = Math.round(img.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", quality);
+}
+
 
 function Index() {
   const [slots, setSlots] = useState<SlotsMap>(DEFAULT_SLOTS);
@@ -1000,19 +1025,15 @@ function Editor({
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            updateSlot(t.key, idx, {
-                              src: String(reader.result),
-                              zoom: 1,
-                              posX: 50,
-                              posY: 30,
-                            });
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const src = await compressImage(file, 1200, 0.78);
+                            updateSlot(t.key, idx, { src, zoom: 1, posX: 50, posY: 30 });
+                          } catch (err) {
+                            console.error("Image compress failed:", err);
+                          }
                         }}
                       />
                     </label>

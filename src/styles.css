@@ -3,23 +3,18 @@
 @import "tw-animate-css";
 
 @font-face {
-  font-family: "Tambyon";
-  src: url("/fonts/Tambyon-LVv5E.otf") format("opentype");
-  font-display: swap;
-}
-
-@font-face {
   font-family: "HakkouMincho";
   src: url("/fonts/HakkouMincho.ttf") format("truetype");
   font-display: swap;
 }
 
 .font-tambyon {
-  font-family: "Tambyon", "Cormorant Garamond", "Times New Roman", serif;
+  font-family: "Cormorant Garamond", "Times New Roman", serif;
+  font-weight: 500;
 }
 
 .font-hakkou {
-  font-family: "HakkouMincho", "Tambyon", "Cormorant Garamond", serif;
+  font-family: "HakkouMincho", "Cormorant Garamond", serif;
 }
 
 /* Washi paper grain — subtle layered SVG noise + warm pink wash */

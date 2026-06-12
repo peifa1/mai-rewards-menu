@@ -189,9 +189,8 @@ function Index() {
         .eq("id", "singleton")
         .maybeSingle();
       if (cancelled) return;
-      const payload = data?.data as { slots?: SlotsMap; tiers?: Tier[]; dateText?: string } | undefined;
+      const payload = data?.data as { tiers?: Tier[]; dateText?: string } | undefined;
       if (payload) {
-        if (payload.slots) setSlots(payload.slots);
         if (payload.tiers) setTiers(payload.tiers);
         if (payload.dateText) setDateText(payload.dateText);
       }
@@ -200,19 +199,19 @@ function Index() {
     return () => { cancelled = true; };
   }, []);
 
-  // Debounced save on changes (after initial load)
+  // Debounced save on changes (after initial load) — only tiers + dateText, images are session-only
   useEffect(() => {
     if (!loaded) return;
     const handle = setTimeout(() => {
       supabase
         .from("app_state")
-        .upsert({ id: "singleton", data: { slots, tiers, dateText }, updated_at: new Date().toISOString() })
+        .upsert({ id: "singleton", data: { tiers, dateText }, updated_at: new Date().toISOString() })
         .then(({ error }) => {
           if (error) console.error("Save failed:", error);
         });
     }, 600);
     return () => clearTimeout(handle);
-  }, [slots, tiers, dateText, loaded]);
+  }, [tiers, dateText, loaded]);
 
 
   const updateSlot = (tierKey: string, idx: number, next: Partial<ImgSlot>) => {

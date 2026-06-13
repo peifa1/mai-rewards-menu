@@ -145,29 +145,35 @@ const DEFAULT_SLOTS: SlotsMap = {
   danna: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
 };
 
-// Resize + JPEG-encode an uploaded image so the persisted JSONB payload stays small.
-async function compressImage(file: File, maxDim = 1200, quality = 0.78): Promise<string> {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
+const TEXT_STATE_CACHE_KEY = "iomaya-mai-text-state";
+type PersistedState = { tiers?: Tier[]; dateText?: string };
+
+const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+function readImageFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(String(fr.result));
     fr.onerror = () => reject(fr.error);
     fr.readAsDataURL(file);
   });
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const i = new Image();
-    i.onload = () => resolve(i);
-    i.onerror = reject;
-    i.src = dataUrl;
-  });
-  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-  const w = Math.round(img.width * scale);
-  const h = Math.round(img.height * scale);
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL("image/jpeg", quality);
+}
+
+function readCachedTextState(): PersistedState | null {
+  try {
+    const cached = window.localStorage.getItem(TEXT_STATE_CACHE_KEY);
+    return cached ? (JSON.parse(cached) as PersistedState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheTextState(state: PersistedState) {
+  try {
+    window.localStorage.setItem(TEXT_STATE_CACHE_KEY, JSON.stringify(state));
+  } catch {
+    // Ignore local cache failures; the shared backend save is the source of truth.
+  }
 }
 
 
@@ -176,6 +182,7 @@ function Index() {
   const [tiers, setTiers] = useState<Tier[]>(INITIAL_TIERS);
   const [dateText, setDateText] = useState("MAY 2025");
   const canvasRef = useRef<HTMLDivElement>(null);
+  const didFinishInitialHydration = useRef(false);
   const [exporting, setExporting] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -183,16 +190,32 @@ function Index() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("app_state")
-        .select("data")
-        .eq("id", "singleton")
-        .maybeSingle();
+      const cached = readCachedTextState();
+      if (cached) {
+        if (cached.tiers) setTiers(cached.tiers);
+        if (cached.dateText) setDateText(cached.dateText);
+      }
+
+      let data: { data: PersistedState } | null = null;
+      let error: unknown = null;
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const result = await supabase
+          .from("app_state")
+          .select("data")
+          .eq("id", "singleton")
+          .maybeSingle();
+        data = result.data as { data: PersistedState } | null;
+        error = result.error;
+        if (!error) break;
+        await wait(500 * (attempt + 1));
+      }
       if (cancelled) return;
-      const payload = data?.data as { tiers?: Tier[]; dateText?: string } | undefined;
+      if (error) console.error("Load failed:", error);
+      const payload = data?.data;
       if (payload) {
         if (payload.tiers) setTiers(payload.tiers);
         if (payload.dateText) setDateText(payload.dateText);
+        cacheTextState(payload);
       }
       setLoaded(true);
     })();
@@ -202,13 +225,25 @@ function Index() {
   // Debounced save on changes (after initial load) — only tiers + dateText, images are session-only
   useEffect(() => {
     if (!loaded) return;
+    if (!didFinishInitialHydration.current) {
+      didFinishInitialHydration.current = true;
+      return;
+    }
+    const payload = { tiers, dateText };
+    cacheTextState(payload);
     const handle = setTimeout(() => {
-      supabase
-        .from("app_state")
-        .upsert({ id: "singleton", data: { tiers, dateText }, updated_at: new Date().toISOString() })
-        .then(({ error }) => {
-          if (error) console.error("Save failed:", error);
-        });
+      (async () => {
+        let lastError: unknown = null;
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          const { error } = await supabase
+            .from("app_state")
+            .upsert({ id: "singleton", data: payload, updated_at: new Date().toISOString() });
+          lastError = error;
+          if (!error) return;
+          await wait(500 * (attempt + 1));
+        }
+        console.error("Save failed:", lastError);
+      })();
     }, 600);
     return () => clearTimeout(handle);
   }, [tiers, dateText, loaded]);
@@ -1028,10 +1063,10 @@ function Editor({
                           const file = e.target.files?.[0];
                           if (!file) return;
                           try {
-                            const src = await compressImage(file, 1200, 0.78);
+                            const src = await readImageFile(file);
                             updateSlot(t.key, idx, { src, zoom: 1, posX: 50, posY: 30 });
                           } catch (err) {
-                            console.error("Image compress failed:", err);
+                            console.error("Image upload failed:", err);
                           }
                         }}
                       />

@@ -1052,10 +1052,10 @@ function Editor({
                           const file = e.target.files?.[0];
                           if (!file) return;
                           try {
-                            const src = await compressImage(file, 1200, 0.78);
+                            const src = await readImageFile(file);
                             updateSlot(t.key, idx, { src, zoom: 1, posX: 50, posY: 30 });
                           } catch (err) {
-                            console.error("Image compress failed:", err);
+                            console.error("Image upload failed:", err);
                           }
                         }}
                       />

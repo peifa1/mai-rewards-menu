@@ -145,29 +145,35 @@ const DEFAULT_SLOTS: SlotsMap = {
   danna: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
 };
 
-// Resize + JPEG-encode an uploaded image so the persisted JSONB payload stays small.
-async function compressImage(file: File, maxDim = 1200, quality = 0.78): Promise<string> {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
+const TEXT_STATE_CACHE_KEY = "iomaya-mai-text-state";
+type PersistedState = { tiers?: Tier[]; dateText?: string };
+
+const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+function readImageFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(String(fr.result));
     fr.onerror = () => reject(fr.error);
     fr.readAsDataURL(file);
   });
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const i = new Image();
-    i.onload = () => resolve(i);
-    i.onerror = reject;
-    i.src = dataUrl;
-  });
-  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-  const w = Math.round(img.width * scale);
-  const h = Math.round(img.height * scale);
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL("image/jpeg", quality);
+}
+
+function readCachedTextState(): PersistedState | null {
+  try {
+    const cached = window.localStorage.getItem(TEXT_STATE_CACHE_KEY);
+    return cached ? (JSON.parse(cached) as PersistedState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheTextState(state: PersistedState) {
+  try {
+    window.localStorage.setItem(TEXT_STATE_CACHE_KEY, JSON.stringify(state));
+  } catch {
+    // Ignore local cache failures; the shared backend save is the source of truth.
+  }
 }
 
 

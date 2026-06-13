@@ -189,16 +189,32 @@ function Index() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("app_state")
-        .select("data")
-        .eq("id", "singleton")
-        .maybeSingle();
+      const cached = readCachedTextState();
+      if (cached) {
+        if (cached.tiers) setTiers(cached.tiers);
+        if (cached.dateText) setDateText(cached.dateText);
+      }
+
+      let data: { data: PersistedState } | null = null;
+      let error: unknown = null;
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const result = await supabase
+          .from("app_state")
+          .select("data")
+          .eq("id", "singleton")
+          .maybeSingle();
+        data = result.data as { data: PersistedState } | null;
+        error = result.error;
+        if (!error) break;
+        await wait(500 * (attempt + 1));
+      }
       if (cancelled) return;
-      const payload = data?.data as { tiers?: Tier[]; dateText?: string } | undefined;
+      if (error) console.error("Load failed:", error);
+      const payload = data?.data;
       if (payload) {
         if (payload.tiers) setTiers(payload.tiers);
         if (payload.dateText) setDateText(payload.dateText);
+        cacheTextState(payload);
       }
       setLoaded(true);
     })();
@@ -208,10 +224,12 @@ function Index() {
   // Debounced save on changes (after initial load) — only tiers + dateText, images are session-only
   useEffect(() => {
     if (!loaded) return;
+    const payload = { tiers, dateText };
+    cacheTextState(payload);
     const handle = setTimeout(() => {
       supabase
         .from("app_state")
-        .upsert({ id: "singleton", data: { tiers, dateText }, updated_at: new Date().toISOString() })
+        .upsert({ id: "singleton", data: payload, updated_at: new Date().toISOString() })
         .then(({ error }) => {
           if (error) console.error("Save failed:", error);
         });

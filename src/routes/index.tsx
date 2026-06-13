@@ -248,11 +248,13 @@ function Index() {
 
   const handleTiersChange = (next: Tier[]) => {
     userEditedText.current = true;
+    cacheTextState({ tiers: next, dateText });
     setTiers(next);
   };
 
   const handleDateChange = (next: string) => {
     userEditedText.current = true;
+    cacheTextState({ tiers, dateText: next });
     setDateText(next);
   };
 

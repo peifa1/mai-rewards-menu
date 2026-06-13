@@ -182,6 +182,7 @@ function Index() {
   const [tiers, setTiers] = useState<Tier[]>(INITIAL_TIERS);
   const [dateText, setDateText] = useState("MAY 2025");
   const canvasRef = useRef<HTMLDivElement>(null);
+  const didFinishInitialHydration = useRef(false);
   const [exporting, setExporting] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -224,15 +225,25 @@ function Index() {
   // Debounced save on changes (after initial load) — only tiers + dateText, images are session-only
   useEffect(() => {
     if (!loaded) return;
+    if (!didFinishInitialHydration.current) {
+      didFinishInitialHydration.current = true;
+      return;
+    }
     const payload = { tiers, dateText };
     cacheTextState(payload);
     const handle = setTimeout(() => {
-      supabase
-        .from("app_state")
-        .upsert({ id: "singleton", data: payload, updated_at: new Date().toISOString() })
-        .then(({ error }) => {
-          if (error) console.error("Save failed:", error);
-        });
+      (async () => {
+        let lastError: unknown = null;
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          const { error } = await supabase
+            .from("app_state")
+            .upsert({ id: "singleton", data: payload, updated_at: new Date().toISOString() });
+          lastError = error;
+          if (!error) return;
+          await wait(500 * (attempt + 1));
+        }
+        console.error("Save failed:", lastError);
+      })();
     }, 600);
     return () => clearTimeout(handle);
   }, [tiers, dateText, loaded]);

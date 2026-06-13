@@ -182,9 +182,9 @@ function Index() {
   const [tiers, setTiers] = useState<Tier[]>(INITIAL_TIERS);
   const [dateText, setDateText] = useState("MAY 2025");
   const canvasRef = useRef<HTMLDivElement>(null);
-  const didFinishInitialHydration = useRef(false);
+  const didSkipInitialSave = useRef(false);
+  const userEditedText = useRef(false);
   const [exporting, setExporting] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
   // Load shared state once on mount
   useEffect(() => {
@@ -212,21 +212,19 @@ function Index() {
       if (cancelled) return;
       if (error) console.error("Load failed:", error);
       const payload = data?.data;
-      if (payload) {
+      if (payload && !userEditedText.current) {
         if (payload.tiers) setTiers(payload.tiers);
         if (payload.dateText) setDateText(payload.dateText);
         cacheTextState(payload);
       }
-      setLoaded(true);
     })();
     return () => { cancelled = true; };
   }, []);
 
-  // Debounced save on changes (after initial load) — only tiers + dateText, images are session-only
+  // Debounced save on text changes — only tiers + dateText, images are session-only
   useEffect(() => {
-    if (!loaded) return;
-    if (!didFinishInitialHydration.current) {
-      didFinishInitialHydration.current = true;
+    if (!didSkipInitialSave.current) {
+      didSkipInitialSave.current = true;
       return;
     }
     const payload = { tiers, dateText };
@@ -246,7 +244,19 @@ function Index() {
       })();
     }, 600);
     return () => clearTimeout(handle);
-  }, [tiers, dateText, loaded]);
+  }, [tiers, dateText]);
+
+  const handleTiersChange = (next: Tier[]) => {
+    userEditedText.current = true;
+    cacheTextState({ tiers: next, dateText });
+    setTiers(next);
+  };
+
+  const handleDateChange = (next: string) => {
+    userEditedText.current = true;
+    cacheTextState({ tiers, dateText: next });
+    setDateText(next);
+  };
 
 
   const updateSlot = (tierKey: string, idx: number, next: Partial<ImgSlot>) => {
@@ -302,11 +312,11 @@ function Index() {
       </div>
       <Editor
         tiers={tiers}
-        onTiersChange={setTiers}
+        onTiersChange={handleTiersChange}
         slots={slots}
         onChange={setSlots}
         dateText={dateText}
-        onDateChange={setDateText}
+        onDateChange={handleDateChange}
       />
     </div>
   );

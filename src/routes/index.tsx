@@ -270,14 +270,38 @@ function Index() {
     if (!canvasRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await toPng(canvasRef.current, {
+      // Wait for all webfonts (Cormorant Garamond) to be fully loaded so the
+      // export uses the correct glyph metrics. Without this, the export
+      // engine may snapshot before fonts are ready and substitute a fallback
+      // font with different widths — causing the title, tier names, and
+      // descriptions to wrap or misalign.
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+
+      // Pre-fetch and inline @font-face rules so the snapshot includes the
+      // actual font data (avoids missing-font fallback on other devices).
+      let fontEmbedCSS = "";
+      try {
+        fontEmbedCSS = await getFontEmbedCSS(canvasRef.current);
+      } catch (e) {
+        console.warn("Font embed failed, continuing without inlined fonts:", e);
+      }
+
+      // Run twice — first call warms the image / font cache, second call
+      // produces a clean snapshot. This is a known workaround for
+      // html-to-image when external assets are involved.
+      const opts = {
         cacheBust: true,
         pixelRatio: 2,
         width: 1080,
         height: 1080,
-        filter: (node) =>
+        fontEmbedCSS,
+        filter: (node: HTMLElement) =>
           !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
-      });
+      };
+      await toPng(canvasRef.current, opts);
+      const dataUrl = await toPng(canvasRef.current, opts);
       const link = document.createElement("a");
       link.download = "iomaya-mai-monthly-rewards.png";
       link.href = dataUrl;

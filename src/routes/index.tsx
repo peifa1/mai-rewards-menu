@@ -310,7 +310,7 @@ function Index() {
       // actual font data (avoids missing-font fallback on other devices).
       let fontEmbedCSS = "";
       try {
-        fontEmbedCSS = await getFontEmbedCSS(exportNode);
+        fontEmbedCSS = await getLocalFontEmbedCSS();
       } catch (e) {
         console.warn("Font embed failed, continuing without inlined fonts:", e);
       }

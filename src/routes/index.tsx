@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toPng } from "html-to-image";
+import { toPng, getFontEmbedCSS } from "html-to-image";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 

@@ -283,6 +283,11 @@ function Index() {
     if (!canvasRef.current) return;
     setExporting(true);
     try {
+      const previousTransform = canvasRef.current.style.transform;
+      const previousTransformOrigin = canvasRef.current.style.transformOrigin;
+      canvasRef.current.style.transform = "none";
+      canvasRef.current.style.transformOrigin = "top left";
+
       // Wait for all webfonts (Cormorant Garamond) to be fully loaded so the
       // export uses the correct glyph metrics. Without this, the export
       // engine may snapshot before fonts are ready and substitute a fallback
@@ -313,8 +318,11 @@ function Index() {
         filter: (node: HTMLElement) =>
           !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
       };
+      await waitForImages(canvasRef.current);
       await toPng(canvasRef.current, opts);
       const dataUrl = await toPng(canvasRef.current, opts);
+      canvasRef.current.style.transform = previousTransform;
+      canvasRef.current.style.transformOrigin = previousTransformOrigin;
       const link = document.createElement("a");
       link.download = "iomaya-mai-monthly-rewards.png";
       link.href = dataUrl;
@@ -322,6 +330,9 @@ function Index() {
     } catch (err) {
       console.error("Export failed:", err);
     } finally {
+      if (canvasRef.current) {
+        canvasRef.current.style.transform = canvasRef.current.style.transform || "";
+      }
       setExporting(false);
     }
   };

@@ -837,7 +837,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
         <div className="flex items-baseline gap-4">
           {tier.premium && (
             <div
-              className="font-tambyon"
+              className="font-menu"
               style={{
                 fontSize: isTop ? 26 : 20,
                 color: isTop ? ACCENT_TOP : ACCENT_MID,
@@ -850,7 +850,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
             </div>
           )}
           <div
-            className="font-tambyon"
+            className="font-menu"
             style={{
               fontSize: isTop ? 66 : tier.premium ? 56 : 50,
               color: nameColor,
@@ -866,7 +866,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
             {tier.name}
           </div>
           <div
-            className="font-tambyon"
+            className="font-menu"
             style={{
               fontSize: isTop ? 34 : tier.premium ? 30 : 26,
               color: kanjiColor,

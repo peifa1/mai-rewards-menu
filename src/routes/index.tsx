@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toPng, getFontEmbedCSS } from "html-to-image";
+import { toPng } from "html-to-image";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 
@@ -150,6 +150,32 @@ type PersistedState = { tiers?: Tier[]; dateText?: string };
 
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
+function waitForImages(root: HTMLElement) {
+  const images = Array.from(root.querySelectorAll("img"));
+  return Promise.all(
+    images.map((img) => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.addEventListener("load", () => resolve(), { once: true });
+        img.addEventListener("error", () => resolve(), { once: true });
+      });
+    }),
+  );
+}
+
+async function getLocalFontEmbedCSS() {
+  const response = await fetch("/fonts/HakkouMincho.ttf", { cache: "force-cache" });
+  if (!response.ok) throw new Error("Failed to load export font");
+  const blob = await response.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+  return `@font-face{font-family:"HakkouMincho";src:url(${dataUrl}) format("truetype");font-weight:400 700;font-style:normal;font-display:block;}@font-face{font-family:"HakkouMincho";src:url(${dataUrl}) format("truetype");font-weight:400 700;font-style:italic;font-display:block;}`;
+}
+
 function readImageFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
@@ -269,8 +295,9 @@ function Index() {
   const handleExport = async () => {
     if (!canvasRef.current) return;
     setExporting(true);
+    const exportNode = (canvasRef.current.firstElementChild as HTMLElement | null) ?? canvasRef.current;
     try {
-      // Wait for all webfonts (Cormorant Garamond) to be fully loaded so the
+      // Wait for all webfonts to be fully loaded so the
       // export uses the correct glyph metrics. Without this, the export
       // engine may snapshot before fonts are ready and substitute a fallback
       // font with different widths — causing the title, tier names, and
@@ -283,7 +310,7 @@ function Index() {
       // actual font data (avoids missing-font fallback on other devices).
       let fontEmbedCSS = "";
       try {
-        fontEmbedCSS = await getFontEmbedCSS(canvasRef.current);
+        fontEmbedCSS = await getLocalFontEmbedCSS();
       } catch (e) {
         console.warn("Font embed failed, continuing without inlined fonts:", e);
       }
@@ -300,8 +327,9 @@ function Index() {
         filter: (node: HTMLElement) =>
           !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
       };
-      await toPng(canvasRef.current, opts);
-      const dataUrl = await toPng(canvasRef.current, opts);
+      await waitForImages(exportNode);
+      await toPng(exportNode, opts);
+      const dataUrl = await toPng(exportNode, opts);
       const link = document.createElement("a");
       link.download = "iomaya-mai-monthly-rewards.png";
       link.href = dataUrl;
@@ -374,7 +402,7 @@ function ShowcaseTip() {
       style={{ left: "calc(50% - 820px)", width: 220, color: "#ffd0dc" }}
     >
       <div
-        className="font-tambyon italic text-right leading-tight"
+        className="font-menu italic text-right leading-tight"
         style={{
           fontSize: 18,
           color: "#ffe2ea",
@@ -400,7 +428,7 @@ function EditorTip() {
     >
       <SquiggleArrow flip className="w-[110px] h-[70px] -mb-3" />
       <div
-        className="font-tambyon italic leading-tight"
+        className="font-menu italic leading-tight"
         style={{
           fontSize: 14,
           color: "#ffe2ea",
@@ -455,7 +483,7 @@ type SlotUpdater = (tierKey: string, idx: number, next: Partial<ImgSlot>) => voi
 function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots: SlotsMap; onUpdateSlot: SlotUpdater; dateText: string }) {
   return (
     <div
-      className="relative font-tambyon"
+      className="relative font-menu"
       style={{
         width: 1080,
         height: 1080,
@@ -564,7 +592,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
         <div className="font-hakkou text-[68px] leading-none mt-3" style={{ color: "#fff0f4", textShadow: "0 2px 18px rgba(255,120,150,0.35)" }}>
           月間リワード
         </div>
-        <div className="font-tambyon italic text-[22px] mt-2" style={{ color: "#f0a8b8" }}>
+        <div className="font-menu italic text-[22px] mt-2" style={{ color: "#f0a8b8" }}>
           — Monthly Reward Menu —
         </div>
       </div>
@@ -588,7 +616,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       </div>
 
       <div className="absolute left-0 right-0 flex flex-col items-center" style={{ bottom: 48 }}>
-        <div className="font-tambyon text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
+        <div className="font-menu text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
           {dateText}
         </div>
         <div className="font-hakkou text-[14px] tracking-[0.6em] mt-1" style={{ color: "#d98aa0" }}>
@@ -815,7 +843,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
         <div className="flex items-baseline gap-4">
           {tier.premium && (
             <div
-              className="font-tambyon"
+              className="font-menu"
               style={{
                 fontSize: isTop ? 26 : 20,
                 color: isTop ? ACCENT_TOP : ACCENT_MID,
@@ -828,7 +856,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
             </div>
           )}
           <div
-            className="font-tambyon"
+            className="font-menu"
             style={{
               fontSize: isTop ? 66 : tier.premium ? 56 : 50,
               color: nameColor,
@@ -844,7 +872,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
             {tier.name}
           </div>
           <div
-            className="font-tambyon"
+            className="font-menu"
             style={{
               fontSize: isTop ? 34 : tier.premium ? 30 : 26,
               color: kanjiColor,

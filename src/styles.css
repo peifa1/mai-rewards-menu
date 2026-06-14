@@ -8,13 +8,13 @@
   font-display: swap;
 }
 
-.font-tambyon {
-  font-family: "Cormorant Garamond", "Times New Roman", serif;
-  font-weight: 500;
+.font-menu {
+  font-family: "HakkouMincho", "Times New Roman", serif;
+  font-weight: 600;
 }
 
 .font-hakkou {
-  font-family: "HakkouMincho", "Cormorant Garamond", serif;
+  font-family: "HakkouMincho", "Times New Roman", serif;
 }
 
 /* Washi paper grain — subtle layered SVG noise + warm pink wash */

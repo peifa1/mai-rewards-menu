@@ -396,7 +396,7 @@ function ShowcaseTip() {
       style={{ left: "calc(50% - 820px)", width: 220, color: "#ffd0dc" }}
     >
       <div
-        className="font-tambyon italic text-right leading-tight"
+        className="font-menu italic text-right leading-tight"
         style={{
           fontSize: 18,
           color: "#ffe2ea",
@@ -422,7 +422,7 @@ function EditorTip() {
     >
       <SquiggleArrow flip className="w-[110px] h-[70px] -mb-3" />
       <div
-        className="font-tambyon italic leading-tight"
+        className="font-menu italic leading-tight"
         style={{
           fontSize: 14,
           color: "#ffe2ea",
@@ -477,7 +477,7 @@ type SlotUpdater = (tierKey: string, idx: number, next: Partial<ImgSlot>) => voi
 function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots: SlotsMap; onUpdateSlot: SlotUpdater; dateText: string }) {
   return (
     <div
-      className="relative font-tambyon"
+      className="relative font-menu"
       style={{
         width: 1080,
         height: 1080,
@@ -586,7 +586,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
         <div className="font-hakkou text-[68px] leading-none mt-3" style={{ color: "#fff0f4", textShadow: "0 2px 18px rgba(255,120,150,0.35)" }}>
           月間リワード
         </div>
-        <div className="font-tambyon italic text-[22px] mt-2" style={{ color: "#f0a8b8" }}>
+        <div className="font-menu italic text-[22px] mt-2" style={{ color: "#f0a8b8" }}>
           — Monthly Reward Menu —
         </div>
       </div>
@@ -610,7 +610,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       </div>
 
       <div className="absolute left-0 right-0 flex flex-col items-center" style={{ bottom: 48 }}>
-        <div className="font-tambyon text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
+        <div className="font-menu text-[22px] tracking-[0.45em]" style={{ color: "#fff0f4" }}>
           {dateText}
         </div>
         <div className="font-hakkou text-[14px] tracking-[0.6em] mt-1" style={{ color: "#d98aa0" }}>

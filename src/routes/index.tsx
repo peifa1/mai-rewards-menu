@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toPng, getFontEmbedCSS } from "html-to-image";
+import { toPng } from "html-to-image";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 
@@ -161,6 +161,19 @@ function waitForImages(root: HTMLElement) {
       });
     }),
   );
+}
+
+async function getLocalFontEmbedCSS() {
+  const response = await fetch("/fonts/HakkouMincho.ttf", { cache: "force-cache" });
+  if (!response.ok) throw new Error("Failed to load export font");
+  const blob = await response.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+  return `@font-face{font-family:"HakkouMincho";src:url(${dataUrl}) format("truetype");font-weight:400 700;font-style:normal;font-display:block;}@font-face{font-family:"HakkouMincho";src:url(${dataUrl}) format("truetype");font-weight:400 700;font-style:italic;font-display:block;}`;
 }
 
 function readImageFile(file: File): Promise<string> {

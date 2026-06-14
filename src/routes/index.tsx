@@ -879,14 +879,19 @@ function PerkPill({ perk, tierAccent = ACCENT_STD }: { perk: Perk; tierAccent?: 
       <span>{perk.label}</span>
       {perk.badge && (
         <span
-          className="ml-0.5 px-1.5 rounded-full text-[8px] leading-none py-[2px] font-bold"
+          className="ml-1 px-2 rounded-full leading-none py-[3px]"
           style={{
             background: perk.badgeBg
               ? `linear-gradient(135deg, ${perk.badgeBg}, ${perk.badgeBg}aa)`
               : "rgba(255,255,255,0.15)",
             color: perk.badgeTextColor || "#2a0a14",
-            letterSpacing: "0.05em",
+            letterSpacing: "0.08em",
             boxShadow: perk.badgeBg ? `0 0 6px ${perk.badgeBg}88` : "none",
+            fontFamily: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+            fontWeight: 800,
+            fontSize: 11,
+            fontStyle: "normal",
+            whiteSpace: "nowrap",
           }}
         >
           {perk.badge}

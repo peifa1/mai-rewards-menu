@@ -282,11 +282,12 @@ function Index() {
   const handleExport = async () => {
     if (!canvasRef.current) return;
     setExporting(true);
+    const exportNode = canvasRef.current;
+    const previousTransform = exportNode.style.transform;
+    const previousTransformOrigin = exportNode.style.transformOrigin;
     try {
-      const previousTransform = canvasRef.current.style.transform;
-      const previousTransformOrigin = canvasRef.current.style.transformOrigin;
-      canvasRef.current.style.transform = "none";
-      canvasRef.current.style.transformOrigin = "top left";
+      exportNode.style.transform = "none";
+      exportNode.style.transformOrigin = "top left";
 
       // Wait for all webfonts (Cormorant Garamond) to be fully loaded so the
       // export uses the correct glyph metrics. Without this, the export
@@ -301,7 +302,7 @@ function Index() {
       // actual font data (avoids missing-font fallback on other devices).
       let fontEmbedCSS = "";
       try {
-        fontEmbedCSS = await getFontEmbedCSS(canvasRef.current);
+        fontEmbedCSS = await getFontEmbedCSS(exportNode);
       } catch (e) {
         console.warn("Font embed failed, continuing without inlined fonts:", e);
       }
@@ -318,11 +319,9 @@ function Index() {
         filter: (node: HTMLElement) =>
           !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
       };
-      await waitForImages(canvasRef.current);
-      await toPng(canvasRef.current, opts);
-      const dataUrl = await toPng(canvasRef.current, opts);
-      canvasRef.current.style.transform = previousTransform;
-      canvasRef.current.style.transformOrigin = previousTransformOrigin;
+      await waitForImages(exportNode);
+      await toPng(exportNode, opts);
+      const dataUrl = await toPng(exportNode, opts);
       const link = document.createElement("a");
       link.download = "iomaya-mai-monthly-rewards.png";
       link.href = dataUrl;
@@ -330,9 +329,8 @@ function Index() {
     } catch (err) {
       console.error("Export failed:", err);
     } finally {
-      if (canvasRef.current) {
-        canvasRef.current.style.transform = canvasRef.current.style.transform || "";
-      }
+      exportNode.style.transform = previousTransform;
+      exportNode.style.transformOrigin = previousTransformOrigin;
       setExporting(false);
     }
   };

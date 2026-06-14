@@ -150,6 +150,19 @@ type PersistedState = { tiers?: Tier[]; dateText?: string };
 
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
+function waitForImages(root: HTMLElement) {
+  const images = Array.from(root.querySelectorAll("img"));
+  return Promise.all(
+    images.map((img) => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.addEventListener("load", () => resolve(), { once: true });
+        img.addEventListener("error", () => resolve(), { once: true });
+      });
+    }),
+  );
+}
+
 function readImageFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();

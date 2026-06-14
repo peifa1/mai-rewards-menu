@@ -282,14 +282,9 @@ function Index() {
   const handleExport = async () => {
     if (!canvasRef.current) return;
     setExporting(true);
-    const exportNode = canvasRef.current;
-    const previousTransform = exportNode.style.transform;
-    const previousTransformOrigin = exportNode.style.transformOrigin;
+    const exportNode = (canvasRef.current.firstElementChild as HTMLElement | null) ?? canvasRef.current;
     try {
-      exportNode.style.transform = "none";
-      exportNode.style.transformOrigin = "top left";
-
-      // Wait for all webfonts (Cormorant Garamond) to be fully loaded so the
+      // Wait for all webfonts to be fully loaded so the
       // export uses the correct glyph metrics. Without this, the export
       // engine may snapshot before fonts are ready and substitute a fallback
       // font with different widths — causing the title, tier names, and
@@ -329,8 +324,6 @@ function Index() {
     } catch (err) {
       console.error("Export failed:", err);
     } finally {
-      exportNode.style.transform = previousTransform;
-      exportNode.style.transformOrigin = previousTransformOrigin;
       setExporting(false);
     }
   };

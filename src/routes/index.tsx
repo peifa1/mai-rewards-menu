@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toPng } from "html-to-image";
+import { toPng, getFontEmbedCSS } from "html-to-image";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 
@@ -270,14 +270,38 @@ function Index() {
     if (!canvasRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await toPng(canvasRef.current, {
+      // Wait for all webfonts (Cormorant Garamond) to be fully loaded so the
+      // export uses the correct glyph metrics. Without this, the export
+      // engine may snapshot before fonts are ready and substitute a fallback
+      // font with different widths — causing the title, tier names, and
+      // descriptions to wrap or misalign.
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+
+      // Pre-fetch and inline @font-face rules so the snapshot includes the
+      // actual font data (avoids missing-font fallback on other devices).
+      let fontEmbedCSS = "";
+      try {
+        fontEmbedCSS = await getFontEmbedCSS(canvasRef.current);
+      } catch (e) {
+        console.warn("Font embed failed, continuing without inlined fonts:", e);
+      }
+
+      // Run twice — first call warms the image / font cache, second call
+      // produces a clean snapshot. This is a known workaround for
+      // html-to-image when external assets are involved.
+      const opts = {
         cacheBust: true,
         pixelRatio: 2,
         width: 1080,
         height: 1080,
-        filter: (node) =>
+        fontEmbedCSS,
+        filter: (node: HTMLElement) =>
           !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
-      });
+      };
+      await toPng(canvasRef.current, opts);
+      const dataUrl = await toPng(canvasRef.current, opts);
       const link = document.createElement("a");
       link.download = "iomaya-mai-monthly-rewards.png";
       link.href = dataUrl;
@@ -879,14 +903,19 @@ function PerkPill({ perk, tierAccent = ACCENT_STD }: { perk: Perk; tierAccent?: 
       <span>{perk.label}</span>
       {perk.badge && (
         <span
-          className="ml-0.5 px-1.5 rounded-full text-[8px] leading-none py-[2px] font-bold"
+          className="ml-1 px-2 rounded-full leading-none py-[3px]"
           style={{
             background: perk.badgeBg
               ? `linear-gradient(135deg, ${perk.badgeBg}, ${perk.badgeBg}aa)`
               : "rgba(255,255,255,0.15)",
             color: perk.badgeTextColor || "#2a0a14",
-            letterSpacing: "0.05em",
+            letterSpacing: "0.08em",
             boxShadow: perk.badgeBg ? `0 0 6px ${perk.badgeBg}88` : "none",
+            fontFamily: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+            fontWeight: 800,
+            fontSize: 11,
+            fontStyle: "normal",
+            whiteSpace: "nowrap",
           }}
         >
           {perk.badge}

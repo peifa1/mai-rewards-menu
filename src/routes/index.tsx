@@ -204,6 +204,42 @@ function cacheTextState(state: PersistedState) {
 
 
 function Index() {
+  const [tab, setTab] = useState<"patreon" | "twitch">(() => {
+    if (typeof window === "undefined") return "patreon";
+    return (localStorage.getItem("active-tab") as "patreon" | "twitch") || "patreon";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("active-tab", tab); } catch {}
+  }, [tab]);
+
+  return (
+    <div className="min-h-screen w-full" style={{ background: "#2a0a14" }}>
+      <div className="w-full flex justify-center pt-4 pb-2">
+        <div className="inline-flex rounded-full p-1 gap-1" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,180,200,0.25)" }}>
+          {([
+            { id: "patreon", label: "Patreon Showcase" },
+            { id: "twitch", label: "Twitch Overlays" },
+          ] as const).map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className="px-5 py-2 rounded-full text-xs font-semibold uppercase tracking-widest transition"
+              style={{
+                background: tab === id ? "linear-gradient(135deg,#c8132a,#8a0a1c)" : "transparent",
+                color: tab === id ? "#fff0f4" : "#ffd0dc",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {tab === "patreon" ? <PatreonShowcase /> : <TwitchOverlayBuilder />}
+    </div>
+  );
+}
+
+function PatreonShowcase() {
   const [slots, setSlots] = useState<SlotsMap>(DEFAULT_SLOTS);
   const [tiers, setTiers] = useState<Tier[]>(INITIAL_TIERS);
   const [dateText, setDateText] = useState("MAY 2025");

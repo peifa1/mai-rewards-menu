@@ -201,10 +201,31 @@ export function TwitchOverlayBuilder() {
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Colors</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <ColorField label="Card back" value={cfg.cardBackColor} onChange={(v) => updateCfg("cardBackColor", v)} />
             <ColorField label="Audio bg" value={cfg.audioCardColor} onChange={(v) => updateCfg("audioCardColor", v)} />
             <ColorField label="Text" value={cfg.textColor} onChange={(v) => updateCfg("textColor", v)} />
             <ColorField label="Wave / mic" value={cfg.audioWaveColor} onChange={(v) => updateCfg("audioWaveColor", v)} />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Timing</h3>
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <NumberField
+              label="Card hold (sec)"
+              hint="How long each tier shows before flipping"
+              value={+(cfg.holdMs / 1000).toFixed(1)}
+              step={0.1}
+              min={0.5}
+              onChange={(v) => updateCfg("holdMs", Math.max(500, Math.round(v * 1000)))}
+            />
+            <NumberField
+              label="Loop break (min)"
+              hint="Empty pause before the animation replays"
+              value={+(cfg.breakMs / 60000).toFixed(2)}
+              step={0.25}
+              min={0}
+              onChange={(v) => updateCfg("breakMs", Math.max(0, Math.round(v * 60000)))}
+            />
           </div>
         </div>
 
@@ -307,6 +328,43 @@ function ColorField({
     </label>
   );
 }
+
+
+function NumberField({
+  label,
+  hint,
+  value,
+  step,
+  min,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: number;
+  step: number;
+  min: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="uppercase tracking-widest opacity-80">{label}</span>
+      <input
+        type="number"
+        value={value}
+        step={step}
+        min={min}
+        onChange={(e) => {
+          const n = parseFloat(e.target.value);
+          if (!Number.isNaN(n)) onChange(n);
+        }}
+        className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
+        style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
+      />
+      {hint && <span className="text-[10px] opacity-60 leading-snug">{hint}</span>}
+    </label>
+  );
+}
+
 
 function CardImageSlot({
   label,

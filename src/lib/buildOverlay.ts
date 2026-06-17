@@ -1,19 +1,16 @@
 // Take the master overlay HTML template (a fully self-contained single file)
 // and apply user customisations via targeted text replacement + script/style injection.
-// The template's own animations / fonts / images remain untouched — we only
-// override values that the editor exposes (tier names, per-slot images,
-// audio-card on/off per tier, and a few colors).
 
 export type OverlayConfig = {
   tierNames: string[]; // length 5
-  // tierImages[tier][slot 0|1|2] = data URL or empty string ("" = keep original)
-  tierImages: string[][];
-  // audioTiers[t] = true means the center card on that tier shows the audio effect
+  tierImages: string[][]; // [tier][slot 0|1|2] data URL or "" (keep original)
   audioTiers: boolean[];
-  cardBackColor: string;
   audioCardColor: string;
   textColor: string;
   audioWaveColor: string;
+  // Timing
+  holdMs: number;   // how long each tier is shown before flipping to the next
+  breakMs: number;  // empty/pause time between full animation loops (ms)
 };
 
 export const DEFAULT_CONFIG: OverlayConfig = {
@@ -26,31 +23,26 @@ export const DEFAULT_CONFIG: OverlayConfig = {
     ["", "", ""],
   ],
   audioTiers: [false, false, true, true, true],
-  cardBackColor: "#4a0c22",
   audioCardColor: "#2a0712",
   textColor: "#ffffff",
   audioWaveColor: "#f8b8cc",
+  holdMs: 3400,
+  breakMs: 1500,
 };
 
-function jsonStringSafe(s: string) {
-  // Escape for embedding inside a JS string literal in injected <script>
-  return JSON.stringify(s);
-}
-
 export function buildOverlayHtml(template: string, cfg: OverlayConfig): string {
-  // 1) Inject a script EARLY (at start of body) that exposes the user config on window.
+  // 1) Inject user config on window early
   const configScript = `<script>window.__OVERLAY_CONFIG__=${JSON.stringify({
     tierNames: cfg.tierNames,
     tierImages: cfg.tierImages,
     audioTiers: cfg.audioTiers,
+    holdMs: cfg.holdMs,
+    breakMs: cfg.breakMs,
   })};</script>\n`;
 
   let out = template.replace("<body>", "<body>\n" + configScript);
 
-  // 2) Inject override code INSIDE the original script, after the const TIERS/
-  //    TIER_NAMES/AUDIO_TIERS declarations and BEFORE the init code that pushes
-  //    initial images & names into the DOM. The init begins with
-  //    `const CARD_BACK=CARD_BACKS[0];` — insert immediately before that.
+  // 2) Inject overrides for names/images/audio just before the init line
   const initMarker = "const CARD_BACK=CARD_BACKS[0];";
   const overrideBlock = `
 // ===== user overrides injected by builder =====
@@ -70,11 +62,15 @@ try {
 `;
   out = out.replace(initMarker, overrideBlock + initMarker);
 
-  // 3) Inject color CSS overrides just before </body>
+  // 3) Patch timing: hold-per-tier (3400ms) and end-of-loop break (1500ms).
+  //    Use global regex replace so both `await sleep(3400)` calls swap.
+  out = out
+    .replace(/await sleep\(3400\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.holdMs)||3400)`)
+    .replace(/await sleep\(1500\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.breakMs)||1500)`);
+
+  // 4) Color overrides — keep the original card-back artwork; only theme the audio card + text.
   const colorCss = `
 <style id="user-color-overrides">
-  .face.back { background: ${cfg.cardBackColor} !important; }
-  .face.back img { display: none !important; }
   #tier-text, #patreon-text, #ac-txt, #ac-sub { color: ${cfg.textColor} !important; }
   #audio-card { background: ${cfg.audioCardColor} !important; }
   #audio-card #ac-bg { display: none !important; }
@@ -93,5 +89,3 @@ export function htmlToBlobUrl(html: string): string {
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   return URL.createObjectURL(blob);
 }
-
-void jsonStringSafe; // keep for future use, avoid unused warning

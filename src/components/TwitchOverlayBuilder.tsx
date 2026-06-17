@@ -201,10 +201,31 @@ export function TwitchOverlayBuilder() {
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Colors</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <ColorField label="Card back" value={cfg.cardBackColor} onChange={(v) => updateCfg("cardBackColor", v)} />
             <ColorField label="Audio bg" value={cfg.audioCardColor} onChange={(v) => updateCfg("audioCardColor", v)} />
             <ColorField label="Text" value={cfg.textColor} onChange={(v) => updateCfg("textColor", v)} />
             <ColorField label="Wave / mic" value={cfg.audioWaveColor} onChange={(v) => updateCfg("audioWaveColor", v)} />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Timing</h3>
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <NumberField
+              label="Card hold (sec)"
+              hint="How long each tier shows before flipping"
+              value={+(cfg.holdMs / 1000).toFixed(1)}
+              step={0.1}
+              min={0.5}
+              onChange={(v) => updateCfg("holdMs", Math.max(500, Math.round(v * 1000)))}
+            />
+            <NumberField
+              label="Loop break (min)"
+              hint="Empty pause before the animation replays"
+              value={+(cfg.breakMs / 60000).toFixed(2)}
+              step={0.25}
+              min={0}
+              onChange={(v) => updateCfg("breakMs", Math.max(0, Math.round(v * 60000)))}
+            />
           </div>
         </div>
 

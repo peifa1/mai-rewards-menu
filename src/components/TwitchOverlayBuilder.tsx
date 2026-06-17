@@ -327,6 +327,8 @@ function ColorField({
       </div>
     </label>
   );
+}
+
 
 function NumberField({
   label,

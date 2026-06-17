@@ -327,7 +327,42 @@ function ColorField({
       </div>
     </label>
   );
+
+function NumberField({
+  label,
+  hint,
+  value,
+  step,
+  min,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: number;
+  step: number;
+  min: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="uppercase tracking-widest opacity-80">{label}</span>
+      <input
+        type="number"
+        value={value}
+        step={step}
+        min={min}
+        onChange={(e) => {
+          const n = parseFloat(e.target.value);
+          if (!Number.isNaN(n)) onChange(n);
+        }}
+        className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
+        style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
+      />
+      {hint && <span className="text-[10px] opacity-60 leading-snug">{hint}</span>}
+    </label>
+  );
 }
+
 
 function CardImageSlot({
   label,

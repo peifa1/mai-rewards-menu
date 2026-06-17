@@ -8,6 +8,7 @@ export type OverlayConfig = {
   textColor: string;
   audioWaveColor: string;
   // Timing
+  initialDelayMs: number; // silent pause before the animation starts
   holdMs: number;   // how long each tier is shown before flipping to the next
   breakMs: number;  // empty/transparent pause after the single playthrough (ms)
 };
@@ -24,6 +25,7 @@ export const DEFAULT_CONFIG: OverlayConfig = {
   audioTiers: [false, false, true, true, true],
   textColor: "#ffffff",
   audioWaveColor: "#f8b8cc",
+  initialDelayMs: 3000,
   holdMs: 3400,
   breakMs: 1500,
 };
@@ -34,6 +36,7 @@ export function buildOverlayHtml(template: string, cfg: OverlayConfig): string {
     tierNames: cfg.tierNames,
     tierImages: cfg.tierImages,
     audioTiers: cfg.audioTiers,
+    initialDelayMs: cfg.initialDelayMs,
     holdMs: cfg.holdMs,
     breakMs: cfg.breakMs,
   })};</script>\n`;
@@ -90,7 +93,7 @@ try {
   out = out
     .replace(/await sleep\(3400\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.holdMs)||3400)`)
     .replace(/await sleep\(1500\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.breakMs)||1500)`)
-    .replace(/while\s*\(\s*true\s*\)\s*\{/, "for (let __once=0; __once<1; __once++) {");
+    .replace(/while\s*\(\s*true\s*\)\s*\{/, "for (let __once=0; __once<1; __once++) {\nawait sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.initialDelayMs!=null)?window.__OVERLAY_CONFIG__.initialDelayMs:3000);");
 
   // 4) Color overrides — keep the original card-back artwork and the audio-card
   //    background image; only theme the text + the waveform/mic accent color.

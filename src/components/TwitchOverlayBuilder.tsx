@@ -30,6 +30,7 @@ export function TwitchOverlayBuilder() {
     return DEFAULT_CONFIG;
   });
   const [activeTier, setActiveTier] = useState(0);
+  const [replayKey, setReplayKey] = useState(0);
   const blobUrlRef = useRef<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
 
@@ -127,19 +128,34 @@ export function TwitchOverlayBuilder() {
               Renders the exact HTML you'll download. 1920×1080 scaled to fit.
             </p>
           </div>
-          <button
-            onClick={handleDownload}
-            disabled={!template}
-            className="px-5 py-2.5 rounded-full text-sm font-semibold tracking-widest uppercase transition hover:scale-105 disabled:opacity-50"
-            style={{
-              background: "linear-gradient(135deg, #c8132a, #8a0a1c)",
-              color: "#fff0f4",
-              border: "1px solid rgba(255,200,215,0.4)",
-              boxShadow: "0 6px 24px rgba(200,19,42,0.45)",
-            }}
-          >
-            Download HTML
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setReplayKey((k) => k + 1)}
+              disabled={!previewUrl}
+              className="px-4 py-2.5 rounded-full text-xs font-semibold tracking-widest uppercase transition hover:scale-105 disabled:opacity-50"
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                color: "#ffe2ec",
+                border: "1px solid rgba(255,200,215,0.35)",
+              }}
+              title="Restart the preview animation (preview-only — not baked into the download)"
+            >
+              ↻ Replay
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={!template}
+              className="px-5 py-2.5 rounded-full text-sm font-semibold tracking-widest uppercase transition hover:scale-105 disabled:opacity-50"
+              style={{
+                background: "linear-gradient(135deg, #c8132a, #8a0a1c)",
+                color: "#fff0f4",
+                border: "1px solid rgba(255,200,215,0.4)",
+                boxShadow: "0 6px 24px rgba(200,19,42,0.45)",
+              }}
+            >
+              Download HTML
+            </button>
+          </div>
         </div>
         <div
           className="relative w-full rounded-xl overflow-hidden border"
@@ -162,7 +178,7 @@ export function TwitchOverlayBuilder() {
           )}
           {previewUrl && (
             <iframe
-              key={previewUrl}
+              key={previewUrl + ":" + replayKey}
               src={previewUrl}
               title="Overlay preview"
               className="absolute top-0 left-0"
@@ -201,7 +217,6 @@ export function TwitchOverlayBuilder() {
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Colors</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <ColorField label="Audio bg" value={cfg.audioCardColor} onChange={(v) => updateCfg("audioCardColor", v)} />
             <ColorField label="Text" value={cfg.textColor} onChange={(v) => updateCfg("textColor", v)} />
             <ColorField label="Wave / mic" value={cfg.audioWaveColor} onChange={(v) => updateCfg("audioWaveColor", v)} />
           </div>
@@ -219,13 +234,14 @@ export function TwitchOverlayBuilder() {
               onChange={(v) => updateCfg("holdMs", Math.max(500, Math.round(v * 1000)))}
             />
             <NumberField
-              label="Loop break (min)"
-              hint="Empty pause before the animation replays"
+              label="End break (min)"
+              hint="Transparent pause after the animation finishes (plays once, then empty)"
               value={+(cfg.breakMs / 60000).toFixed(2)}
               step={0.25}
               min={0}
               onChange={(v) => updateCfg("breakMs", Math.max(0, Math.round(v * 60000)))}
             />
+
           </div>
         </div>
 

@@ -31,6 +31,8 @@ export function TwitchOverlayBuilder() {
   });
   const [activeTier, setActiveTier] = useState(0);
   const [replayKey, setReplayKey] = useState(0);
+  const [previewBg, setPreviewBg] = useState<string>("checker");
+  const [previewBgColor, setPreviewBgColor] = useState<string>("#1a1a1a");
   const blobUrlRef = useRef<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
 

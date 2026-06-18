@@ -116,9 +116,7 @@ export function TwitchOverlayBuilder() {
   );
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-4 py-6 flex flex-col gap-4">
-      <ObsGuide />
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6">
+    <div className="w-full max-w-[1600px] mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6">
       {/* PREVIEW */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -228,14 +226,6 @@ export function TwitchOverlayBuilder() {
           <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Timing</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <NumberField
-              label="Initial delay (sec)"
-              hint="Silent pause before the animation starts"
-              value={+(cfg.initialDelayMs / 1000).toFixed(1)}
-              step={0.5}
-              min={0}
-              onChange={(v) => updateCfg("initialDelayMs", Math.max(0, Math.round(v * 1000)))}
-            />
-            <NumberField
               label="Card hold (sec)"
               hint="How long each tier shows before flipping"
               value={+(cfg.holdMs / 1000).toFixed(1)}
@@ -251,6 +241,7 @@ export function TwitchOverlayBuilder() {
               min={0}
               onChange={(v) => updateCfg("breakMs", Math.max(0, Math.round(v * 60000)))}
             />
+
           </div>
         </div>
 
@@ -325,7 +316,6 @@ export function TwitchOverlayBuilder() {
           Reset to template defaults
         </button>
       </div>
-      </div>
     </div>
   );
 }
@@ -391,41 +381,6 @@ function NumberField({
   );
 }
 
-
-function ObsGuide() {
-  const [open, setOpen] = useState(false);
-  return (
-    <div
-      className="rounded-xl border overflow-hidden"
-      style={{ borderColor: "rgba(255,180,200,0.18)", background: "rgba(20,4,10,0.5)" }}
-    >
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold tracking-wide text-left"
-        style={{ color: "#ffe2ec" }}
-      >
-        <span>OBS Setup Guide</span>
-        <span className="text-base opacity-60" style={{ transform: open ? "rotate(180deg)" : undefined, display: "inline-block", transition: "transform 0.2s" }}>▾</span>
-      </button>
-      {open && (
-        <div className="px-4 pb-4 text-xs leading-relaxed" style={{ color: "#ffd0dc" }}>
-          <ol className="list-decimal list-inside space-y-1.5 mb-3">
-            <li>Press <strong style={{ color: "#ffe2ec" }}>Download</strong></li>
-            <li>A <code>.html</code> file will be downloaded</li>
-            <li>Open OBS</li>
-            <li>Add <strong style={{ color: "#ffe2ec" }}>Browser</strong> in your Sources Scene</li>
-            <li>Checkmark <strong style={{ color: "#ffe2ec" }}>Local File</strong> and import the <code>.html</code> file</li>
-            <li>Set <strong style={{ color: "#ffe2ec" }}>Width: 1920</strong> and <strong style={{ color: "#ffe2ec" }}>Height: 1080</strong></li>
-            <li>Enjoy! Adjust the size of the animation however you want in your scene ♡</li>
-          </ol>
-          <p className="opacity-80 leading-snug" style={{ borderLeft: "2px solid rgba(255,180,200,0.4)", paddingLeft: "0.75rem" }}>
-            <strong style={{ color: "#ffe2ec" }}>Tip:</strong> Download 2 separate files — one with a 0.3s end break, and one with however long a break you actually want. Use the 0.3s file to position and adjust the overlay in OBS, since the other one will appear once and then be invisible for several minutes.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function CardImageSlot({
   label,

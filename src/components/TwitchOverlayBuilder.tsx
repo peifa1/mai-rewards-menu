@@ -161,16 +161,15 @@ export function TwitchOverlayBuilder() {
           </div>
         </div>
         <div
-          className="relative w-full rounded-xl overflow-hidden border"
+          className="relative w-full rounded-2xl overflow-hidden border"
           style={{
             aspectRatio: "16 / 9",
             background:
-              previewBg === "checker"
-                ? "repeating-conic-gradient(#1f0710 0 25%, #2a0a14 0 50%) 50% / 28px 28px"
-                : previewBg === "transparent"
-                  ? "repeating-conic-gradient(#bbb 0 25%, #fff 0 50%) 50% / 18px 18px"
-                  : previewBgColor,
-            borderColor: "rgba(255,180,200,0.18)",
+              previewBg === "image" && previewBgImage
+                ? `url(${previewBgImage}) center/cover no-repeat`
+                : "repeating-conic-gradient(#1f0710 0 25%, #2a0a14 0 50%) 50% / 28px 28px",
+            borderColor: "rgba(255,180,200,0.22)",
+            boxShadow: "0 0 0 1px rgba(255,200,215,0.05) inset, 0 12px 40px rgba(0,0,0,0.45)",
           }}
         >
           {loadError && (
@@ -213,40 +212,79 @@ export function TwitchOverlayBuilder() {
 
         {/* Preview background (preview-only, not baked into download) */}
         <div
-          className="flex items-center gap-3 flex-wrap text-xs rounded-lg px-3 py-2 border"
+          className="flex items-center gap-3 flex-wrap text-xs rounded-xl px-3 py-2 border"
           style={{
             borderColor: "rgba(255,180,200,0.18)",
-            background: "rgba(20,4,10,0.5)",
+            background: "linear-gradient(135deg, rgba(40,8,18,0.7), rgba(20,4,10,0.55))",
             color: "#ffe2ec",
           }}
         >
-          <span className="uppercase tracking-widest opacity-70">Preview BG</span>
-          {(["checker", "transparent", "color"] as const).map((opt) => (
-            <button
-              key={opt}
-              onClick={() => setPreviewBg(opt)}
-              className="px-2.5 py-1 rounded-full transition"
-              style={{
-                background:
-                  previewBg === opt
-                    ? "linear-gradient(135deg,#c8132a,#8a0a1c)"
-                    : "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,180,200,0.25)",
-                color: "#fff0f4",
-              }}
-            >
-              {opt === "checker" ? "Default" : opt === "transparent" ? "Transparency grid" : "Solid color"}
-            </button>
-          ))}
-          {previewBg === "color" && (
-            <input
-              type="color"
-              value={previewBgColor}
-              onChange={(e) => setPreviewBgColor(e.target.value)}
-              className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
-            />
+          <span className="uppercase tracking-[0.25em] opacity-70">背景 · Preview BG</span>
+          <button
+            onClick={() => setPreviewBg("default")}
+            className="px-3 py-1 rounded-full transition"
+            style={{
+              background:
+                previewBg === "default"
+                  ? "linear-gradient(135deg,#c8132a,#8a0a1c)"
+                  : "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,180,200,0.25)",
+              color: "#fff0f4",
+            }}
+          >
+            Default
+          </button>
+          <button
+            onClick={() => {
+              if (previewBgImage) setPreviewBg("image");
+              else bgInputRef.current?.click();
+            }}
+            className="px-3 py-1 rounded-full transition"
+            style={{
+              background:
+                previewBg === "image"
+                  ? "linear-gradient(135deg,#c8132a,#8a0a1c)"
+                  : "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,180,200,0.25)",
+              color: "#fff0f4",
+            }}
+          >
+            {previewBgImage ? "Custom image" : "Upload image…"}
+          </button>
+          {previewBgImage && (
+            <>
+              <button
+                onClick={() => bgInputRef.current?.click()}
+                className="px-2 py-1 rounded-full opacity-80 hover:opacity-100"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,180,200,0.18)", color: "#fff0f4" }}
+              >
+                Change
+              </button>
+              <button
+                onClick={() => { setPreviewBgImage(""); setPreviewBg("default"); }}
+                className="px-2 py-1 rounded-full opacity-70 hover:opacity-100"
+                style={{ color: "#ffd0dc" }}
+              >
+                Clear
+              </button>
+            </>
           )}
-          <span className="opacity-50 ml-auto">Preview only — not included in the download.</span>
+          <input
+            ref={bgInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (f) {
+                const url = await readFileAsDataUrl(f);
+                setPreviewBgImage(url);
+                setPreviewBg("image");
+              }
+              e.currentTarget.value = "";
+            }}
+          />
+          <span className="opacity-50 ml-auto">Preview only — not baked into the download.</span>
         </div>
 
         <ObsGuide />

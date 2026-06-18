@@ -272,6 +272,14 @@ export function TwitchOverlayBuilder() {
           <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Timing</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <NumberField
+              label="Start delay (sec)"
+              hint="Empty/transparent pause before the animation begins"
+              value={+(cfg.startDelayMs / 1000).toFixed(1)}
+              step={0.5}
+              min={0}
+              onChange={(v) => updateCfg("startDelayMs", Math.max(0, Math.round(v * 1000)))}
+            />
+            <NumberField
               label="Card hold (sec)"
               hint="How long each tier shows before flipping"
               value={+(cfg.holdMs / 1000).toFixed(1)}

@@ -8,8 +8,9 @@ export type OverlayConfig = {
   textColor: string;
   audioWaveColor: string;
   // Timing
-  holdMs: number;   // how long each tier is shown before flipping to the next
-  breakMs: number;  // empty/transparent pause after the single playthrough (ms)
+  holdMs: number;       // how long each tier is shown before flipping to the next
+  breakMs: number;      // empty/transparent pause after the single playthrough (ms)
+  startDelayMs: number; // empty/transparent pause BEFORE the animation begins (ms)
 };
 
 export const DEFAULT_CONFIG: OverlayConfig = {
@@ -26,6 +27,7 @@ export const DEFAULT_CONFIG: OverlayConfig = {
   audioWaveColor: "#f8b8cc",
   holdMs: 3400,
   breakMs: 1500,
+  startDelayMs: 3000,
 };
 
 export function buildOverlayHtml(template: string, cfg: OverlayConfig): string {

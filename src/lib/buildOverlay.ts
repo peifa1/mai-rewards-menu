@@ -101,6 +101,7 @@ try {
   //    (same speed as before).
   const colorCss = `
 <style id="user-color-overrides">
+  body { opacity: 0; transition: opacity .35s ease-out; }
   #tier-text, #patreon-text, #ac-txt, #ac-sub { color: ${cfg.textColor} !important; }
   #ac-wf span { background: ${cfg.audioWaveColor} !important; }
   #ac-icon { stroke: ${cfg.audioWaveColor} !important; }

@@ -93,7 +93,7 @@ try {
   out = out
     .replace(/await sleep\(3400\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.holdMs)||3400)`)
     .replace(/await sleep\(1500\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.breakMs)||1500)`)
-    .replace(/while\s*\(\s*true\s*\)\s*\{/, "for (let __once=0; __once<1; __once++) { await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.startDelayMs)||3000);");
+    .replace(/while\s*\(\s*true\s*\)\s*\{/, "for (let __once=0; __once<1; __once++) { document.body.style.opacity='0'; await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.startDelayMs)||3000); document.body.style.opacity='1';");
 
   // 4) Color overrides — keep the original card-back artwork and the audio-card
   //    background image; only theme the text + the waveform/mic accent color.

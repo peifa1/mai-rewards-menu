@@ -38,6 +38,7 @@ export function buildOverlayHtml(template: string, cfg: OverlayConfig): string {
     audioTiers: cfg.audioTiers,
     holdMs: cfg.holdMs,
     breakMs: cfg.breakMs,
+    startDelayMs: cfg.startDelayMs,
   })};</script>\n`;
 
   let out = template.replace("<body>", "<body>\n" + configScript);

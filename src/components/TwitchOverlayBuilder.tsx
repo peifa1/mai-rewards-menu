@@ -164,7 +164,11 @@ export function TwitchOverlayBuilder() {
           style={{
             aspectRatio: "16 / 9",
             background:
-              "repeating-conic-gradient(#1f0710 0 25%, #2a0a14 0 50%) 50% / 28px 28px",
+              previewBg === "checker"
+                ? "repeating-conic-gradient(#1f0710 0 25%, #2a0a14 0 50%) 50% / 28px 28px"
+                : previewBg === "transparent"
+                  ? "repeating-conic-gradient(#bbb 0 25%, #fff 0 50%) 50% / 18px 18px"
+                  : previewBgColor,
             borderColor: "rgba(255,180,200,0.18)",
           }}
         >
@@ -205,6 +209,46 @@ export function TwitchOverlayBuilder() {
             />
           )}
         </div>
+
+        {/* Preview background (preview-only, not baked into download) */}
+        <div
+          className="flex items-center gap-3 flex-wrap text-xs rounded-lg px-3 py-2 border"
+          style={{
+            borderColor: "rgba(255,180,200,0.18)",
+            background: "rgba(20,4,10,0.5)",
+            color: "#ffe2ec",
+          }}
+        >
+          <span className="uppercase tracking-widest opacity-70">Preview BG</span>
+          {(["checker", "transparent", "color"] as const).map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setPreviewBg(opt)}
+              className="px-2.5 py-1 rounded-full transition"
+              style={{
+                background:
+                  previewBg === opt
+                    ? "linear-gradient(135deg,#c8132a,#8a0a1c)"
+                    : "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,180,200,0.25)",
+                color: "#fff0f4",
+              }}
+            >
+              {opt === "checker" ? "Default" : opt === "transparent" ? "Transparency grid" : "Solid color"}
+            </button>
+          ))}
+          {previewBg === "color" && (
+            <input
+              type="color"
+              value={previewBgColor}
+              onChange={(e) => setPreviewBgColor(e.target.value)}
+              className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
+            />
+          )}
+          <span className="opacity-50 ml-auto">Preview only — not included in the download.</span>
+        </div>
+
+        <ObsGuide />
       </div>
 
       {/* EDITOR */}

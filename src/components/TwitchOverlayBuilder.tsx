@@ -491,3 +491,52 @@ function CardImageSlot({
     </div>
   );
 }
+
+function ObsGuide() {
+  const [open, setOpen] = useState(true);
+  return (
+    <div
+      className="rounded-xl border overflow-hidden"
+      style={{
+        borderColor: "rgba(255,180,200,0.18)",
+        background: "rgba(20,4,10,0.5)",
+        color: "#ffe2ec",
+      }}
+    >
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold uppercase tracking-widest"
+        style={{ background: "rgba(255,255,255,0.04)" }}
+      >
+        <span>OBS Setup Guide</span>
+        <span className="opacity-70">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="px-4 py-3 text-sm leading-relaxed space-y-2">
+          <p className="font-semibold">How to add this to OBS:</p>
+          <ol className="list-decimal pl-5 space-y-1">
+            <li>Press Download</li>
+            <li>A .html file will be downloaded</li>
+            <li>Open OBS</li>
+            <li>Add Browser in your Sources Scene</li>
+            <li>Checkmark Local File and import the .html file</li>
+            <li>Set Width: 1920 and Height: 1080</li>
+            <li>Enjoy! Adjust the size of the animation however you want in your scene ♡</li>
+          </ol>
+          <p
+            className="mt-3 text-xs leading-snug rounded-md px-3 py-2"
+            style={{
+              background: "rgba(255,200,215,0.08)",
+              border: "1px solid rgba(255,180,200,0.25)",
+            }}
+          >
+            <span className="font-semibold">Tip:</span> Download 2 separate files — one with a
+            0.3s end break, and one with however long a break you actually want. Use the 0.3s
+            file to position and adjust the overlay in OBS, since the other one will appear
+            once and then be invisible for several minutes.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

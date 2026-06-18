@@ -31,6 +31,8 @@ export function TwitchOverlayBuilder() {
   });
   const [activeTier, setActiveTier] = useState(0);
   const [replayKey, setReplayKey] = useState(0);
+  const [previewBg, setPreviewBg] = useState<string>("checker");
+  const [previewBgColor, setPreviewBgColor] = useState<string>("#1a1a1a");
   const blobUrlRef = useRef<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
 
@@ -162,7 +164,11 @@ export function TwitchOverlayBuilder() {
           style={{
             aspectRatio: "16 / 9",
             background:
-              "repeating-conic-gradient(#1f0710 0 25%, #2a0a14 0 50%) 50% / 28px 28px",
+              previewBg === "checker"
+                ? "repeating-conic-gradient(#1f0710 0 25%, #2a0a14 0 50%) 50% / 28px 28px"
+                : previewBg === "transparent"
+                  ? "repeating-conic-gradient(#bbb 0 25%, #fff 0 50%) 50% / 18px 18px"
+                  : previewBgColor,
             borderColor: "rgba(255,180,200,0.18)",
           }}
         >
@@ -203,6 +209,46 @@ export function TwitchOverlayBuilder() {
             />
           )}
         </div>
+
+        {/* Preview background (preview-only, not baked into download) */}
+        <div
+          className="flex items-center gap-3 flex-wrap text-xs rounded-lg px-3 py-2 border"
+          style={{
+            borderColor: "rgba(255,180,200,0.18)",
+            background: "rgba(20,4,10,0.5)",
+            color: "#ffe2ec",
+          }}
+        >
+          <span className="uppercase tracking-widest opacity-70">Preview BG</span>
+          {(["checker", "transparent", "color"] as const).map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setPreviewBg(opt)}
+              className="px-2.5 py-1 rounded-full transition"
+              style={{
+                background:
+                  previewBg === opt
+                    ? "linear-gradient(135deg,#c8132a,#8a0a1c)"
+                    : "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,180,200,0.25)",
+                color: "#fff0f4",
+              }}
+            >
+              {opt === "checker" ? "Default" : opt === "transparent" ? "Transparency grid" : "Solid color"}
+            </button>
+          ))}
+          {previewBg === "color" && (
+            <input
+              type="color"
+              value={previewBgColor}
+              onChange={(e) => setPreviewBgColor(e.target.value)}
+              className="w-8 h-8 rounded cursor-pointer bg-transparent border-0 p-0"
+            />
+          )}
+          <span className="opacity-50 ml-auto">Preview only — not included in the download.</span>
+        </div>
+
+        <ObsGuide />
       </div>
 
       {/* EDITOR */}
@@ -225,6 +271,14 @@ export function TwitchOverlayBuilder() {
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Timing</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
+            <NumberField
+              label="Start delay (sec)"
+              hint="Empty/transparent pause before the animation begins"
+              value={+(cfg.startDelayMs / 1000).toFixed(1)}
+              step={0.5}
+              min={0}
+              onChange={(v) => updateCfg("startDelayMs", Math.max(0, Math.round(v * 1000)))}
+            />
             <NumberField
               label="Card hold (sec)"
               hint="How long each tier shows before flipping"
@@ -434,6 +488,55 @@ function CardImageSlot({
           e.currentTarget.value = "";
         }}
       />
+    </div>
+  );
+}
+
+function ObsGuide() {
+  const [open, setOpen] = useState(true);
+  return (
+    <div
+      className="rounded-xl border overflow-hidden"
+      style={{
+        borderColor: "rgba(255,180,200,0.18)",
+        background: "rgba(20,4,10,0.5)",
+        color: "#ffe2ec",
+      }}
+    >
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold uppercase tracking-widest"
+        style={{ background: "rgba(255,255,255,0.04)" }}
+      >
+        <span>OBS Setup Guide</span>
+        <span className="opacity-70">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="px-4 py-3 text-sm leading-relaxed space-y-2">
+          <p className="font-semibold">How to add this to OBS:</p>
+          <ol className="list-decimal pl-5 space-y-1">
+            <li>Press Download</li>
+            <li>A .html file will be downloaded</li>
+            <li>Open OBS</li>
+            <li>Add Browser in your Sources Scene</li>
+            <li>Checkmark Local File and import the .html file</li>
+            <li>Set Width: 1920 and Height: 1080</li>
+            <li>Enjoy! Adjust the size of the animation however you want in your scene ♡</li>
+          </ol>
+          <p
+            className="mt-3 text-xs leading-snug rounded-md px-3 py-2"
+            style={{
+              background: "rgba(255,200,215,0.08)",
+              border: "1px solid rgba(255,180,200,0.25)",
+            }}
+          >
+            <span className="font-semibold">Tip:</span> Download 2 separate files — one with a
+            0.3s end break, and one with however long a break you actually want. Use the 0.3s
+            file to position and adjust the overlay in OBS, since the other one will appear
+            once and then be invisible for several minutes.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,8 +8,9 @@ export type OverlayConfig = {
   textColor: string;
   audioWaveColor: string;
   // Timing
-  holdMs: number;   // how long each tier is shown before flipping to the next
-  breakMs: number;  // empty/transparent pause after the single playthrough (ms)
+  holdMs: number;       // how long each tier is shown before flipping to the next
+  breakMs: number;      // empty/transparent pause after the single playthrough (ms)
+  startDelayMs: number; // empty/transparent pause BEFORE the animation begins (ms)
 };
 
 export const DEFAULT_CONFIG: OverlayConfig = {
@@ -26,6 +27,7 @@ export const DEFAULT_CONFIG: OverlayConfig = {
   audioWaveColor: "#f8b8cc",
   holdMs: 3400,
   breakMs: 1500,
+  startDelayMs: 3000,
 };
 
 export function buildOverlayHtml(template: string, cfg: OverlayConfig): string {
@@ -36,6 +38,7 @@ export function buildOverlayHtml(template: string, cfg: OverlayConfig): string {
     audioTiers: cfg.audioTiers,
     holdMs: cfg.holdMs,
     breakMs: cfg.breakMs,
+    startDelayMs: cfg.startDelayMs,
   })};</script>\n`;
 
   let out = template.replace("<body>", "<body>\n" + configScript);
@@ -90,16 +93,19 @@ try {
   out = out
     .replace(/await sleep\(3400\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.holdMs)||3400)`)
     .replace(/await sleep\(1500\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.breakMs)||1500)`)
-    .replace(/while\s*\(\s*true\s*\)\s*\{/, "for (let __once=0; __once<1; __once++) {");
+    .replace(/while\s*\(\s*true\s*\)\s*\{/, "for (let __once=0; __once<1; __once++) { await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.startDelayMs)||3000);");
 
   // 4) Color overrides — keep the original card-back artwork and the audio-card
   //    background image; only theme the text + the waveform/mic accent color.
+  //    Also: reverse the right-side patreon sakura so it spins counter-clockwise
+  //    (same speed as before).
   const colorCss = `
 <style id="user-color-overrides">
   #tier-text, #patreon-text, #ac-txt, #ac-sub { color: ${cfg.textColor} !important; }
   #ac-wf span { background: ${cfg.audioWaveColor} !important; }
   #ac-icon { stroke: ${cfg.audioWaveColor} !important; }
   #ac-icon rect { fill: ${cfg.audioWaveColor}33 !important; }
+  #psakura-r { animation-direction: reverse !important; animation-duration: 17s !important; }
 </style>
 </body>`;
   out = out.replace("</body>", colorCss);

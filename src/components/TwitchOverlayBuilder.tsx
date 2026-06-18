@@ -534,45 +534,79 @@ function ObsGuide() {
   const [open, setOpen] = useState(true);
   return (
     <div
-      className="rounded-xl border overflow-hidden"
+      className="rounded-2xl border overflow-hidden"
       style={{
-        borderColor: "rgba(255,180,200,0.18)",
-        background: "rgba(20,4,10,0.5)",
+        borderColor: "rgba(255,180,200,0.22)",
+        background:
+          "linear-gradient(135deg, rgba(50,10,22,0.75), rgba(20,4,10,0.6))",
         color: "#ffe2ec",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
       }}
     >
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold uppercase tracking-widest"
-        style={{ background: "rgba(255,255,255,0.04)" }}
+        className="w-full flex items-center justify-between px-5 py-3 text-sm font-semibold tracking-[0.25em] uppercase"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(200,19,42,0.18), rgba(200,19,42,0.04))",
+          borderBottom: open ? "1px solid rgba(255,180,200,0.18)" : "none",
+        }}
       >
-        <span>OBS Setup Guide</span>
-        <span className="opacity-70">{open ? "−" : "+"}</span>
+        <span className="flex items-center gap-3">
+          <span aria-hidden style={{ color: "#ffb8cc", fontSize: 16, lineHeight: 1 }}>⛩</span>
+          <span>OBS Setup Guide</span>
+          <span className="opacity-60 text-[10px] tracking-[0.3em]">案内</span>
+        </span>
+        <span className="opacity-70 text-base">{open ? "−" : "+"}</span>
       </button>
       {open && (
-        <div className="px-4 py-3 text-sm leading-relaxed space-y-2">
-          <p className="font-semibold">How to add this to OBS:</p>
-          <ol className="list-decimal pl-5 space-y-1">
-            <li>Press Download</li>
-            <li>A .html file will be downloaded</li>
-            <li>Open OBS</li>
-            <li>Add Browser in your Sources Scene</li>
-            <li>Checkmark Local File and import the .html file</li>
-            <li>Set Width: 1920 and Height: 1080</li>
-            <li>Enjoy! Adjust the size of the animation however you want in your scene ♡</li>
+        <div className="px-5 py-4 text-sm leading-relaxed">
+          <p className="font-semibold mb-3 flex items-center gap-2" style={{ color: "#ffd0dc" }}>
+            <span aria-hidden>❀</span> How to add this to OBS
+          </p>
+          <ol className="space-y-2">
+            {[
+              "Press Download",
+              "A .html file will be saved to your computer",
+              "Open OBS",
+              "Add a Browser source to your scene",
+              "Tick Local File and import the .html file",
+              "Set Width: 1920 and Height: 1080",
+              "Adjust the size in your scene however you like ♡",
+            ].map((step, i) => (
+              <li key={i} className="flex gap-3 items-start">
+                <span
+                  className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold"
+                  style={{
+                    background: "linear-gradient(135deg,#c8132a,#8a0a1c)",
+                    color: "#fff0f4",
+                    boxShadow: "0 2px 8px rgba(200,19,42,0.4)",
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <span className="pt-0.5">{step}</span>
+              </li>
+            ))}
           </ol>
-          <p
-            className="mt-3 text-xs leading-snug rounded-md px-3 py-2"
+          <div
+            className="mt-4 text-xs leading-snug rounded-lg px-4 py-3 flex gap-3"
             style={{
-              background: "rgba(255,200,215,0.08)",
-              border: "1px solid rgba(255,180,200,0.25)",
+              background:
+                "linear-gradient(135deg, rgba(255,200,215,0.10), rgba(255,200,215,0.03))",
+              border: "1px solid rgba(255,180,200,0.28)",
             }}
           >
-            <span className="font-semibold">Tip:</span> Download 2 separate files — one with a
-            0.3s end break, and one with however long a break you actually want. Use the 0.3s
-            file to position and adjust the overlay in OBS, since the other one will appear
-            once and then be invisible for several minutes.
-          </p>
+            <span aria-hidden style={{ color: "#ffb8cc", fontSize: 14 }}>🌸</span>
+            <p>
+              <span className="font-semibold tracking-wider uppercase text-[10px] mr-1" style={{ color: "#ffb8cc" }}>
+                Tip
+              </span>
+              Download 2 files — one with a 0.3s end break for positioning in OBS, and one
+              with the real break length you want. The real one stays invisible between plays,
+              which makes it hard to align.
+            </p>
+          </div>
         </div>
       )}
     </div>

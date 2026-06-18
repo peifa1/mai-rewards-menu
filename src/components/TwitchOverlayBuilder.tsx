@@ -397,8 +397,7 @@ export function TwitchOverlayBuilder() {
             ))}
           </div>
           <p className="text-[11px] opacity-60 leading-snug mt-1">
-            Tip: when "Audio card" is on, the center slot shows the animated mic+waveform indicator instead of the image —
-            you can still upload an image; it just won't be visible on that tier.
+            Tip: when "Audio card" is on, the center slot shows the animated mic+waveform.
           </p>
         </div>
 

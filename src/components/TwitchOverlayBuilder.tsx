@@ -544,15 +544,36 @@ export function TwitchOverlayBuilder() {
               />
             )}
 
-            <label className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2 mt-1">
-              <input
-                type="checkbox"
-                checked={cfg.cardBlur[activeTier]}
-                onChange={(e) => setBlur(activeTier, e.target.checked)}
-              />
-              Blur cards
-            </label>
-          </div>
+            <div className="mt-1">
+              <span className="text-xs uppercase tracking-widest opacity-80 block mb-1.5">
+                Blur cards (front face only)
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {SLOT_LABELS.map((label, slot) => {
+                  const on = !!(cfg.cardBlur[activeTier] || [])[slot];
+                  return (
+                    <label
+                      key={slot}
+                      className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded cursor-pointer"
+                      style={{
+                        background: on
+                          ? "linear-gradient(135deg, rgba(200,19,42,0.35), rgba(138,10,28,0.25))"
+                          : "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,180,200,0.22)",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={(e) => setBlur(activeTier, slot, e.target.checked)}
+                      />
+                      <span className="uppercase tracking-widest opacity-90">{label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
 
           <label className="text-xs uppercase tracking-widest opacity-80 mt-2">Card images</label>
           <div className="grid grid-cols-3 gap-2">

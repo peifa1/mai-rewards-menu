@@ -157,17 +157,19 @@ try {
   // Audio slots are driven entirely by the per-slot patch below (setAudioCard is replaced).
 } catch (e) { console.warn('overlay overrides failed', e); }
 
-// ===== continuous petal rain =====
-// Runs inside the main script where the DOM is fully ready.
-// Uses evenly-spaced negative delays (one full duration / petal count)
-// so petals are uniformly distributed through their fall cycle at all times.
+// ===== petal rain setup =====
+// Positive staggered delays: petals start one by one from the top when enter() fires.
+// enter() calls animationPlayState='running' — petal i waits (i/TOTAL)*DUR seconds before
+// its first fall, so they cascade in sequentially rather than all appearing mid-screen.
+// exit() already handles the outro: snapshots each petal's progress, sets iterationCount=1
+// so every petal finishes its current fall naturally with no new cycles starting.
 try {
   (function(){
     var box = document.getElementById('petals');
     if (!box) return;
     var existing = Array.from(box.querySelectorAll('.petal'));
     if (!existing.length) return;
-    var TOTAL = 30;
+    var TOTAL = 15;
     var DUR   = 12; // fixed duration keeps spacing perfectly uniform
     var tpl   = existing[0];
     // Grow to TOTAL
@@ -176,10 +178,16 @@ try {
       box.appendChild(c);
       existing.push(c);
     }
-    // Assign each petal a unique evenly-spaced negative delay + random visuals
+    // Trim extras (template ships with 6; we want exactly TOTAL)
+    while (existing.length > TOTAL) {
+      var extra = existing.pop();
+      if (extra.parentNode) extra.parentNode.removeChild(extra);
+    }
+    // Assign each petal a unique evenly-spaced positive delay + random visuals.
+    // Positive delay = petal starts from the top after that many seconds, one by one.
     existing.forEach(function(p, i) {
       var dur   = DUR * (0.88 + Math.random() * 0.24); // ~10.6–13.4s slight variation
-      var delay = -((i / TOTAL) * DUR);                // evenly spread: 0, -0.4, -0.8...
+      var delay = (i / TOTAL) * DUR;                   // 0, 0.8, 1.6 ... 11.2s stagger
       var size  = 16 + Math.random() * 18;
       var r0    = Math.random() * 120 - 60;
       var r1    = r0 + 160 + Math.random() * 140;
@@ -191,9 +199,7 @@ try {
       p.style.setProperty('--r0',   r0.toFixed(1)   + 'deg');
       p.style.setProperty('--r1',   r1.toFixed(1)   + 'deg');
       p.style.setProperty('--dx',   dx.toFixed(1)   + 'px');
-      // Start running immediately — body is opacity:0 so invisible;
-      // by the time it fades in, petals are fully distributed through their cycle.
-      p.style.animationPlayState = 'running';
+      // Leave animationPlayState paused — enter() will start them.
     });
   })();
 } catch(e) { console.warn('petal seeding failed', e); }

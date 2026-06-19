@@ -124,11 +124,46 @@ export function TwitchOverlayBuilder() {
       return { ...c, cardShineColor };
     });
 
-  const setBlur = (t: number, on: boolean) =>
+  const setBlur = (t: number, slot: number, on: boolean) =>
     setCfg((c) => {
-      const cardBlur = c.cardBlur.slice();
-      cardBlur[t] = on;
+      const cardBlur = c.cardBlur.map((r) => r.slice());
+      if (!cardBlur[t]) cardBlur[t] = [false, false, false];
+      cardBlur[t][slot] = on;
       return { ...c, cardBlur };
+    });
+
+  const addTier = () =>
+    setCfg((c) => {
+      if (c.tierNames.length >= 12) return c;
+      const lastImgs = c.tierImages[c.tierImages.length - 1] ?? ["", "", ""];
+      return {
+        ...c,
+        tierNames: [...c.tierNames, `Tier ${c.tierNames.length + 1}`],
+        tierImages: [...c.tierImages, lastImgs.slice()],
+        audioTiers: [...c.audioTiers, false],
+        audioColors: [...c.audioColors, "#f8b8cc"],
+        audioTexts: [...c.audioTexts, { top: "RP AUDIO", sub: "ASMR" }],
+        cardShine: [...c.cardShine, false],
+        cardShineColor: [...c.cardShineColor, "#ffb8cc"],
+        cardBlur: [...c.cardBlur, [false, false, false]],
+      };
+    });
+
+  const removeTier = (idx: number) =>
+    setCfg((c) => {
+      if (c.tierNames.length <= 1) return c;
+      const drop = <T,>(a: T[]) => a.filter((_, i) => i !== idx);
+      return {
+        ...c,
+        tierNames: drop(c.tierNames),
+        tierImages: drop(c.tierImages),
+        audioTiers: drop(c.audioTiers),
+        audioColors: drop(c.audioColors),
+        audioTexts: drop(c.audioTexts),
+        cardShine: drop(c.cardShine),
+        cardShineColor: drop(c.cardShineColor),
+        cardBlur: drop(c.cardBlur),
+      };
     });
 
   const handleDownload = async () => {
@@ -377,7 +412,42 @@ export function TwitchOverlayBuilder() {
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Tier</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold uppercase tracking-widest opacity-80">Tiers</h3>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={addTier}
+                disabled={cfg.tierNames.length >= 12}
+                className="px-2 py-1 rounded-full text-[11px] font-semibold transition disabled:opacity-40"
+                style={{
+                  background: "linear-gradient(135deg,#c8132a,#8a0a1c)",
+                  color: "#fff0f4",
+                  border: "1px solid rgba(255,180,200,0.3)",
+                }}
+                title="Add a new tier"
+              >
+                + Add tier
+              </button>
+              <button
+                onClick={() => {
+                  if (cfg.tierNames.length <= 1) return;
+                  const newIdx = Math.max(0, Math.min(activeTier, cfg.tierNames.length - 2));
+                  removeTier(activeTier);
+                  setActiveTier(newIdx);
+                }}
+                disabled={cfg.tierNames.length <= 1}
+                className="px-2 py-1 rounded-full text-[11px] font-semibold transition disabled:opacity-40"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#ffd0dc",
+                  border: "1px solid rgba(255,180,200,0.25)",
+                }}
+                title="Remove the currently selected tier"
+              >
+                − Remove
+              </button>
+            </div>
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {tierTabs.map((t) => (
               <button
@@ -398,6 +468,7 @@ export function TwitchOverlayBuilder() {
             ))}
           </div>
         </div>
+
 
         <div className="flex flex-col gap-3">
           <label className="text-xs uppercase tracking-widest opacity-80">Tier name</label>
@@ -473,15 +544,39 @@ export function TwitchOverlayBuilder() {
               />
             )}
 
-            <label className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2 mt-1">
-              <input
-                type="checkbox"
-                checked={cfg.cardBlur[activeTier]}
-                onChange={(e) => setBlur(activeTier, e.target.checked)}
-              />
-              Blur cards
-            </label>
+            <div className="mt-1">
+              <span className="text-xs uppercase tracking-widest opacity-80 block mb-1.5">
+                Blur cards (front face only)
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {SLOT_LABELS.map((label, slot) => {
+                  const on = !!(cfg.cardBlur[activeTier] || [])[slot];
+                  return (
+                    <label
+                      key={slot}
+                      className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded cursor-pointer"
+                      style={{
+                        background: on
+                          ? "linear-gradient(135deg, rgba(200,19,42,0.35), rgba(138,10,28,0.25))"
+                          : "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,180,200,0.22)",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={(e) => setBlur(activeTier, slot, e.target.checked)}
+                      />
+                      <span className="uppercase tracking-widest opacity-90">{label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
           </div>
+
+
+
 
           <label className="text-xs uppercase tracking-widest opacity-80 mt-2">Card images</label>
           <div className="grid grid-cols-3 gap-2">

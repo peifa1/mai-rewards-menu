@@ -162,7 +162,7 @@ try {
 } catch (e) { console.warn('overlay overrides failed', e); }
 
 // ===== petal rain setup =====
-if (__o.showPetals !== false) {
+if ((window.__OVERLAY_CONFIG__||{}).showPetals !== false) {
 // Positive staggered delays: petals start one by one from the top when enter() fires.
 // enter() calls animationPlayState='running' — petal i waits (i/TOTAL)*DUR seconds before
 // its first fall, so they cascade in sequentially rather than all appearing mid-screen.

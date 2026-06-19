@@ -124,11 +124,46 @@ export function TwitchOverlayBuilder() {
       return { ...c, cardShineColor };
     });
 
-  const setBlur = (t: number, on: boolean) =>
+  const setBlur = (t: number, slot: number, on: boolean) =>
     setCfg((c) => {
-      const cardBlur = c.cardBlur.slice();
-      cardBlur[t] = on;
+      const cardBlur = c.cardBlur.map((r) => r.slice());
+      if (!cardBlur[t]) cardBlur[t] = [false, false, false];
+      cardBlur[t][slot] = on;
       return { ...c, cardBlur };
+    });
+
+  const addTier = () =>
+    setCfg((c) => {
+      if (c.tierNames.length >= 12) return c;
+      const lastImgs = c.tierImages[c.tierImages.length - 1] ?? ["", "", ""];
+      return {
+        ...c,
+        tierNames: [...c.tierNames, `Tier ${c.tierNames.length + 1}`],
+        tierImages: [...c.tierImages, lastImgs.slice()],
+        audioTiers: [...c.audioTiers, false],
+        audioColors: [...c.audioColors, "#f8b8cc"],
+        audioTexts: [...c.audioTexts, { top: "RP AUDIO", sub: "ASMR" }],
+        cardShine: [...c.cardShine, false],
+        cardShineColor: [...c.cardShineColor, "#ffb8cc"],
+        cardBlur: [...c.cardBlur, [false, false, false]],
+      };
+    });
+
+  const removeTier = (idx: number) =>
+    setCfg((c) => {
+      if (c.tierNames.length <= 1) return c;
+      const drop = <T,>(a: T[]) => a.filter((_, i) => i !== idx);
+      return {
+        ...c,
+        tierNames: drop(c.tierNames),
+        tierImages: drop(c.tierImages),
+        audioTiers: drop(c.audioTiers),
+        audioColors: drop(c.audioColors),
+        audioTexts: drop(c.audioTexts),
+        cardShine: drop(c.cardShine),
+        cardShineColor: drop(c.cardShineColor),
+        cardBlur: drop(c.cardBlur),
+      };
     });
 
   const handleDownload = async () => {

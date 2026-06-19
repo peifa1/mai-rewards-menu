@@ -216,6 +216,32 @@ function Index() {
 
   return (
     <div className="min-h-screen w-full" style={{ background: "#2a0a14" }}>
+      {/* Spinning sakura logo — top-left, decorative only */}
+      <div style={{ position: "fixed", top: 18, left: 22, zIndex: 50, pointerEvents: "none", userSelect: "none" }}>
+        <svg
+          width="44" height="44" viewBox="0 0 100 100"
+          style={{ animation: "sakura-spin 18s linear infinite", filter: "drop-shadow(0 0 10px rgba(255,160,190,0.55))" }}
+        >
+          <style>{`@keyframes sakura-spin { to { transform: rotate(360deg); } }`}</style>
+          {/* 5 petals */}
+          {[0,72,144,216,288].map((deg) => (
+            <ellipse key={deg} cx="50" cy="28" rx="14" ry="22"
+              fill="#ffb8c8" opacity="0.90"
+              transform={`rotate(${deg} 50 50)`}
+            />
+          ))}
+          {/* centre */}
+          <circle cx="50" cy="50" r="10" fill="#ff8aaa" />
+          <circle cx="50" cy="50" r="6" fill="#ffccd8" />
+          {/* stamens */}
+          {[0,60,120,180,240,300].map((deg) => (
+            <g key={deg} transform={`rotate(${deg} 50 50)`}>
+              <line x1="50" y1="44" x2="50" y2="38" stroke="#c8132a" strokeWidth="1.4" />
+              <circle cx="50" cy="37" r="2" fill="#c8132a" />
+            </g>
+          ))}
+        </svg>
+      </div>
       <div className="w-full flex justify-center pt-4 pb-2">
         <div className="inline-flex rounded-full p-1 gap-1" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,180,200,0.25)" }}>
           {([

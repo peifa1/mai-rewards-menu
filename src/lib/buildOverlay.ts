@@ -4,35 +4,34 @@
 export type AudioText = { top: string; sub: string };
 
 export type OverlayConfig = {
-  tierNames: string[]; // length 6
-  tierImages: string[][]; // [tier][slot 0|1|2] data URL or "" (keep original)
+  tierNames: string[]; // dynamic length (min 1)
+  tierImages: string[][]; // [tier][slot 0|1|2]
   audioTiers: boolean[];
-  audioColors: string[];      // per-tier wave/mic color
-  audioTexts: AudioText[];    // per-tier "RP AUDIO" / "ASMR" text
-  cardShine: boolean[];       // per-tier audio-card outline glow toggle
-  cardShineColor: string[];   // per-tier shine color
-  cardBlur: boolean[];        // per-tier blur toggle
-  cardBlurAmount: number;     // px blur radius applied when on
+  audioColors: string[];
+  audioTexts: AudioText[];
+  cardShine: boolean[];
+  cardShineColor: string[];
+  cardBlur: boolean[][]; // [tier][slot] — per-card blur
+  cardBlurAmount: number;
   textColor: string;
-  // Timing
   holdMs: number;
   breakMs: number;
   startDelayMs: number;
 };
 
-const TIER_COUNT = 6;
+const DEFAULT_TIERS = ["Yokan", "Sensu", "Tomo", "Okami", "Danna", "Kami"];
 
 const fill = <T,>(n: number, v: T): T[] => Array.from({ length: n }, () => v);
 
 export const DEFAULT_CONFIG: OverlayConfig = {
-  tierNames: ["Yokan", "Sensu", "Tomo", "Okami", "Danna", "Kami"],
-  tierImages: Array.from({ length: TIER_COUNT }, () => ["", "", ""]),
+  tierNames: [...DEFAULT_TIERS],
+  tierImages: DEFAULT_TIERS.map(() => ["", "", ""]),
   audioTiers: [false, false, true, true, true, true],
-  audioColors: fill(TIER_COUNT, "#f8b8cc"),
-  audioTexts: Array.from({ length: TIER_COUNT }, () => ({ top: "RP AUDIO", sub: "ASMR" })),
-  cardShine: fill(TIER_COUNT, false),
-  cardShineColor: fill(TIER_COUNT, "#ffb8cc"),
-  cardBlur: fill(TIER_COUNT, false),
+  audioColors: fill(DEFAULT_TIERS.length, "#f8b8cc"),
+  audioTexts: DEFAULT_TIERS.map(() => ({ top: "RP AUDIO", sub: "ASMR" })),
+  cardShine: fill(DEFAULT_TIERS.length, false),
+  cardShineColor: fill(DEFAULT_TIERS.length, "#ffb8cc"),
+  cardBlur: DEFAULT_TIERS.map(() => [false, false, false]),
   cardBlurAmount: 8,
   textColor: "#ffffff",
   holdMs: 3400,
@@ -47,21 +46,31 @@ function pad<T>(arr: T[] | undefined, n: number, fallback: T): T[] {
 }
 
 export function normalizeConfig(cfg: OverlayConfig): OverlayConfig {
+  const n = Math.max(1, (cfg.tierNames ?? DEFAULT_TIERS).length);
+  // Migrate legacy boolean[] blur -> boolean[][]
+  let blurInput: any = cfg.cardBlur;
+  if (Array.isArray(blurInput) && blurInput.length && typeof blurInput[0] === "boolean") {
+    blurInput = blurInput.map((b: boolean) => [b, b, b]);
+  }
   return {
     ...cfg,
-    tierNames: pad(cfg.tierNames, TIER_COUNT, ""),
-    tierImages: pad(cfg.tierImages, TIER_COUNT, ["", "", ""]).map((r) => pad(r, 3, "")),
-    audioTiers: pad(cfg.audioTiers, TIER_COUNT, false),
-    audioColors: pad(cfg.audioColors, TIER_COUNT, "#f8b8cc"),
-    audioTexts: pad(cfg.audioTexts, TIER_COUNT, { top: "RP AUDIO", sub: "ASMR" }),
-    cardShine: pad(cfg.cardShine, TIER_COUNT, false),
-    cardShineColor: pad(cfg.cardShineColor, TIER_COUNT, "#ffb8cc"),
-    cardBlur: pad(cfg.cardBlur, TIER_COUNT, false),
+    tierNames: pad(cfg.tierNames, n, ""),
+    tierImages: pad(cfg.tierImages, n, ["", "", ""]).map((r) => pad(r, 3, "")),
+    audioTiers: pad(cfg.audioTiers, n, false),
+    audioColors: pad(cfg.audioColors, n, "#f8b8cc"),
+    audioTexts: pad(cfg.audioTexts, n, { top: "RP AUDIO", sub: "ASMR" }),
+    cardShine: pad(cfg.cardShine, n, false),
+    cardShineColor: pad(cfg.cardShineColor, n, "#ffb8cc"),
+    cardBlur: pad(blurInput as boolean[][], n, [false, false, false]).map((r) =>
+      pad(r, 3, false),
+    ),
+    cardBlurAmount: cfg.cardBlurAmount ?? 8,
   };
 }
 
 export function buildOverlayHtml(template: string, rawCfg: OverlayConfig): string {
   const cfg = normalizeConfig(rawCfg);
+  const N = cfg.tierNames.length;
 
   // 1) Inject user config on window early + invisible body to kill initial flash
   const configScript = `<script>window.__OVERLAY_CONFIG__=${JSON.stringify({
@@ -74,28 +83,74 @@ export function buildOverlayHtml(template: string, rawCfg: OverlayConfig): strin
     cardShineColor: cfg.cardShineColor,
     cardBlur: cfg.cardBlur,
     cardBlurAmount: cfg.cardBlurAmount,
+    tierCount: N,
     holdMs: cfg.holdMs,
     breakMs: cfg.breakMs,
     startDelayMs: cfg.startDelayMs,
   })};</script>\n`;
 
-  // Inline opacity:0 on <body> so the very first paint is empty — kills the
-  // pre-script flicker where cards briefly appear before the start delay hides them.
+  // Invisible body kills the pre-script flicker.
   let out = template.replace("<body>", `<body style="opacity:0">\n${configScript}`);
 
+  // 1b) Inject a script BEFORE the main <script> to add many more petals
+  //     with randomized delays/durations/positions so the fall looks continuous,
+  //     not "chunky". Runs before the main script's origDelay snapshot.
+  const petalGen = `<script>
+(function(){
+  try {
+    var box = document.getElementById('petals');
+    if (!box) return;
+    var existing = box.querySelectorAll('.petal');
+    if (!existing.length) return;
+    // Re-randomize the originals so they don't all share the same hand-picked
+    // delays/positions (which causes visible "chunks").
+    existing.forEach(function(p){
+      var dur = 9 + Math.random()*7;
+      p.style.setProperty('--dur', dur.toFixed(2)+'s');
+      p.style.setProperty('--delay', (Math.random()*dur).toFixed(2)+'s');
+      p.style.setProperty('--x', (Math.random()*100).toFixed(1)+'%');
+    });
+    var TOTAL = 32; // total petals on screen
+    var tpl = existing[0];
+    for (var i = existing.length; i < TOTAL; i++) {
+      var p = tpl.cloneNode();
+      var size = 16 + Math.random()*18;
+      var dur  = 9 + Math.random()*7;          // 9–16s
+      var delay = Math.random()*dur;            // uniformly spread across cycle
+      var r0 = (Math.random()*120 - 60);
+      var r1 = r0 + 160 + Math.random()*140;
+      var dx = (Math.random()*44 - 22);
+      p.style.setProperty('--x', (Math.random()*100).toFixed(1)+'%');
+      p.style.setProperty('--size', size.toFixed(1)+'px');
+      p.style.setProperty('--dur', dur.toFixed(2)+'s');
+      p.style.setProperty('--delay', delay.toFixed(2)+'s');
+      p.style.setProperty('--r0', r0.toFixed(1)+'deg');
+      p.style.setProperty('--r1', r1.toFixed(1)+'deg');
+      p.style.setProperty('--dx', dx.toFixed(1)+'px');
+      box.appendChild(p);
+    }
+  } catch(e) { console.warn('petal seeding failed', e); }
+})();
+</script>
+<script>`;
+  out = out.replace("<script>", petalGen);
+
   // 2) Inject overrides for names/images/audio just before the init line.
-  //    Also push the 6th tier (Kami) into TIER_NAMES / TIERS / AUDIO_TIERS,
-  //    reusing Danna's card slots as the visual fallback.
+  //    Dynamically size TIER_NAMES / TIERS / AUDIO_TIERS to the user's tier count.
   const initMarker = "const CARD_BACK=CARD_BACKS[0];";
   const overrideBlock = `
 // ===== user overrides injected by builder =====
 try {
-  // Make room for the 6th tier (Kami) using Danna's cards as a visual fallback.
-  while (TIER_NAMES.length < 6) TIER_NAMES.push('Kami');
-  while (TIERS.length < 6) TIERS.push(TIERS[TIERS.length-1].slice());
-
   const __o = window.__OVERLAY_CONFIG__ || {};
-  if (__o.tierNames) __o.tierNames.forEach((n,i)=>{ if (n != null && TIER_NAMES[i] !== undefined) TIER_NAMES[i] = n; });
+  const __N = __o.tierCount || TIER_NAMES.length;
+  // Grow arrays as needed (clone last tier's slots as visual fallback for new tiers).
+  while (TIER_NAMES.length < __N) TIER_NAMES.push('New Tier');
+  while (TIERS.length < __N) TIERS.push((TIERS[TIERS.length-1]||['','','']).slice());
+  // Shrink if user removed tiers.
+  TIER_NAMES.length = __N;
+  TIERS.length = __N;
+
+  if (__o.tierNames) __o.tierNames.forEach((n,i)=>{ if (n != null && i < __N) TIER_NAMES[i] = n; });
   if (__o.tierImages) __o.tierImages.forEach((row,t)=>{
     if (!TIERS[t]) return;
     row.forEach((src,s)=>{ if (src) TIERS[t][s] = src; });
@@ -109,12 +164,7 @@ try {
 `;
   out = out.replace(initMarker, overrideBlock + initMarker);
 
-  // 2b) Patch setAudioCard so it ALSO drives:
-  //     - audio card bg = user-uploaded center image (darkened by #ac-overlay)
-  //     - per-tier wave/mic color
-  //     - per-tier "RP AUDIO" / "ASMR" text
-  //     - per-tier outline glow (shine)
-  //     - per-tier blur of all cards
+  // 2b) Patch setAudioCard so it ALSO drives per-tier audio visuals + per-card blur.
   const audioPatchMarker = "const slots =[0,1,2].map";
   const audioPatch = `
 // ===== per-tier audio/visual patch =====
@@ -153,7 +203,7 @@ try {
       if (sub && typeof t.sub === 'string') sub.textContent = t.sub;
     }
 
-    // Per-tier outline glow (shine) on the audio card — outline only, no fill
+    // Per-tier outline glow (shine) on the audio card
     const ac = document.getElementById('audio-card');
     if (ac) {
       const on = !!(c.cardShine||[])[tierIdx] && AUDIO_TIERS.has(tierIdx);
@@ -164,19 +214,35 @@ try {
       ac.style.borderRadius = on ? '10px' : '';
     }
 
-    // Per-tier blur of every card (front + back)
-    const blurOn = !!(c.cardBlur||[])[tierIdx];
+    // Per-card blur — front face only, so the back stays crisp during flip.
+    // After every swap, the engine normalizes curFace back to 'front', so we
+    // only need to drive front imgs + their reflection counterparts.
+    const blurRow = (c.cardBlur||[])[tierIdx] || [false,false,false];
     const px = (c.cardBlurAmount != null ? c.cardBlurAmount : 8);
-    const cardsEl = document.getElementById('cards');
-    if (cardsEl) cardsEl.style.filter = blurOn ? ('blur(' + px + 'px)') : '';
+    for (var __i=0; __i<3; __i++) {
+      var f  = document.getElementById('f'+__i);
+      var rf = document.getElementById('rf'+__i);
+      var val = blurRow[__i] ? ('blur(' + px + 'px)') : '';
+      if (f)  f.style.filter  = val;
+      if (rf) rf.style.filter = val;
+    }
+    // Always keep backs unblurred so flips look clean.
+    for (var __j=0; __j<3; __j++) {
+      var b  = document.getElementById('b'+__j);
+      var rb = document.getElementById('rb'+__j);
+      if (b)  b.style.filter  = '';
+      if (rb) rb.style.filter = '';
+    }
+    // Make sure the parent container has no global blur lingering from older builds.
+    var cardsEl = document.getElementById('cards');
+    if (cardsEl) cardsEl.style.filter = '';
   };
 } catch (e) { console.warn('audio/visual patch failed', e); }
 // ===== end patch =====
 `;
   out = out.replace(audioPatchMarker, audioPatch + audioPatchMarker);
 
-  // 3) Timing patches: per-tier hold, end-of-playthrough break, single playthrough,
-  //    + reveal body after the start delay.
+  // 3) Timing patches: per-tier hold, end-of-playthrough break, single playthrough.
   out = out
     .replace(/await sleep\(3400\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.holdMs)||3400)`)
     .replace(/await sleep\(1500\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.breakMs)||1500)`)
@@ -185,13 +251,13 @@ try {
       "for (let __once=0; __once<1; __once++) { await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.startDelayMs)||3000); document.body.style.opacity='1';"
     );
 
-  // 4) Color / sakura overrides. The right sakura now spins the SAME speed as
-  //    the left (14s), just in the opposite direction.
+  // 4) Color / sakura overrides + smooth blur transition on faces.
   const colorCss = `
 <style id="user-color-overrides">
   body { transition: opacity .35s ease-out; }
   #tier-text, #patreon-text, #ac-txt, #ac-sub { color: ${cfg.textColor} !important; }
   #psakura-r { animation-direction: reverse !important; animation-duration: 14s !important; }
+  .face img, #reflection .face img { transition: filter .35s ease; }
 </style>
 </body>`;
   out = out.replace("</body>", colorCss);

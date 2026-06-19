@@ -169,7 +169,7 @@ try {
     if (!box) return;
     var existing = Array.from(box.querySelectorAll('.petal'));
     if (!existing.length) return;
-    var TOTAL = 15;
+    var TOTAL = 8;
     var DUR   = 12; // fixed duration keeps spacing perfectly uniform
     var tpl   = existing[0];
     // Grow to TOTAL
@@ -377,6 +377,12 @@ try {
     .replace(
       /while\s*\(\s*true\s*\)\s*\{/,
       "for (let __once=0; __once<1; __once++) { await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.startDelayMs)||3000); document.body.style.opacity='1';"
+    )
+    // Fix exit() petal elapsed: original formula assumed negative delays (pre-seeded);
+    // staggered positive delays require Web Animations API currentTime for accuracy.
+    .replace(
+      `    const elapsed = (performance.now() - delay + dur*100) % dur;\n    const remaining = dur - elapsed;\n    // Switch to exactly 1 more iteration from current point using a fresh delay trick:\n    // Keep current timing but stop after this iteration\n    p.style.animationIterationCount = '1';\n    // Rewind to current position by setting a negative delay\n    p.style.animationDelay = \`-\${elapsed}ms\`;`,
+      `    const _wa = p.getAnimations ? p.getAnimations()[0] : null;\n    const _ct = _wa ? (_wa.currentTime || 0) : null;\n    const elapsed = _ct != null ? Math.max(0, _ct - Math.max(0, delay)) % dur : (performance.now() - delay + dur*100) % dur;\n    p.style.animationIterationCount = '1';\n    p.style.animationDelay = '-' + Math.round(elapsed) + 'ms';`
     );
 
   // 4) Color / sakura overrides + smooth blur transition on faces.

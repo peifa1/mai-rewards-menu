@@ -17,6 +17,7 @@ export type OverlayConfig = {
   cardBlur: boolean[][]; // [tier][slot] — per-card blur
   cardBlurAmount: number;
   textColor: string;
+  showPetals: boolean;
   holdMs: number;
   breakMs: number;
   startDelayMs: number;
@@ -39,6 +40,7 @@ export const DEFAULT_CONFIG: OverlayConfig = {
   cardBlur: DEFAULT_TIERS.map(() => [false, false, false]),
   cardBlurAmount: 8,
   textColor: "#ffffff",
+  showPetals: true,
   holdMs: 3400,
   breakMs: 1500,
   startDelayMs: 3000,
@@ -103,6 +105,7 @@ export function normalizeConfig(cfg: OverlayConfig): OverlayConfig {
       pad(r, 3, false),
     ),
     cardBlurAmount: cfg.cardBlurAmount ?? 8,
+    showPetals: cfg.showPetals ?? true,
   };
 }
 
@@ -125,6 +128,7 @@ export function buildOverlayHtml(template: string, rawCfg: OverlayConfig): strin
     holdMs: cfg.holdMs,
     breakMs: cfg.breakMs,
     startDelayMs: cfg.startDelayMs,
+    showPetals: cfg.showPetals,
   })};</script>\n`;
 
   // Invisible body kills the pre-script flicker.
@@ -158,6 +162,7 @@ try {
 } catch (e) { console.warn('overlay overrides failed', e); }
 
 // ===== petal rain setup =====
+if (__o.showPetals !== false) {
 // Positive staggered delays: petals start one by one from the top when enter() fires.
 // enter() calls animationPlayState='running' — petal i waits (i/TOTAL)*DUR seconds before
 // its first fall, so they cascade in sequentially rather than all appearing mid-screen.
@@ -203,6 +208,7 @@ try {
     });
   })();
 } catch(e) { console.warn('petal seeding failed', e); }
+} // end showPetals
 // ===== end petal rain =====
 // ===== end overrides =====
 `;

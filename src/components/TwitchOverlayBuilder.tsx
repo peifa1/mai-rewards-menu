@@ -383,6 +383,17 @@ export function TwitchOverlayBuilder() {
           <div className="grid grid-cols-2 gap-3 text-xs">
             <ColorField label="Text" value={cfg.textColor} onChange={(v) => updateCfg("textColor", v)} />
           </div>
+          <div className="mt-3">
+            <label className="flex items-center gap-2 text-xs cursor-pointer select-none"
+              style={{ color: "rgba(255,255,255,0.85)" }}>
+              <input
+                type="checkbox"
+                checked={cfg.showPetals ?? true}
+                onChange={(e) => updateCfg("showPetals", e.target.checked)}
+              />
+              <span className="uppercase tracking-widest">Show petal rain</span>
+            </label>
+          </div>
           <p className="text-[10px] opacity-60 mt-2 leading-snug">
             Audio wave / mic color is now configured per-tier below.
           </p>

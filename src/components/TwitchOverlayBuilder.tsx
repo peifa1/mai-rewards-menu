@@ -26,7 +26,7 @@ export function TwitchOverlayBuilder() {
     if (typeof window === "undefined") return DEFAULT_CONFIG;
     try {
       const raw = localStorage.getItem("twitch-overlay-cfg");
-      if (raw) return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+      if (raw) return normalizeConfig({ ...DEFAULT_CONFIG, ...JSON.parse(raw) });
     } catch {}
     return DEFAULT_CONFIG;
   });

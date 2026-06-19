@@ -130,49 +130,9 @@ export function buildOverlayHtml(template: string, rawCfg: OverlayConfig): strin
   // Invisible body kills the pre-script flicker.
   let out = template.replace("<body>", `<body style="opacity:0">\n${configScript}`);
 
-  // 1b) Inject a script BEFORE the main <script> to add many more petals
-  //     with randomized delays/durations/positions so the fall looks continuous,
-  //     not "chunky". Runs before the main script's origDelay snapshot.
-  const petalGen = `<script>
-(function(){
-  try {
-    var box = document.getElementById('petals');
-    if (!box) return;
-    var existing = box.querySelectorAll('.petal');
-    if (!existing.length) return;
-    // Re-randomize the originals so they don't all share the same hand-picked
-    // delays/positions (which causes visible "chunks").
-    existing.forEach(function(p){
-      var dur = 9 + Math.random()*7;
-      p.style.setProperty('--dur', dur.toFixed(2)+'s');
-      // Negative delay pre-seeds each petal mid-fall so rain is continuous from frame one.
-      p.style.setProperty('--delay', (-(Math.random()*dur)).toFixed(2)+'s');
-      p.style.setProperty('--x', (Math.random()*100).toFixed(1)+'%');
-    });
-    var TOTAL = 32; // total petals on screen
-    var tpl = existing[0];
-    for (var i = existing.length; i < TOTAL; i++) {
-      var p = tpl.cloneNode();
-      var size = 16 + Math.random()*18;
-      var dur  = 9 + Math.random()*7;          // 9–16s
-      var delay = -(Math.random()*dur);          // negative = pre-seeded mid-fall
-      var r0 = (Math.random()*120 - 60);
-      var r1 = r0 + 160 + Math.random()*140;
-      var dx = (Math.random()*44 - 22);
-      p.style.setProperty('--x', (Math.random()*100).toFixed(1)+'%');
-      p.style.setProperty('--size', size.toFixed(1)+'px');
-      p.style.setProperty('--dur', dur.toFixed(2)+'s');
-      p.style.setProperty('--delay', delay.toFixed(2)+'s');
-      p.style.setProperty('--r0', r0.toFixed(1)+'deg');
-      p.style.setProperty('--r1', r1.toFixed(1)+'deg');
-      p.style.setProperty('--dx', dx.toFixed(1)+'px');
-      box.appendChild(p);
-    }
-  } catch(e) { console.warn('petal seeding failed', e); }
-})();
-</script>
-<script>`;
-  out = out.replace("<script>", petalGen);
+  // 1b) Petal seeding is done inside overrideBlock below (inside the main script,
+  //     where the DOM is guaranteed ready). The old approach of replacing the first
+  //     "<script>" tag hit the injected configScript, not the template's main script.
 
   // 2) Inject overrides for names/images/audio just before the init line.
   //    Dynamically size TIER_NAMES / TIERS / AUDIO_TIERS to the user's tier count.
@@ -196,6 +156,48 @@ try {
   });
   // Audio slots are driven entirely by the per-slot patch below (setAudioCard is replaced).
 } catch (e) { console.warn('overlay overrides failed', e); }
+
+// ===== continuous petal rain =====
+// Runs inside the main script where the DOM is fully ready.
+// Uses evenly-spaced negative delays (one full duration / petal count)
+// so petals are uniformly distributed through their fall cycle at all times.
+try {
+  (function(){
+    var box = document.getElementById('petals');
+    if (!box) return;
+    var existing = Array.from(box.querySelectorAll('.petal'));
+    if (!existing.length) return;
+    var TOTAL = 30;
+    var DUR   = 12; // fixed duration keeps spacing perfectly uniform
+    var tpl   = existing[0];
+    // Grow to TOTAL
+    while (existing.length < TOTAL) {
+      var c = tpl.cloneNode(false);
+      box.appendChild(c);
+      existing.push(c);
+    }
+    // Assign each petal a unique evenly-spaced negative delay + random visuals
+    existing.forEach(function(p, i) {
+      var dur   = DUR * (0.88 + Math.random() * 0.24); // ~10.6–13.4s slight variation
+      var delay = -((i / TOTAL) * DUR);                // evenly spread: 0, -0.4, -0.8...
+      var size  = 16 + Math.random() * 18;
+      var r0    = Math.random() * 120 - 60;
+      var r1    = r0 + 160 + Math.random() * 140;
+      var dx    = Math.random() * 44 - 22;
+      p.style.setProperty('--x',    (Math.random() * 100).toFixed(1) + '%');
+      p.style.setProperty('--size', size.toFixed(1) + 'px');
+      p.style.setProperty('--dur',  dur.toFixed(2)  + 's');
+      p.style.setProperty('--delay', delay.toFixed(2) + 's');
+      p.style.setProperty('--r0',   r0.toFixed(1)   + 'deg');
+      p.style.setProperty('--r1',   r1.toFixed(1)   + 'deg');
+      p.style.setProperty('--dx',   dx.toFixed(1)   + 'px');
+      // Start running immediately — body is opacity:0 so invisible;
+      // by the time it fades in, petals are fully distributed through their cycle.
+      p.style.animationPlayState = 'running';
+    });
+  })();
+} catch(e) { console.warn('petal seeding failed', e); }
+// ===== end petal rain =====
 // ===== end overrides =====
 `;
   out = out.replace(initMarker, overrideBlock + initMarker);

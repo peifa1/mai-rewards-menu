@@ -95,6 +95,41 @@ export function TwitchOverlayBuilder() {
       return { ...c, audioTiers };
     });
 
+  const setAudioColor = (t: number, v: string) =>
+    setCfg((c) => {
+      const audioColors = c.audioColors.slice();
+      audioColors[t] = v;
+      return { ...c, audioColors };
+    });
+
+  const setAudioText = (t: number, key: "top" | "sub", v: string) =>
+    setCfg((c) => {
+      const audioTexts = c.audioTexts.map((x) => ({ ...x }));
+      audioTexts[t] = { ...audioTexts[t], [key]: v };
+      return { ...c, audioTexts };
+    });
+
+  const setShine = (t: number, on: boolean) =>
+    setCfg((c) => {
+      const cardShine = c.cardShine.slice();
+      cardShine[t] = on;
+      return { ...c, cardShine };
+    });
+
+  const setShineColor = (t: number, v: string) =>
+    setCfg((c) => {
+      const cardShineColor = c.cardShineColor.slice();
+      cardShineColor[t] = v;
+      return { ...c, cardShineColor };
+    });
+
+  const setBlur = (t: number, on: boolean) =>
+    setCfg((c) => {
+      const cardBlur = c.cardBlur.slice();
+      cardBlur[t] = on;
+      return { ...c, cardBlur };
+    });
+
   const handleDownload = async () => {
     if (!template) return;
     const html = buildOverlayHtml(template, cfg);

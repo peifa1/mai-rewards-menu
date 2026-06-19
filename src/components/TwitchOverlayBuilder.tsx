@@ -573,6 +573,9 @@ export function TwitchOverlayBuilder() {
                 })}
               </div>
             </div>
+          </div>
+
+
 
 
           <label className="text-xs uppercase tracking-widest opacity-80 mt-2">Card images</label>

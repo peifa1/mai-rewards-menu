@@ -6,10 +6,10 @@ export type AudioText = { top: string; sub: string };
 export type OverlayConfig = {
   tierNames: string[]; // dynamic length (min 1)
   tierImages: string[][]; // [tier][slot 0|1|2]
-  audioTiers: boolean[];
+  audioSlots: boolean[][]; // [tier][slot] — which slots show the audio card
   audioColors: string[];
   audioTexts: AudioText[];
-  cardShine: boolean[];
+  cardShineSlots: boolean[][]; // [tier][slot] — which slots get the outline shine
   cardShineColor: string[];
   cardBlur: boolean[][]; // [tier][slot] — per-card blur
   cardBlurAmount: number;
@@ -26,10 +26,11 @@ const fill = <T,>(n: number, v: T): T[] => Array.from({ length: n }, () => v);
 export const DEFAULT_CONFIG: OverlayConfig = {
   tierNames: [...DEFAULT_TIERS],
   tierImages: DEFAULT_TIERS.map(() => ["", "", ""]),
-  audioTiers: [false, false, true, true, true, true],
+  // Center-slot audio on for Tomo/Okami/Danna/Kami (matches the original template).
+  audioSlots: [false, false, true, true, true, true].map((v) => [false, v, false]),
   audioColors: fill(DEFAULT_TIERS.length, "#f8b8cc"),
   audioTexts: DEFAULT_TIERS.map(() => ({ top: "RP AUDIO", sub: "ASMR" })),
-  cardShine: fill(DEFAULT_TIERS.length, false),
+  cardShineSlots: DEFAULT_TIERS.map(() => [false, false, false]),
   cardShineColor: fill(DEFAULT_TIERS.length, "#ffb8cc"),
   cardBlur: DEFAULT_TIERS.map(() => [false, false, false]),
   cardBlurAmount: 8,
@@ -52,14 +53,28 @@ export function normalizeConfig(cfg: OverlayConfig): OverlayConfig {
   if (Array.isArray(blurInput) && blurInput.length && typeof blurInput[0] === "boolean") {
     blurInput = blurInput.map((b: boolean) => [b, b, b]);
   }
+  // Migrate legacy per-tier audio/shine booleans -> per-slot [L,C,R] (were center-only).
+  const legacy = cfg as any;
+  let audioInput: any = cfg.audioSlots;
+  if (!audioInput && Array.isArray(legacy.audioTiers)) {
+    audioInput = legacy.audioTiers.map((b: boolean) => [false, !!b, false]);
+  }
+  let shineInput: any = cfg.cardShineSlots;
+  if (!shineInput && Array.isArray(legacy.cardShine)) {
+    shineInput = legacy.cardShine.map((b: boolean) => [false, !!b, false]);
+  }
   return {
     ...cfg,
     tierNames: pad(cfg.tierNames, n, ""),
     tierImages: pad(cfg.tierImages, n, ["", "", ""]).map((r) => pad(r, 3, "")),
-    audioTiers: pad(cfg.audioTiers, n, false),
+    audioSlots: pad(audioInput as boolean[][], n, [false, false, false]).map((r) =>
+      pad(r, 3, false),
+    ),
     audioColors: pad(cfg.audioColors, n, "#f8b8cc"),
     audioTexts: pad(cfg.audioTexts, n, { top: "RP AUDIO", sub: "ASMR" }),
-    cardShine: pad(cfg.cardShine, n, false),
+    cardShineSlots: pad(shineInput as boolean[][], n, [false, false, false]).map((r) =>
+      pad(r, 3, false),
+    ),
     cardShineColor: pad(cfg.cardShineColor, n, "#ffb8cc"),
     cardBlur: pad(blurInput as boolean[][], n, [false, false, false]).map((r) =>
       pad(r, 3, false),
@@ -76,10 +91,10 @@ export function buildOverlayHtml(template: string, rawCfg: OverlayConfig): strin
   const configScript = `<script>window.__OVERLAY_CONFIG__=${JSON.stringify({
     tierNames: cfg.tierNames,
     tierImages: cfg.tierImages,
-    audioTiers: cfg.audioTiers,
+    audioSlots: cfg.audioSlots,
     audioColors: cfg.audioColors,
     audioTexts: cfg.audioTexts,
-    cardShine: cfg.cardShine,
+    cardShineSlots: cfg.cardShineSlots,
     cardShineColor: cfg.cardShineColor,
     cardBlur: cfg.cardBlur,
     cardBlurAmount: cfg.cardBlurAmount,
@@ -155,68 +170,128 @@ try {
     if (!TIERS[t]) return;
     row.forEach((src,s)=>{ if (src) TIERS[t][s] = src; });
   });
-  if (__o.audioTiers) {
-    AUDIO_TIERS.clear();
-    __o.audioTiers.forEach((on,t)=>{ if (on) AUDIO_TIERS.add(t); });
-  }
+  // Audio slots are driven entirely by the per-slot patch below (setAudioCard is replaced).
 } catch (e) { console.warn('overlay overrides failed', e); }
 // ===== end overrides =====
 `;
   out = out.replace(initMarker, overrideBlock + initMarker);
 
-  // 2b) Patch setAudioCard so it ALSO drives per-tier audio visuals + per-card blur.
+  // 2b) Replace setAudioCard so the audio card + shine can live on ANY slot
+  //     (left / center / right), not just the center. The template only ships a
+  //     single center audio card, so we clone it into the side slots on demand.
   const audioPatchMarker = "const slots =[0,1,2].map";
   const audioPatch = `
-// ===== per-tier audio/visual patch =====
+// ===== per-slot audio / shine patch =====
 try {
   const __cfg = () => (window.__OVERLAY_CONFIG__ || {});
-  const __origSetAudio = setAudioCard;
-  setAudioCard = function(tierIdx){
-    __origSetAudio(tierIdx);
-    const c = __cfg();
 
-    // Audio-card background image override (user image)
-    const bg = document.getElementById('ac-bg');
-    if (bg && AUDIO_TIERS.has(tierIdx)) {
-      const img = (TIERS[tierIdx]||[])[1];
-      if (img) bg.style.backgroundImage = "url('"+img+"')";
+  // Class-based mirror of the id-based audio-card CSS so cloned cards style up.
+  (function(){
+    var st = document.createElement('style');
+    st.textContent = ''
+      + '.audio-card{display:none;position:absolute;inset:0;width:80px;height:112px;overflow:hidden;}'
+      + '.audio-card.active{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;}'
+      + '.audio-card .ac-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(0.28) saturate(0.85);z-index:0;}'
+      + '.audio-card .ac-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0.15) 40%,rgba(0,0,0,0.55) 100%);z-index:1;}'
+      + '.audio-card .ac-icon{width:26px;height:26px;position:relative;z-index:2;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));}'
+      + '.audio-card .ac-wf{display:flex;align-items:center;gap:2px;height:22px;position:relative;z-index:2;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.6));}'
+      + '.audio-card .ac-wf span{width:2px;border-radius:2px;background:linear-gradient(180deg,#f8b8cc,#c8647a);animation:acwave 0.9s ease-in-out infinite;}'
+      + '.audio-card .ac-wf span:nth-child(1){animation-delay:0s;height:5px}'
+      + '.audio-card .ac-wf span:nth-child(2){animation-delay:.1s;height:11px}'
+      + '.audio-card .ac-wf span:nth-child(3){animation-delay:.2s;height:8px}'
+      + '.audio-card .ac-wf span:nth-child(4){animation-delay:.3s;height:18px}'
+      + '.audio-card .ac-wf span:nth-child(5){animation-delay:.15s;height:13px}'
+      + '.audio-card .ac-wf span:nth-child(6){animation-delay:.05s;height:22px}'
+      + '.audio-card .ac-wf span:nth-child(7){animation-delay:.25s;height:15px}'
+      + '.audio-card .ac-wf span:nth-child(8){animation-delay:.35s;height:9px}'
+      + '.audio-card .ac-wf span:nth-child(9){animation-delay:.1s;height:19px}'
+      + '.audio-card .ac-wf span:nth-child(10){animation-delay:.2s;height:7px}'
+      + '.audio-card .ac-wf span:nth-child(11){animation-delay:.3s;height:14px}'
+      + '.audio-card .ac-wf span:nth-child(12){animation-delay:.15s;height:10px}'
+      + '.ac-shine{border-radius:10px;}';
+    document.head.appendChild(st);
+  })();
+
+  const __slotFront = (s) => {
+    const slot = document.getElementById('s'+s);
+    return slot ? slot.querySelector('.face.front') : null;
+  };
+
+  // Give the center card classes, then clone it into the L/R slots once.
+  const __audioNodes = [null,null,null];
+  (function(){
+    const center = document.getElementById('audio-card');
+    if (center) {
+      center.classList.add('audio-card');
+      ['ac-bg','ac-overlay','ac-icon','ac-wf','ac-txt','ac-sub'].forEach(function(cls){
+        const el = center.querySelector('#'+cls);
+        if (el) el.classList.add(cls);
+      });
+      __audioNodes[1] = center;
+      [0,2].forEach(function(s){
+        const front = __slotFront(s);
+        if (!front) return;
+        const clone = center.cloneNode(true);
+        clone.removeAttribute('id');
+        clone.querySelectorAll('[id]').forEach(function(el){ el.removeAttribute('id'); });
+        clone.classList.remove('active');
+        front.appendChild(clone);
+        __audioNodes[s] = clone;
+      });
     }
+  })();
 
-    // Per-tier wave/mic color
-    const wf = document.getElementById('ac-wf');
-    const ic = document.getElementById('ac-icon');
+  setAudioCard = function(tierIdx){
+    const c = __cfg();
+    const audioRow = (c.audioSlots||[])[tierIdx] || [false,false,false];
+    const shineRow = (c.cardShineSlots||[])[tierIdx] || [false,false,false];
     const color = (c.audioColors||[])[tierIdx];
-    if (color) {
-      if (wf) wf.querySelectorAll('span').forEach(s => { s.style.background = color; });
-      if (ic) {
-        ic.style.stroke = color;
-        ic.querySelectorAll('rect').forEach(r => { r.style.fill = color + '33'; });
+    const txt = (c.audioTexts||[])[tierIdx] || {};
+    const sc = (c.cardShineColor||[])[tierIdx] || '#ffb8cc';
+
+    for (var s=0; s<3; s++) {
+      const node = __audioNodes[s];
+      const img = document.getElementById('f'+s);
+      const audioOn = !!audioRow[s];
+      if (node) {
+        if (audioOn) {
+          node.classList.add('active');
+          if (img) img.style.display = 'none';
+          const bg = node.querySelector('.ac-bg');
+          const src = (TIERS[tierIdx]||[])[s];
+          if (bg && src) bg.style.backgroundImage = "url('"+src+"')";
+          if (color) {
+            node.querySelectorAll('.ac-wf span').forEach(function(sp){ sp.style.background = color; });
+            const ic = node.querySelector('.ac-icon');
+            if (ic) {
+              ic.style.stroke = color;
+              ic.querySelectorAll('rect').forEach(function(r){ r.style.fill = color + '33'; });
+            }
+          }
+          const top = node.querySelector('.ac-txt');
+          const sub = node.querySelector('.ac-sub');
+          if (top && typeof txt.top === 'string') top.textContent = txt.top;
+          if (sub && typeof txt.sub === 'string') sub.textContent = txt.sub;
+        } else {
+          node.classList.remove('active');
+          if (img) img.style.display = '';
+        }
+      }
+
+      // Per-slot outline glow (shine) on the front face — independent of audio.
+      const front = __slotFront(s);
+      if (front) {
+        if (shineRow[s]) {
+          front.style.boxShadow = '0 0 18px 2px ' + sc + ', 0 0 36px 6px ' + sc + '88, inset 0 0 0 1.5px ' + sc;
+          front.classList.add('ac-shine');
+        } else {
+          front.style.boxShadow = '';
+          front.classList.remove('ac-shine');
+        }
       }
     }
 
-    // Per-tier audio text
-    const t = (c.audioTexts||[])[tierIdx];
-    if (t) {
-      const top = document.getElementById('ac-txt');
-      const sub = document.getElementById('ac-sub');
-      if (top && typeof t.top === 'string') top.textContent = t.top;
-      if (sub && typeof t.sub === 'string') sub.textContent = t.sub;
-    }
-
-    // Per-tier outline glow (shine) on the audio card
-    const ac = document.getElementById('audio-card');
-    if (ac) {
-      const on = !!(c.cardShine||[])[tierIdx] && AUDIO_TIERS.has(tierIdx);
-      const sc = (c.cardShineColor||[])[tierIdx] || '#ffb8cc';
-      ac.style.boxShadow = on
-        ? ('0 0 18px 2px ' + sc + ', 0 0 36px 6px ' + sc + '88, inset 0 0 0 1.5px ' + sc)
-        : '';
-      ac.style.borderRadius = on ? '10px' : '';
-    }
-
     // Per-card blur — front face only, so the back stays crisp during flip.
-    // After every swap, the engine normalizes curFace back to 'front', so we
-    // only need to drive front imgs + their reflection counterparts.
     const blurRow = (c.cardBlur||[])[tierIdx] || [false,false,false];
     const px = (c.cardBlurAmount != null ? c.cardBlurAmount : 8);
     for (var __i=0; __i<3; __i++) {
@@ -226,14 +301,12 @@ try {
       if (f)  f.style.filter  = val;
       if (rf) rf.style.filter = val;
     }
-    // Always keep backs unblurred so flips look clean.
     for (var __j=0; __j<3; __j++) {
       var b  = document.getElementById('b'+__j);
       var rb = document.getElementById('rb'+__j);
       if (b)  b.style.filter  = '';
       if (rb) rb.style.filter = '';
     }
-    // Make sure the parent container has no global blur lingering from older builds.
     var cardsEl = document.getElementById('cards');
     if (cardsEl) cardsEl.style.filter = '';
   };

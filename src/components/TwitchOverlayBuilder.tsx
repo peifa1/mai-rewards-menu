@@ -89,11 +89,12 @@ export function TwitchOverlayBuilder() {
       return { ...c, tierImages };
     });
 
-  const setAudioTier = (t: number, on: boolean) =>
+  const setAudioSlot = (t: number, slot: number, on: boolean) =>
     setCfg((c) => {
-      const audioTiers = c.audioTiers.slice();
-      audioTiers[t] = on;
-      return { ...c, audioTiers };
+      const audioSlots = c.audioSlots.map((r) => r.slice());
+      if (!audioSlots[t]) audioSlots[t] = [false, false, false];
+      audioSlots[t][slot] = on;
+      return { ...c, audioSlots };
     });
 
   const setAudioColor = (t: number, v: string) =>
@@ -110,11 +111,12 @@ export function TwitchOverlayBuilder() {
       return { ...c, audioTexts };
     });
 
-  const setShine = (t: number, on: boolean) =>
+  const setShineSlot = (t: number, slot: number, on: boolean) =>
     setCfg((c) => {
-      const cardShine = c.cardShine.slice();
-      cardShine[t] = on;
-      return { ...c, cardShine };
+      const cardShineSlots = c.cardShineSlots.map((r) => r.slice());
+      if (!cardShineSlots[t]) cardShineSlots[t] = [false, false, false];
+      cardShineSlots[t][slot] = on;
+      return { ...c, cardShineSlots };
     });
 
   const setShineColor = (t: number, v: string) =>
@@ -140,10 +142,10 @@ export function TwitchOverlayBuilder() {
         ...c,
         tierNames: [...c.tierNames, `Tier ${c.tierNames.length + 1}`],
         tierImages: [...c.tierImages, lastImgs.slice()],
-        audioTiers: [...c.audioTiers, false],
+        audioSlots: [...c.audioSlots, [false, false, false]],
         audioColors: [...c.audioColors, "#f8b8cc"],
         audioTexts: [...c.audioTexts, { top: "RP AUDIO", sub: "ASMR" }],
-        cardShine: [...c.cardShine, false],
+        cardShineSlots: [...c.cardShineSlots, [false, false, false]],
         cardShineColor: [...c.cardShineColor, "#ffb8cc"],
         cardBlur: [...c.cardBlur, [false, false, false]],
       };
@@ -157,10 +159,10 @@ export function TwitchOverlayBuilder() {
         ...c,
         tierNames: drop(c.tierNames),
         tierImages: drop(c.tierImages),
-        audioTiers: drop(c.audioTiers),
+        audioSlots: drop(c.audioSlots),
         audioColors: drop(c.audioColors),
         audioTexts: drop(c.audioTexts),
-        cardShine: drop(c.cardShine),
+        cardShineSlots: drop(c.cardShineSlots),
         cardShineColor: drop(c.cardShineColor),
         cardBlur: drop(c.cardBlur),
       };
@@ -484,16 +486,15 @@ export function TwitchOverlayBuilder() {
             className="rounded-lg border p-3 flex flex-col gap-3"
             style={{ borderColor: "rgba(255,180,200,0.22)", background: "rgba(255,255,255,0.03)" }}
           >
-            <label className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={cfg.audioTiers[activeTier]}
-                onChange={(e) => setAudioTier(activeTier, e.target.checked)}
-              />
-              Audio card on center slot (mic + waveform)
-            </label>
+            <span className="text-xs uppercase tracking-widest opacity-80 block">
+              Audio card (mic + waveform) — pick slots
+            </span>
+            <SlotToggles
+              values={cfg.audioSlots[activeTier]}
+              onChange={(slot, on) => setAudioSlot(activeTier, slot, on)}
+            />
 
-            {cfg.audioTiers[activeTier] && (
+            {(cfg.audioSlots[activeTier] || []).some(Boolean) && (
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <ColorField
                   label="Wave / mic"
@@ -528,15 +529,14 @@ export function TwitchOverlayBuilder() {
             className="rounded-lg border p-3 flex flex-col gap-2"
             style={{ borderColor: "rgba(255,180,200,0.22)", background: "rgba(255,255,255,0.03)" }}
           >
-            <label className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={cfg.cardShine[activeTier]}
-                onChange={(e) => setShine(activeTier, e.target.checked)}
-              />
-              Card shine (outline glow on audio card)
-            </label>
-            {cfg.cardShine[activeTier] && (
+            <span className="text-xs uppercase tracking-widest opacity-80 block">
+              Card shine (outline glow) — pick slots
+            </span>
+            <SlotToggles
+              values={cfg.cardShineSlots[activeTier]}
+              onChange={(slot, on) => setShineSlot(activeTier, slot, on)}
+            />
+            {(cfg.cardShineSlots[activeTier] || []).some(Boolean) && (
               <ColorField
                 label="Shine color"
                 value={cfg.cardShineColor[activeTier]}
@@ -588,7 +588,7 @@ export function TwitchOverlayBuilder() {
                 key={slot}
                 label={label}
                 value={cfg.tierImages[activeTier][slot]}
-                isAudioCenter={slot === 1 && cfg.audioTiers[activeTier]}
+                isAudioCenter={!!(cfg.audioSlots[activeTier] || [])[slot]}
                 onPick={async (file) => {
                   const url = await readFileAsDataUrl(file);
                   setTierImage(activeTier, slot, url);
@@ -598,7 +598,7 @@ export function TwitchOverlayBuilder() {
             ))}
           </div>
           <p className="text-[11px] opacity-60 leading-snug mt-1">
-            Tip: when "Audio card" is on, the center slot shows the animated mic+waveform.
+            Tip: any slot with "Audio card" enabled shows the animated mic+waveform instead of its image.
           </p>
         </div>
 
@@ -609,6 +609,41 @@ export function TwitchOverlayBuilder() {
           Reset to template defaults
         </button>
       </div>
+    </div>
+  );
+}
+
+function SlotToggles({
+  values,
+  onChange,
+}: {
+  values: boolean[] | undefined;
+  onChange: (slot: number, on: boolean) => void;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {SLOT_LABELS.map((label, slot) => {
+        const on = !!(values || [])[slot];
+        return (
+          <label
+            key={slot}
+            className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded cursor-pointer"
+            style={{
+              background: on
+                ? "linear-gradient(135deg, rgba(200,19,42,0.35), rgba(138,10,28,0.25))"
+                : "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,180,200,0.22)",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={on}
+              onChange={(e) => onChange(slot, e.target.checked)}
+            />
+            <span className="uppercase tracking-widest opacity-90">{label}</span>
+          </label>
+        );
+      })}
     </div>
   );
 }

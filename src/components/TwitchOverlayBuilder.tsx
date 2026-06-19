@@ -3,6 +3,7 @@ import {
   buildOverlayHtml,
   DEFAULT_CONFIG,
   htmlToBlobUrl,
+  normalizeConfig,
   type OverlayConfig,
 } from "@/lib/buildOverlay";
 import { loadOverlayTemplate } from "@/lib/overlayTemplate";

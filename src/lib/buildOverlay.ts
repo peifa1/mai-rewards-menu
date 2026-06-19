@@ -387,6 +387,15 @@ try {
       /while\s*\(\s*true\s*\)\s*\{/,
       "for (let __once=0; __once<1; __once++) { await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.startDelayMs)||3000); document.body.style.opacity='1';"
     )
+    // Keep petals hidden in enter() when showPetals is off.
+    .replace(
+      `  petels.style.opacity='0';\n  petels.style.display='';`,
+      `  petels.style.opacity='0';\n  petels.style.display=(window.__OVERLAY_CONFIG__||{}).showPetals===false?'none':'';`
+    )
+    .replace(
+      `  document.querySelectorAll('.petal').forEach(p=>{ p.style.animationPlayState='running'; });\n  animate(2200, p=>{\n    petels.style.opacity = String(easeOutCubic(p));\n  });`,
+      `  if((window.__OVERLAY_CONFIG__||{}).showPetals!==false){document.querySelectorAll('.petal').forEach(p=>{ p.style.animationPlayState='running'; });animate(2200, p=>{petels.style.opacity = String(easeOutCubic(p));});}`
+    )
     // Fix exit() petal elapsed: original formula assumed negative delays (pre-seeded);
     // staggered positive delays require Web Animations API currentTime for accuracy.
     .replace(

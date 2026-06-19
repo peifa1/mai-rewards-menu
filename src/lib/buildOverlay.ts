@@ -3,12 +3,15 @@
 
 export type AudioText = { top: string; sub: string };
 
+const DEFAULT_AUDIO_TEXT: AudioText = { top: "RP AUDIO", sub: "ASMR" };
+const DEFAULT_AUDIO_COLOR = "#f8b8cc";
+
 export type OverlayConfig = {
   tierNames: string[]; // dynamic length (min 1)
   tierImages: string[][]; // [tier][slot 0|1|2]
   audioSlots: boolean[][]; // [tier][slot] — which slots show the audio card
-  audioColors: string[];
-  audioTexts: AudioText[];
+  audioColors: string[][]; // [tier][slot] — wave/mic color per slot
+  audioTexts: AudioText[][]; // [tier][slot] — top/sub text per slot
   cardShineSlots: boolean[][]; // [tier][slot] — which slots get the outline shine
   cardShineColor: string[];
   cardBlur: boolean[][]; // [tier][slot] — per-card blur
@@ -22,14 +25,15 @@ export type OverlayConfig = {
 const DEFAULT_TIERS = ["Yokan", "Sensu", "Tomo", "Okami", "Danna", "Kami"];
 
 const fill = <T,>(n: number, v: T): T[] => Array.from({ length: n }, () => v);
+const fillSlot = <T,>(n: number, v: T): T[][] => Array.from({ length: n }, () => [v, v, v] as T[]);
 
 export const DEFAULT_CONFIG: OverlayConfig = {
   tierNames: [...DEFAULT_TIERS],
   tierImages: DEFAULT_TIERS.map(() => ["", "", ""]),
   // Center-slot audio on for Tomo/Okami/Danna/Kami (matches the original template).
   audioSlots: [false, false, true, true, true, true].map((v) => [false, v, false]),
-  audioColors: fill(DEFAULT_TIERS.length, "#f8b8cc"),
-  audioTexts: DEFAULT_TIERS.map(() => ({ top: "RP AUDIO", sub: "ASMR" })),
+  audioColors: fillSlot(DEFAULT_TIERS.length, DEFAULT_AUDIO_COLOR),
+  audioTexts: fillSlot(DEFAULT_TIERS.length, DEFAULT_AUDIO_TEXT),
   cardShineSlots: DEFAULT_TIERS.map(() => [false, false, false]),
   cardShineColor: fill(DEFAULT_TIERS.length, "#ffb8cc"),
   cardBlur: DEFAULT_TIERS.map(() => [false, false, false]),
@@ -42,19 +46,21 @@ export const DEFAULT_CONFIG: OverlayConfig = {
 
 function pad<T>(arr: T[] | undefined, n: number, fallback: T): T[] {
   const out = (arr ?? []).slice(0, n);
-  while (out.length < n) out.push(fallback);
+  while (out.length < n) out.push(typeof fallback === "object" ? JSON.parse(JSON.stringify(fallback)) : fallback);
   return out;
 }
 
 export function normalizeConfig(cfg: OverlayConfig): OverlayConfig {
   const n = Math.max(1, (cfg.tierNames ?? DEFAULT_TIERS).length);
+  const legacy = cfg as any;
+
   // Migrate legacy boolean[] blur -> boolean[][]
   let blurInput: any = cfg.cardBlur;
   if (Array.isArray(blurInput) && blurInput.length && typeof blurInput[0] === "boolean") {
     blurInput = blurInput.map((b: boolean) => [b, b, b]);
   }
+
   // Migrate legacy per-tier audio/shine booleans -> per-slot [L,C,R] (were center-only).
-  const legacy = cfg as any;
   let audioInput: any = cfg.audioSlots;
   if (!audioInput && Array.isArray(legacy.audioTiers)) {
     audioInput = legacy.audioTiers.map((b: boolean) => [false, !!b, false]);
@@ -63,6 +69,19 @@ export function normalizeConfig(cfg: OverlayConfig): OverlayConfig {
   if (!shineInput && Array.isArray(legacy.cardShine)) {
     shineInput = legacy.cardShine.map((b: boolean) => [false, !!b, false]);
   }
+
+  // Migrate per-tier string[] audioColors -> per-slot string[][]
+  let colorsInput: any = cfg.audioColors;
+  if (Array.isArray(colorsInput) && colorsInput.length && typeof colorsInput[0] === "string") {
+    colorsInput = colorsInput.map((c: string) => [c, c, c]);
+  }
+
+  // Migrate per-tier AudioText[] audioTexts -> per-slot AudioText[][]
+  let textsInput: any = cfg.audioTexts;
+  if (Array.isArray(textsInput) && textsInput.length && !Array.isArray(textsInput[0])) {
+    textsInput = textsInput.map((t: AudioText) => [t, { ...t }, { ...t }]);
+  }
+
   return {
     ...cfg,
     tierNames: pad(cfg.tierNames, n, ""),
@@ -70,8 +89,12 @@ export function normalizeConfig(cfg: OverlayConfig): OverlayConfig {
     audioSlots: pad(audioInput as boolean[][], n, [false, false, false]).map((r) =>
       pad(r, 3, false),
     ),
-    audioColors: pad(cfg.audioColors, n, "#f8b8cc"),
-    audioTexts: pad(cfg.audioTexts, n, { top: "RP AUDIO", sub: "ASMR" }),
+    audioColors: pad(colorsInput as string[][], n, [DEFAULT_AUDIO_COLOR, DEFAULT_AUDIO_COLOR, DEFAULT_AUDIO_COLOR]).map((r) =>
+      pad(r, 3, DEFAULT_AUDIO_COLOR),
+    ),
+    audioTexts: pad(textsInput as AudioText[][], n, [DEFAULT_AUDIO_TEXT, DEFAULT_AUDIO_TEXT, DEFAULT_AUDIO_TEXT]).map((r) =>
+      pad(r, 3, DEFAULT_AUDIO_TEXT),
+    ),
     cardShineSlots: pad(shineInput as boolean[][], n, [false, false, false]).map((r) =>
       pad(r, 3, false),
     ),
@@ -185,7 +208,7 @@ try {
 try {
   const __cfg = () => (window.__OVERLAY_CONFIG__ || {});
 
-  // Class-based mirror of the id-based audio-card CSS so cloned cards style up.
+  // Class-based mirror of all audio-card id-based CSS so cloned cards style up correctly.
   (function(){
     var st = document.createElement('style');
     st.textContent = ''
@@ -208,6 +231,8 @@ try {
       + '.audio-card .ac-wf span:nth-child(10){animation-delay:.2s;height:7px}'
       + '.audio-card .ac-wf span:nth-child(11){animation-delay:.3s;height:14px}'
       + '.audio-card .ac-wf span:nth-child(12){animation-delay:.15s;height:10px}'
+      + '.audio-card .ac-txt{font-family:\\'HakkouMincho\\',serif;font-size:8px;color:#fff;letter-spacing:3px;text-transform:uppercase;font-weight:bold;position:relative;z-index:2;text-shadow:0 1px 3px rgba(0,0,0,0.9),0 0 6px rgba(248,150,190,0.5);}'
+      + '.audio-card .ac-sub{font-family:\\'HakkouMincho\\',serif;font-size:6px;color:rgba(255,210,225,0.85);letter-spacing:3px;position:relative;z-index:2;text-shadow:0 1px 2px rgba(0,0,0,0.9);}'
       + '.ac-shine{border-radius:10px;}';
     document.head.appendChild(st);
   })();
@@ -217,7 +242,7 @@ try {
     return slot ? slot.querySelector('.face.front') : null;
   };
 
-  // Give the center card classes, then clone it into the L/R slots once.
+  // Give the center card classes so selectors work, then clone it into the L/R slots once.
   const __audioNodes = [null,null,null];
   (function(){
     const center = document.getElementById('audio-card');
@@ -243,35 +268,42 @@ try {
 
   setAudioCard = function(tierIdx){
     const c = __cfg();
-    const audioRow = (c.audioSlots||[])[tierIdx] || [false,false,false];
-    const shineRow = (c.cardShineSlots||[])[tierIdx] || [false,false,false];
-    const color = (c.audioColors||[])[tierIdx];
-    const txt = (c.audioTexts||[])[tierIdx] || {};
-    const sc = (c.cardShineColor||[])[tierIdx] || '#ffb8cc';
+    const audioRow  = (c.audioSlots||[])[tierIdx]  || [false,false,false];
+    const shineRow  = (c.cardShineSlots||[])[tierIdx] || [false,false,false];
+    const colorRow  = (c.audioColors||[])[tierIdx] || [];
+    const txtRow    = (c.audioTexts||[])[tierIdx]  || [];
+    const sc        = (c.cardShineColor||[])[tierIdx] || '#ffb8cc';
 
     for (var s=0; s<3; s++) {
-      const node = __audioNodes[s];
-      const img = document.getElementById('f'+s);
+      const node   = __audioNodes[s];
+      const img    = document.getElementById('f'+s);
       const audioOn = !!audioRow[s];
+      const color  = colorRow[s] || '#f8b8cc';
+      const txt    = txtRow[s]   || {};
+
       if (node) {
         if (audioOn) {
           node.classList.add('active');
           if (img) img.style.display = 'none';
-          const bg = node.querySelector('.ac-bg');
+
+          // Background image from user's card image for this slot
+          const bg  = node.querySelector('.ac-bg');
           const src = (TIERS[tierIdx]||[])[s];
           if (bg && src) bg.style.backgroundImage = "url('"+src+"')";
-          if (color) {
-            node.querySelectorAll('.ac-wf span').forEach(function(sp){ sp.style.background = color; });
-            const ic = node.querySelector('.ac-icon');
-            if (ic) {
-              ic.style.stroke = color;
-              ic.querySelectorAll('rect').forEach(function(r){ r.style.fill = color + '33'; });
-            }
+
+          // Per-slot wave/mic color
+          node.querySelectorAll('.ac-wf span').forEach(function(sp){ sp.style.background = color; });
+          const ic = node.querySelector('.ac-icon');
+          if (ic) {
+            ic.style.stroke = color;
+            ic.querySelectorAll('rect').forEach(function(r){ r.style.fill = color + '33'; });
           }
-          const top = node.querySelector('.ac-txt');
-          const sub = node.querySelector('.ac-sub');
-          if (top && typeof txt.top === 'string') top.textContent = txt.top;
-          if (sub && typeof txt.sub === 'string') sub.textContent = txt.sub;
+
+          // Per-slot text
+          const topEl = node.querySelector('.ac-txt');
+          const subEl = node.querySelector('.ac-sub');
+          if (topEl && typeof txt.top === 'string') topEl.textContent = txt.top;
+          if (subEl && typeof txt.sub === 'string') subEl.textContent = txt.sub;
         } else {
           node.classList.remove('active');
           if (img) img.style.display = '';
@@ -325,10 +357,11 @@ try {
     );
 
   // 4) Color / sakura overrides + smooth blur transition on faces.
+  //    Cover both #id (center audio card) and .class (cloned side cards) for text color.
   const colorCss = `
 <style id="user-color-overrides">
   body { transition: opacity .35s ease-out; }
-  #tier-text, #patreon-text, #ac-txt, #ac-sub { color: ${cfg.textColor} !important; }
+  #tier-text, #patreon-text, #ac-txt, .ac-txt, #ac-sub, .ac-sub { color: ${cfg.textColor} !important; }
   #psakura-r { animation-direction: reverse !important; animation-duration: 14s !important; }
   .face img, #reflection .face img { transition: filter .35s ease; }
 </style>

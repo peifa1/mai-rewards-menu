@@ -97,17 +97,23 @@ export function TwitchOverlayBuilder() {
       return { ...c, audioSlots };
     });
 
-  const setAudioColor = (t: number, v: string) =>
+  const setAudioColor = (t: number, slot: number, v: string) =>
     setCfg((c) => {
-      const audioColors = c.audioColors.slice();
-      audioColors[t] = v;
+      const audioColors = c.audioColors.map((r) => r.slice());
+      if (!audioColors[t]) audioColors[t] = ["#f8b8cc", "#f8b8cc", "#f8b8cc"];
+      audioColors[t][slot] = v;
       return { ...c, audioColors };
     });
 
-  const setAudioText = (t: number, key: "top" | "sub", v: string) =>
+  const setAudioText = (t: number, slot: number, key: "top" | "sub", v: string) =>
     setCfg((c) => {
-      const audioTexts = c.audioTexts.map((x) => ({ ...x }));
-      audioTexts[t] = { ...audioTexts[t], [key]: v };
+      const audioTexts = c.audioTexts.map((r) => r.map((x) => ({ ...x })));
+      if (!audioTexts[t]) audioTexts[t] = [
+        { top: "RP AUDIO", sub: "ASMR" },
+        { top: "RP AUDIO", sub: "ASMR" },
+        { top: "RP AUDIO", sub: "ASMR" },
+      ];
+      audioTexts[t][slot] = { ...audioTexts[t][slot], [key]: v };
       return { ...c, audioTexts };
     });
 
@@ -143,8 +149,8 @@ export function TwitchOverlayBuilder() {
         tierNames: [...c.tierNames, `Tier ${c.tierNames.length + 1}`],
         tierImages: [...c.tierImages, lastImgs.slice()],
         audioSlots: [...c.audioSlots, [false, false, false]],
-        audioColors: [...c.audioColors, "#f8b8cc"],
-        audioTexts: [...c.audioTexts, { top: "RP AUDIO", sub: "ASMR" }],
+        audioColors: [...c.audioColors, ["#f8b8cc", "#f8b8cc", "#f8b8cc"]],
+        audioTexts: [...c.audioTexts, [{ top: "RP AUDIO", sub: "ASMR" }, { top: "RP AUDIO", sub: "ASMR" }, { top: "RP AUDIO", sub: "ASMR" }]],
         cardShineSlots: [...c.cardShineSlots, [false, false, false]],
         cardShineColor: [...c.cardShineColor, "#ffb8cc"],
         cardBlur: [...c.cardBlur, [false, false, false]],
@@ -494,35 +500,41 @@ export function TwitchOverlayBuilder() {
               onChange={(slot, on) => setAudioSlot(activeTier, slot, on)}
             />
 
-            {(cfg.audioSlots[activeTier] || []).some(Boolean) && (
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <ColorField
-                  label="Wave / mic"
-                  value={cfg.audioColors[activeTier]}
-                  onChange={(v) => setAudioColor(activeTier, v)}
-                />
-                <label className="flex flex-col gap-1">
-                  <span className="uppercase tracking-widest opacity-80">Top text</span>
-                  <input
-                    value={cfg.audioTexts[activeTier].top}
-                    onChange={(e) => setAudioText(activeTier, "top", e.target.value)}
-                    className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
-                    style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
-                    maxLength={24}
-                  />
-                </label>
-                <label className="flex flex-col gap-1 col-span-2">
-                  <span className="uppercase tracking-widest opacity-80">Sub text</span>
-                  <input
-                    value={cfg.audioTexts[activeTier].sub}
-                    onChange={(e) => setAudioText(activeTier, "sub", e.target.value)}
-                    className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
-                    style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
-                    maxLength={24}
-                  />
-                </label>
-              </div>
-            )}
+            {SLOT_LABELS.map((slotLabel, slot) => {
+              if (!(cfg.audioSlots[activeTier] || [])[slot]) return null;
+              return (
+                <div key={slot} className="flex flex-col gap-2 text-xs pl-1 border-l-2" style={{ borderColor: "rgba(255,180,200,0.3)" }}>
+                  <span className="uppercase tracking-widest opacity-60 text-[10px]">{slotLabel}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <ColorField
+                      label="Wave / mic"
+                      value={(cfg.audioColors[activeTier] || [])[slot] || "#f8b8cc"}
+                      onChange={(v) => setAudioColor(activeTier, slot, v)}
+                    />
+                    <label className="flex flex-col gap-1">
+                      <span className="uppercase tracking-widest opacity-80">Top text</span>
+                      <input
+                        value={(cfg.audioTexts[activeTier] || [])[slot]?.top ?? "RP AUDIO"}
+                        onChange={(e) => setAudioText(activeTier, slot, "top", e.target.value)}
+                        className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
+                        style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
+                        maxLength={24}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 col-span-2">
+                      <span className="uppercase tracking-widest opacity-80">Sub text</span>
+                      <input
+                        value={(cfg.audioTexts[activeTier] || [])[slot]?.sub ?? "ASMR"}
+                        onChange={(e) => setAudioText(activeTier, slot, "sub", e.target.value)}
+                        className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
+                        style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
+                        maxLength={24}
+                      />
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div

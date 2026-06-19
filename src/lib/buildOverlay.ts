@@ -145,7 +145,8 @@ export function buildOverlayHtml(template: string, rawCfg: OverlayConfig): strin
     existing.forEach(function(p){
       var dur = 9 + Math.random()*7;
       p.style.setProperty('--dur', dur.toFixed(2)+'s');
-      p.style.setProperty('--delay', (Math.random()*dur).toFixed(2)+'s');
+      // Negative delay pre-seeds each petal mid-fall so rain is continuous from frame one.
+      p.style.setProperty('--delay', (-(Math.random()*dur)).toFixed(2)+'s');
       p.style.setProperty('--x', (Math.random()*100).toFixed(1)+'%');
     });
     var TOTAL = 32; // total petals on screen
@@ -154,7 +155,7 @@ export function buildOverlayHtml(template: string, rawCfg: OverlayConfig): strin
       var p = tpl.cloneNode();
       var size = 16 + Math.random()*18;
       var dur  = 9 + Math.random()*7;          // 9–16s
-      var delay = Math.random()*dur;            // uniformly spread across cycle
+      var delay = -(Math.random()*dur);          // negative = pre-seeded mid-fall
       var r0 = (Math.random()*120 - 60);
       var r1 = r0 + 160 + Math.random()*140;
       var dx = (Math.random()*44 - 22);

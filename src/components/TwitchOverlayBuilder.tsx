@@ -335,11 +335,13 @@ export function TwitchOverlayBuilder() {
         }}
       >
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Colors</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Global colors</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <ColorField label="Text" value={cfg.textColor} onChange={(v) => updateCfg("textColor", v)} />
-            <ColorField label="Wave / mic" value={cfg.audioWaveColor} onChange={(v) => updateCfg("audioWaveColor", v)} />
           </div>
+          <p className="text-[10px] opacity-60 mt-2 leading-snug">
+            Audio wave / mic color is now configured per-tier below.
+          </p>
         </div>
 
         <div>

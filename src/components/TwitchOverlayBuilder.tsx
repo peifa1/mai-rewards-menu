@@ -412,7 +412,42 @@ export function TwitchOverlayBuilder() {
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Tier</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold uppercase tracking-widest opacity-80">Tiers</h3>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={addTier}
+                disabled={cfg.tierNames.length >= 12}
+                className="px-2 py-1 rounded-full text-[11px] font-semibold transition disabled:opacity-40"
+                style={{
+                  background: "linear-gradient(135deg,#c8132a,#8a0a1c)",
+                  color: "#fff0f4",
+                  border: "1px solid rgba(255,180,200,0.3)",
+                }}
+                title="Add a new tier"
+              >
+                + Add tier
+              </button>
+              <button
+                onClick={() => {
+                  if (cfg.tierNames.length <= 1) return;
+                  const newIdx = Math.max(0, Math.min(activeTier, cfg.tierNames.length - 2));
+                  removeTier(activeTier);
+                  setActiveTier(newIdx);
+                }}
+                disabled={cfg.tierNames.length <= 1}
+                className="px-2 py-1 rounded-full text-[11px] font-semibold transition disabled:opacity-40"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#ffd0dc",
+                  border: "1px solid rgba(255,180,200,0.25)",
+                }}
+                title="Remove the currently selected tier"
+              >
+                − Remove
+              </button>
+            </div>
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {tierTabs.map((t) => (
               <button
@@ -433,6 +468,7 @@ export function TwitchOverlayBuilder() {
             ))}
           </div>
         </div>
+
 
         <div className="flex flex-col gap-3">
           <label className="text-xs uppercase tracking-widest opacity-80">Tier name</label>

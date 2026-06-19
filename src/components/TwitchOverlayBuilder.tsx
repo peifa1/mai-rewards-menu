@@ -542,19 +542,15 @@ export function TwitchOverlayBuilder() {
             style={{ borderColor: "rgba(255,180,200,0.22)", background: "rgba(255,255,255,0.03)" }}
           >
             <span className="text-xs uppercase tracking-widest opacity-80 block">
-              Card shine (outline glow) — pick slots
+              Prestige glint (light sweep) — pick slots
             </span>
+            <p className="text-[10px] opacity-50 -mt-1 leading-snug">
+              Diagonal light shimmer that sweeps across the card face, like sunlight catching glass.
+            </p>
             <SlotToggles
               values={cfg.cardShineSlots[activeTier]}
               onChange={(slot, on) => setShineSlot(activeTier, slot, on)}
             />
-            {(cfg.cardShineSlots[activeTier] || []).some(Boolean) && (
-              <ColorField
-                label="Shine color"
-                value={cfg.cardShineColor[activeTier]}
-                onChange={(v) => setShineColor(activeTier, v)}
-              />
-            )}
           </div>
 
           <div

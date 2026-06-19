@@ -233,7 +233,19 @@ try {
       + '.audio-card .ac-wf span:nth-child(12){animation-delay:.15s;height:10px}'
       + '.audio-card .ac-txt{font-family:\\'HakkouMincho\\',serif;font-size:8px;color:#fff;letter-spacing:3px;text-transform:uppercase;font-weight:bold;position:relative;z-index:2;text-shadow:0 1px 3px rgba(0,0,0,0.9),0 0 6px rgba(248,150,190,0.5);}'
       + '.audio-card .ac-sub{font-family:\\'HakkouMincho\\',serif;font-size:6px;color:rgba(255,210,225,0.85);letter-spacing:3px;position:relative;z-index:2;text-shadow:0 1px 2px rgba(0,0,0,0.9);}'
-      + '.ac-shine{border-radius:10px;}';
+      // Prestige glint — diagonal light sweep over the card face.
+      // The .face already has overflow:hidden so the sweep is clipped to the card.
+      + '.card-glint::after{'
+      + 'content:"";position:absolute;inset:0;pointer-events:none;z-index:8;'
+      + 'background:linear-gradient(108deg,transparent 30%,rgba(255,255,255,0.06) 42%,rgba(255,255,255,0.28) 50%,rgba(255,255,255,0.06) 58%,transparent 70%);'
+      + 'transform:translateX(-160%) skewX(-18deg);'
+      + 'animation:cardGlint var(--glint-dur,3.6s) ease-in-out infinite;'
+      + 'animation-delay:var(--glint-delay,0s);'
+      + '}'
+      + '@keyframes cardGlint{'
+      + '0%{transform:translateX(-160%) skewX(-18deg)}'
+      + '100%{transform:translateX(260%) skewX(-18deg)}'
+      + '}';
     document.head.appendChild(st);
   })();
 
@@ -272,7 +284,6 @@ try {
     const shineRow  = (c.cardShineSlots||[])[tierIdx] || [false,false,false];
     const colorRow  = (c.audioColors||[])[tierIdx] || [];
     const txtRow    = (c.audioTexts||[])[tierIdx]  || [];
-    const sc        = (c.cardShineColor||[])[tierIdx] || '#ffb8cc';
 
     for (var s=0; s<3; s++) {
       const node   = __audioNodes[s];
@@ -310,15 +321,18 @@ try {
         }
       }
 
-      // Per-slot outline glow (shine) on the front face — independent of audio.
+      // Per-slot prestige glint — diagonal light sweep over the card face.
+      // Slots are staggered so they don't all flash at the same time.
       const front = __slotFront(s);
       if (front) {
         if (shineRow[s]) {
-          front.style.boxShadow = '0 0 18px 2px ' + sc + ', 0 0 36px 6px ' + sc + '88, inset 0 0 0 1.5px ' + sc;
-          front.classList.add('ac-shine');
+          front.classList.add('card-glint');
+          front.style.setProperty('--glint-delay', (s * 1.1).toFixed(1) + 's');
+          front.style.setProperty('--glint-dur', '3.6s');
         } else {
-          front.style.boxShadow = '';
-          front.classList.remove('ac-shine');
+          front.classList.remove('card-glint');
+          front.style.removeProperty('--glint-delay');
+          front.style.removeProperty('--glint-dur');
         }
       }
     }

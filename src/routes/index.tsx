@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toPng } from "html-to-image";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 import { TwitchOverlayBuilder } from "@/components/TwitchOverlayBuilder";
+import { GamersuppsBuilder } from "@/components/GamersuppsBuilder";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 
 const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
@@ -235,7 +236,47 @@ function Index() {
           ))}
         </div>
       </div>
-      {tab === "patreon" ? <PatreonShowcase /> : <TwitchOverlayBuilder />}
+      {tab === "patreon" ? <PatreonShowcase /> : <TwitchOverlays />}
+    </div>
+  );
+}
+
+function TwitchOverlays() {
+  const [sub, setSub] = useState<"patreon" | "gamersupps">(() => {
+    if (typeof window === "undefined") return "patreon";
+    return (localStorage.getItem("twitch-sub-tab") as "patreon" | "gamersupps") || "patreon";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("twitch-sub-tab", sub); } catch {}
+  }, [sub]);
+
+  return (
+    <div className="flex flex-col">
+      <div className="w-full flex justify-center pt-1 pb-1">
+        <div
+          className="inline-flex rounded-full p-1 gap-1"
+          style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,180,200,0.18)" }}
+        >
+          {([
+            { id: "patreon", label: "Patreon", kanji: "支援" },
+            { id: "gamersupps", label: "Gamersupps", kanji: "飲" },
+          ] as const).map(({ id, label, kanji }) => (
+            <button
+              key={id}
+              onClick={() => setSub(id)}
+              className="px-4 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.2em] transition inline-flex items-center gap-2"
+              style={{
+                background: sub === id ? "linear-gradient(135deg,#c8132a,#8a0a1c)" : "transparent",
+                color: sub === id ? "#fff0f4" : "#ffd0dc",
+              }}
+            >
+              <span className="font-hakkou text-xs" style={{ color: sub === id ? "#ffe2ec" : "#ffb8c8" }}>{kanji}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {sub === "patreon" ? <TwitchOverlayBuilder /> : <GamersuppsBuilder />}
     </div>
   );
 }

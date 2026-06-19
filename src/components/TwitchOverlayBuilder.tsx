@@ -408,14 +408,79 @@ export function TwitchOverlayBuilder() {
             maxLength={32}
           />
 
-          <label className="text-xs uppercase tracking-widest opacity-80 mt-2 flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={cfg.audioTiers[activeTier]}
-              onChange={(e) => setAudioTier(activeTier, e.target.checked)}
-            />
-            Audio card on center slot (mic + waveform)
-          </label>
+          <div
+            className="rounded-lg border p-3 flex flex-col gap-3"
+            style={{ borderColor: "rgba(255,180,200,0.22)", background: "rgba(255,255,255,0.03)" }}
+          >
+            <label className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={cfg.audioTiers[activeTier]}
+                onChange={(e) => setAudioTier(activeTier, e.target.checked)}
+              />
+              Audio card on center slot (mic + waveform)
+            </label>
+
+            {cfg.audioTiers[activeTier] && (
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <ColorField
+                  label="Wave / mic"
+                  value={cfg.audioColors[activeTier]}
+                  onChange={(v) => setAudioColor(activeTier, v)}
+                />
+                <label className="flex flex-col gap-1">
+                  <span className="uppercase tracking-widest opacity-80">Top text</span>
+                  <input
+                    value={cfg.audioTexts[activeTier].top}
+                    onChange={(e) => setAudioText(activeTier, "top", e.target.value)}
+                    className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
+                    style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
+                    maxLength={24}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 col-span-2">
+                  <span className="uppercase tracking-widest opacity-80">Sub text</span>
+                  <input
+                    value={cfg.audioTexts[activeTier].sub}
+                    onChange={(e) => setAudioText(activeTier, "sub", e.target.value)}
+                    className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
+                    style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
+                    maxLength={24}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+
+          <div
+            className="rounded-lg border p-3 flex flex-col gap-2"
+            style={{ borderColor: "rgba(255,180,200,0.22)", background: "rgba(255,255,255,0.03)" }}
+          >
+            <label className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={cfg.cardShine[activeTier]}
+                onChange={(e) => setShine(activeTier, e.target.checked)}
+              />
+              Card shine (outline glow on audio card)
+            </label>
+            {cfg.cardShine[activeTier] && (
+              <ColorField
+                label="Shine color"
+                value={cfg.cardShineColor[activeTier]}
+                onChange={(v) => setShineColor(activeTier, v)}
+              />
+            )}
+
+            <label className="text-xs uppercase tracking-widest opacity-80 flex items-center gap-2 mt-1">
+              <input
+                type="checkbox"
+                checked={cfg.cardBlur[activeTier]}
+                onChange={(e) => setBlur(activeTier, e.target.checked)}
+              />
+              Blur cards
+            </label>
+          </div>
 
           <label className="text-xs uppercase tracking-widest opacity-80 mt-2">Card images</label>
           <div className="grid grid-cols-3 gap-2">

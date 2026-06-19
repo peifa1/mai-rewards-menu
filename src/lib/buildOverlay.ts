@@ -208,6 +208,9 @@ try {
     });
   })();
 } catch(e) { console.warn('petal seeding failed', e); }
+} else {
+  var _pb = document.getElementById('petals');
+  if (_pb) _pb.style.display = 'none';
 } // end showPetals
 // ===== end petal rain =====
 // ===== end overrides =====

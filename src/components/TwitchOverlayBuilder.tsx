@@ -764,7 +764,7 @@ function ObsGuide() {
           </p>
           <ol className="space-y-2">
             {[
-              "Press Download",
+              "Press DOWNLOAD HTML",
               "A .html file will be saved to your computer",
               "Open OBS",
               "Add a Browser source to your scene",

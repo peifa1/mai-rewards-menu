@@ -19,6 +19,19 @@ function readFileAsDataUrl(file: File): Promise<string> {
 
 const SLOT_LABELS = ["Left", "Center", "Right"] as const;
 
+// Shared palette — harmonised with the Patreon showcase so both tabs read as one site.
+const INK = "#fbe0e7";
+const INK_SOFT = "#f0a8b8";
+const KANJI = "#ffb8c8";
+const BRIGHT = "#fff0f4";
+const LINE = "rgba(255,180,200,0.16)";
+const LINE_STRONG = "rgba(255,180,200,0.30)";
+const PANEL = "rgba(20,5,12,0.5)";
+const CARD = "rgba(255,240,244,0.035)";
+const FIELD = "rgba(20,5,12,0.7)";
+const SEAL = "linear-gradient(135deg,#c8132a,#8a0a1c)";
+const SEAL_WASH = "linear-gradient(135deg, rgba(200,19,42,0.32), rgba(138,10,28,0.20))";
+
 export function TwitchOverlayBuilder() {
   const [template, setTemplate] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -202,24 +215,18 @@ export function TwitchOverlayBuilder() {
       {/* PREVIEW */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h2 className="text-lg font-semibold tracking-wide" style={{ color: "#ffe2ec" }}>
+          <div className="flex items-baseline gap-3">
+            <span className="font-hakkou text-xl leading-none" style={{ color: KANJI }}>実演</span>
+            <h2 className="font-menu italic text-xl tracking-wide" style={{ color: BRIGHT }}>
               Live Preview
             </h2>
-            <p className="text-xs opacity-70" style={{ color: "#ffd0dc" }}>
-              Renders the exact HTML you'll download. 1920×1080 scaled to fit.
-            </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setReplayKey((k) => k + 1)}
               disabled={!previewUrl}
-              className="px-4 py-2.5 rounded-full text-xs font-semibold tracking-widest uppercase transition hover:scale-105 disabled:opacity-50"
-              style={{
-                background: "rgba(255,255,255,0.08)",
-                color: "#ffe2ec",
-                border: "1px solid rgba(255,200,215,0.35)",
-              }}
+              className="px-4 py-2.5 rounded-full text-xs tracking-[0.25em] uppercase transition hover:bg-white/5 disabled:opacity-50"
+              style={{ background: "transparent", color: INK, border: `1px solid ${LINE_STRONG}` }}
               title="Restart the preview animation (preview-only — not baked into the download)"
             >
               ↻ Replay
@@ -227,12 +234,12 @@ export function TwitchOverlayBuilder() {
             <button
               onClick={handleDownload}
               disabled={!template}
-              className="px-5 py-2.5 rounded-full text-sm font-semibold tracking-widest uppercase transition hover:scale-105 disabled:opacity-50"
+              className="px-5 py-2.5 rounded-full text-sm font-semibold tracking-[0.2em] uppercase transition hover:scale-105 disabled:opacity-50"
               style={{
-                background: "linear-gradient(135deg, #c8132a, #8a0a1c)",
-                color: "#fff0f4",
+                background: SEAL,
+                color: BRIGHT,
                 border: "1px solid rgba(255,200,215,0.4)",
-                boxShadow: "0 6px 24px rgba(200,19,42,0.45)",
+                boxShadow: "0 6px 24px rgba(200,19,42,0.4)",
               }}
             >
               Download HTML
@@ -247,7 +254,7 @@ export function TwitchOverlayBuilder() {
               previewBg === "image" && previewBgImage
                 ? `url(${previewBgImage}) center/cover no-repeat`
                 : "repeating-conic-gradient(#1f0710 0 25%, #2a0a14 0 50%) 50% / 28px 28px",
-            borderColor: "rgba(255,180,200,0.22)",
+            borderColor: LINE,
             boxShadow: "0 0 0 1px rgba(255,200,215,0.05) inset, 0 12px 40px rgba(0,0,0,0.45)",
           }}
         >
@@ -291,24 +298,19 @@ export function TwitchOverlayBuilder() {
 
         {/* Preview background (preview-only, not baked into download) */}
         <div
-          className="flex items-center gap-3 flex-wrap text-xs rounded-xl px-3 py-2 border"
-          style={{
-            borderColor: "rgba(255,180,200,0.18)",
-            background: "linear-gradient(135deg, rgba(40,8,18,0.7), rgba(20,4,10,0.55))",
-            color: "#ffe2ec",
-          }}
+          className="flex items-center gap-3 flex-wrap text-xs rounded-xl px-4 py-2.5 border"
+          style={{ borderColor: LINE, background: PANEL, color: INK }}
         >
-          <span className="uppercase tracking-[0.25em] opacity-70">背景 · Preview BG</span>
+          <span className="font-hakkou text-sm" style={{ color: KANJI }}>背景</span>
+          <span className="uppercase tracking-[0.25em]" style={{ color: INK_SOFT }}>Preview BG</span>
+          <span className="flex-1" />
           <button
             onClick={() => setPreviewBg("default")}
-            className="px-3 py-1 rounded-full transition"
+            className="px-3 py-1 rounded-full transition hover:bg-white/5"
             style={{
-              background:
-                previewBg === "default"
-                  ? "linear-gradient(135deg,#c8132a,#8a0a1c)"
-                  : "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,180,200,0.25)",
-              color: "#fff0f4",
+              background: previewBg === "default" ? SEAL_WASH : "transparent",
+              border: `1px solid ${previewBg === "default" ? LINE_STRONG : LINE}`,
+              color: BRIGHT,
             }}
           >
             Default
@@ -318,14 +320,11 @@ export function TwitchOverlayBuilder() {
               if (previewBgImage) setPreviewBg("image");
               else bgInputRef.current?.click();
             }}
-            className="px-3 py-1 rounded-full transition"
+            className="px-3 py-1 rounded-full transition hover:bg-white/5"
             style={{
-              background:
-                previewBg === "image"
-                  ? "linear-gradient(135deg,#c8132a,#8a0a1c)"
-                  : "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,180,200,0.25)",
-              color: "#fff0f4",
+              background: previewBg === "image" ? SEAL_WASH : "transparent",
+              border: `1px solid ${previewBg === "image" ? LINE_STRONG : LINE}`,
+              color: BRIGHT,
             }}
           >
             {previewBgImage ? "Custom image" : "Upload image…"}
@@ -334,8 +333,8 @@ export function TwitchOverlayBuilder() {
             <>
               <button
                 onClick={() => bgInputRef.current?.click()}
-                className="px-2 py-1 rounded-full opacity-80 hover:opacity-100"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,180,200,0.18)", color: "#fff0f4" }}
+                className="px-2 py-1 rounded-full opacity-80 hover:opacity-100 transition hover:bg-white/5"
+                style={{ background: "transparent", border: `1px solid ${LINE}`, color: BRIGHT }}
               >
                 Change
               </button>
@@ -363,7 +362,6 @@ export function TwitchOverlayBuilder() {
               e.currentTarget.value = "";
             }}
           />
-          <span className="opacity-50 ml-auto">Preview only — not baked into the download.</span>
         </div>
 
         <ObsGuide />
@@ -371,36 +369,26 @@ export function TwitchOverlayBuilder() {
 
       {/* EDITOR */}
       <div
-        className="rounded-xl p-4 flex flex-col gap-4 border"
-        style={{
-          background: "rgba(20,4,10,0.6)",
-          borderColor: "rgba(255,180,200,0.18)",
-          color: "#ffe2ec",
-        }}
+        className="rounded-2xl p-5 flex flex-col gap-6 border"
+        style={{ background: PANEL, borderColor: LINE, color: INK }}
       >
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Global colors</h3>
+          <SectionTitle kanji="彩">Global colors</SectionTitle>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <ColorField label="Text" value={cfg.textColor} onChange={(v) => updateCfg("textColor", v)} />
           </div>
-          <div className="mt-3">
-            <label className="flex items-center gap-2 text-xs cursor-pointer select-none"
-              style={{ color: "rgba(255,255,255,0.85)" }}>
-              <input
-                type="checkbox"
-                checked={cfg.showPetals ?? true}
-                onChange={(e) => updateCfg("showPetals", e.target.checked)}
-              />
-              <span className="uppercase tracking-widest">Show petal rain</span>
-            </label>
-          </div>
-          <p className="text-[10px] opacity-60 mt-2 leading-snug">
-            Audio wave / mic color is now configured per-tier below.
+          <ToggleRow
+            label="Show petal rain"
+            on={cfg.showPetals ?? true}
+            onChange={(v) => updateCfg("showPetals", v)}
+          />
+          <p className="text-[10px] opacity-60 mt-2 leading-snug" style={{ color: INK_SOFT }}>
+            Audio wave / mic color is configured per-tier below.
           </p>
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Timing</h3>
+          <SectionTitle kanji="時">Timing</SectionTitle>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <NumberField
               label="Start delay (sec)"
@@ -426,23 +414,21 @@ export function TwitchOverlayBuilder() {
               min={0}
               onChange={(v) => updateCfg("breakMs", Math.max(0, Math.round(v * 60000)))}
             />
-
           </div>
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold uppercase tracking-widest opacity-80">Tiers</h3>
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="font-hakkou text-base leading-none" style={{ color: KANJI }}>段</span>
+              <span className="text-xs uppercase tracking-[0.25em]" style={{ color: INK_SOFT }}>Tiers</span>
+            </div>
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={addTier}
                 disabled={cfg.tierNames.length >= 12}
-                className="px-2 py-1 rounded-full text-[11px] font-semibold transition disabled:opacity-40"
-                style={{
-                  background: "linear-gradient(135deg,#c8132a,#8a0a1c)",
-                  color: "#fff0f4",
-                  border: "1px solid rgba(255,180,200,0.3)",
-                }}
+                className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition disabled:opacity-40"
+                style={{ background: SEAL, color: BRIGHT, border: "1px solid rgba(255,180,200,0.3)" }}
                 title="Add a new tier"
               >
                 + Add tier
@@ -455,12 +441,8 @@ export function TwitchOverlayBuilder() {
                   setActiveTier(newIdx);
                 }}
                 disabled={cfg.tierNames.length <= 1}
-                className="px-2 py-1 rounded-full text-[11px] font-semibold transition disabled:opacity-40"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  color: "#ffd0dc",
-                  border: "1px solid rgba(255,180,200,0.25)",
-                }}
+                className="px-2.5 py-1 rounded-full text-[11px] font-semibold transition hover:bg-white/5 disabled:opacity-40"
+                style={{ background: "transparent", color: "#ffd0dc", border: `1px solid ${LINE_STRONG}` }}
                 title="Remove the currently selected tier"
               >
                 − Remove
@@ -472,14 +454,11 @@ export function TwitchOverlayBuilder() {
               <button
                 key={t.idx}
                 onClick={() => setActiveTier(t.idx)}
-                className="px-3 py-1.5 rounded-full text-xs font-semibold transition"
+                className="px-3 py-1.5 rounded-full text-xs font-semibold transition hover:bg-white/5"
                 style={{
-                  background:
-                    activeTier === t.idx
-                      ? "linear-gradient(135deg,#c8132a,#8a0a1c)"
-                      : "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,180,200,0.25)",
-                  color: "#fff0f4",
+                  background: activeTier === t.idx ? SEAL : "transparent",
+                  border: `1px solid ${activeTier === t.idx ? "rgba(255,180,200,0.4)" : LINE}`,
+                  color: activeTier === t.idx ? BRIGHT : INK,
                 }}
               >
                 {t.label}
@@ -488,24 +467,20 @@ export function TwitchOverlayBuilder() {
           </div>
         </div>
 
+        <div className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs uppercase tracking-[0.25em]" style={{ color: INK_SOFT }}>Tier name</span>
+            <input
+              value={cfg.tierNames[activeTier]}
+              onChange={(e) => setTierName(activeTier, e.target.value)}
+              className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-pink-300/30"
+              style={{ background: FIELD, border: `1px solid ${LINE_STRONG}`, color: "#fff" }}
+              maxLength={32}
+            />
+          </label>
 
-        <div className="flex flex-col gap-3">
-          <label className="text-xs uppercase tracking-widest opacity-80">Tier name</label>
-          <input
-            value={cfg.tierNames[activeTier]}
-            onChange={(e) => setTierName(activeTier, e.target.value)}
-            className="px-3 py-2 rounded text-sm bg-black/30 border outline-none focus:ring-2"
-            style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
-            maxLength={32}
-          />
-
-          <div
-            className="rounded-lg border p-3 flex flex-col gap-3"
-            style={{ borderColor: "rgba(255,180,200,0.22)", background: "rgba(255,255,255,0.03)" }}
-          >
-            <span className="text-xs uppercase tracking-widest opacity-80 block">
-              Audio card (mic + waveform) — pick slots
-            </span>
+          <div className="rounded-xl border p-3.5 flex flex-col gap-3" style={{ borderColor: LINE, background: CARD }}>
+            <SectionLabel kanji="音">Audio Card</SectionLabel>
             <SlotToggles
               values={cfg.audioSlots[activeTier]}
               onChange={(slot, on) => setAudioSlot(activeTier, slot, on)}
@@ -514,8 +489,8 @@ export function TwitchOverlayBuilder() {
             {SLOT_LABELS.map((slotLabel, slot) => {
               if (!(cfg.audioSlots[activeTier] || [])[slot]) return null;
               return (
-                <div key={slot} className="flex flex-col gap-2 text-xs pl-1 border-l-2" style={{ borderColor: "rgba(255,180,200,0.3)" }}>
-                  <span className="uppercase tracking-widest opacity-60 text-[10px]">{slotLabel}</span>
+                <div key={slot} className="flex flex-col gap-2 text-xs pl-3 border-l-2" style={{ borderColor: LINE_STRONG }}>
+                  <span className="uppercase tracking-[0.25em] text-[10px]" style={{ color: INK_SOFT }}>{slotLabel}</span>
                   <div className="grid grid-cols-2 gap-2">
                     <ColorField
                       label="Wave / mic"
@@ -523,22 +498,22 @@ export function TwitchOverlayBuilder() {
                       onChange={(v) => setAudioColor(activeTier, slot, v)}
                     />
                     <label className="flex flex-col gap-1">
-                      <span className="uppercase tracking-widest opacity-80">Top text</span>
+                      <span className="uppercase tracking-[0.2em]" style={{ color: INK_SOFT }}>Top text</span>
                       <input
                         value={(cfg.audioTexts[activeTier] || [])[slot]?.top ?? "RP AUDIO"}
                         onChange={(e) => setAudioText(activeTier, slot, "top", e.target.value)}
-                        className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
-                        style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
+                        className="px-2 py-1.5 rounded-lg outline-none text-sm"
+                        style={{ background: FIELD, border: `1px solid ${LINE_STRONG}`, color: "#fff" }}
                         maxLength={24}
                       />
                     </label>
                     <label className="flex flex-col gap-1 col-span-2">
-                      <span className="uppercase tracking-widest opacity-80">Sub text</span>
+                      <span className="uppercase tracking-[0.2em]" style={{ color: INK_SOFT }}>Sub text</span>
                       <input
                         value={(cfg.audioTexts[activeTier] || [])[slot]?.sub ?? "ASMR"}
                         onChange={(e) => setAudioText(activeTier, slot, "sub", e.target.value)}
-                        className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
-                        style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
+                        className="px-2 py-1.5 rounded-lg outline-none text-sm"
+                        style={{ background: FIELD, border: `1px solid ${LINE_STRONG}`, color: "#fff" }}
                         maxLength={24}
                       />
                     </label>
@@ -548,87 +523,106 @@ export function TwitchOverlayBuilder() {
             })}
           </div>
 
-          <div
-            className="rounded-lg border p-3 flex flex-col gap-2"
-            style={{ borderColor: "rgba(255,180,200,0.22)", background: "rgba(255,255,255,0.03)" }}
-          >
-            <span className="text-xs uppercase tracking-widest opacity-80 block">
-              Prestige glint (light sweep) — pick slots
-            </span>
-            <p className="text-[10px] opacity-50 -mt-1 leading-snug">
-              Diagonal light shimmer that sweeps across the card face, like sunlight catching glass.
-            </p>
+          <div className="rounded-xl border p-3.5 flex flex-col gap-3" style={{ borderColor: LINE, background: CARD }}>
+            <SectionLabel kanji="光">Light Shimmer</SectionLabel>
             <SlotToggles
               values={cfg.cardShineSlots[activeTier]}
               onChange={(slot, on) => setShineSlot(activeTier, slot, on)}
             />
           </div>
 
-          <div
-            className="rounded-lg border p-3 flex flex-col gap-2"
-            style={{ borderColor: "rgba(255,180,200,0.22)", background: "rgba(255,255,255,0.03)" }}
-          >
-            <span className="text-xs uppercase tracking-widest opacity-80 block">
-              Blur cards (front face only)
-            </span>
+          <div className="rounded-xl border p-3.5 flex flex-col gap-3" style={{ borderColor: LINE, background: CARD }}>
+            <SectionLabel kanji="暈">Blur</SectionLabel>
+            <SlotToggles
+              values={cfg.cardBlur[activeTier]}
+              onChange={(slot, on) => setBlur(activeTier, slot, on)}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2.5">
+            <SectionLabel kanji="絵">Card images</SectionLabel>
             <div className="grid grid-cols-3 gap-2">
-              {SLOT_LABELS.map((label, slot) => {
-                const on = !!(cfg.cardBlur[activeTier] || [])[slot];
-                return (
-                  <label
-                    key={slot}
-                    className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded cursor-pointer"
-                    style={{
-                      background: on
-                        ? "linear-gradient(135deg, rgba(200,19,42,0.35), rgba(138,10,28,0.25))"
-                        : "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,180,200,0.22)",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      onChange={(e) => setBlur(activeTier, slot, e.target.checked)}
-                    />
-                    <span className="uppercase tracking-widest opacity-90">{label}</span>
-                  </label>
-                );
-              })}
+              {SLOT_LABELS.map((label, slot) => (
+                <CardImageSlot
+                  key={slot}
+                  label={label}
+                  value={cfg.tierImages[activeTier][slot]}
+                  isAudioCenter={!!(cfg.audioSlots[activeTier] || [])[slot]}
+                  onPick={async (file) => {
+                    const url = await readFileAsDataUrl(file);
+                    setTierImage(activeTier, slot, url);
+                  }}
+                  onClear={() => setTierImage(activeTier, slot, "")}
+                />
+              ))}
             </div>
           </div>
-
-
-
-
-          <label className="text-xs uppercase tracking-widest opacity-80 mt-2">Card images</label>
-          <div className="grid grid-cols-3 gap-2">
-            {SLOT_LABELS.map((label, slot) => (
-              <CardImageSlot
-                key={slot}
-                label={label}
-                value={cfg.tierImages[activeTier][slot]}
-                isAudioCenter={!!(cfg.audioSlots[activeTier] || [])[slot]}
-                onPick={async (file) => {
-                  const url = await readFileAsDataUrl(file);
-                  setTierImage(activeTier, slot, url);
-                }}
-                onClear={() => setTierImage(activeTier, slot, "")}
-              />
-            ))}
-          </div>
-          <p className="text-[11px] opacity-60 leading-snug mt-1">
-            Tip: any slot with "Audio card" enabled shows the animated mic+waveform instead of its image.
-          </p>
         </div>
 
         <button
           onClick={() => setCfg(DEFAULT_CONFIG)}
-          className="text-[11px] uppercase tracking-widest opacity-60 hover:opacity-100 mt-1 self-start"
+          className="text-[11px] uppercase tracking-[0.25em] opacity-60 hover:opacity-100 self-start transition"
+          style={{ color: INK_SOFT }}
         >
           Reset to template defaults
         </button>
       </div>
     </div>
+  );
+}
+
+function SectionTitle({ kanji, children }: { kanji: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-3">
+      <span className="font-hakkou text-base leading-none" style={{ color: KANJI }}>{kanji}</span>
+      <span className="text-xs uppercase tracking-[0.25em] whitespace-nowrap" style={{ color: INK_SOFT }}>{children}</span>
+      <span className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(255,180,200,0.22), transparent)" }} />
+    </div>
+  );
+}
+
+function SectionLabel({ kanji, children }: { kanji: string; children: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span className="font-hakkou text-sm leading-none" style={{ color: KANJI }}>{kanji}</span>
+      <span className="text-xs uppercase tracking-[0.25em]" style={{ color: INK_SOFT }}>{children}</span>
+    </span>
+  );
+}
+
+function ToggleRow({
+  label,
+  on,
+  onChange,
+}: {
+  label: string;
+  on: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  return (
+    <label
+      className="flex items-center justify-between gap-2 mt-3 px-3 py-2 rounded-lg cursor-pointer select-none transition"
+      style={{
+        background: on ? SEAL_WASH : "transparent",
+        border: `1px solid ${on ? LINE_STRONG : LINE}`,
+      }}
+    >
+      <span className="text-xs uppercase tracking-[0.2em]" style={{ color: on ? BRIGHT : INK }}>{label}</span>
+      <span
+        role="switch"
+        aria-checked={on}
+        className="relative inline-block flex-shrink-0"
+        style={{ width: 36, height: 20, borderRadius: 999, background: on ? "#c8132a" : "rgba(255,255,255,0.15)", transition: "background 0.15s" }}
+      >
+        <span
+          style={{
+            position: "absolute", top: 2, left: on ? 18 : 2, width: 16, height: 16,
+            borderRadius: "50%", background: "#fff", transition: "left 0.15s", boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+          }}
+        />
+      </span>
+      <input type="checkbox" className="sr-only" checked={on} onChange={(e) => onChange(e.target.checked)} />
+    </label>
   );
 }
 
@@ -646,20 +640,23 @@ function SlotToggles({
         return (
           <label
             key={slot}
-            className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded cursor-pointer"
+            className="flex items-center justify-center gap-2 text-[11px] px-2 py-2 rounded-lg cursor-pointer select-none transition hover:bg-white/5"
             style={{
-              background: on
-                ? "linear-gradient(135deg, rgba(200,19,42,0.35), rgba(138,10,28,0.25))"
-                : "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,180,200,0.22)",
+              background: on ? SEAL_WASH : "transparent",
+              border: `1px solid ${on ? LINE_STRONG : LINE}`,
             }}
           >
-            <input
-              type="checkbox"
-              checked={on}
-              onChange={(e) => onChange(slot, e.target.checked)}
+            <span
+              className="inline-block flex-shrink-0"
+              style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: on ? "#ff5a78" : "transparent",
+                border: on ? "none" : `1px solid ${LINE_STRONG}`,
+                boxShadow: on ? "0 0 6px rgba(255,90,120,0.7)" : "none",
+              }}
             />
-            <span className="uppercase tracking-widest opacity-90">{label}</span>
+            <span className="uppercase tracking-[0.2em]" style={{ color: on ? BRIGHT : INK }}>{label}</span>
+            <input type="checkbox" className="sr-only" checked={on} onChange={(e) => onChange(slot, e.target.checked)} />
           </label>
         );
       })}
@@ -682,16 +679,15 @@ function ColorField({
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-9 h-9 rounded cursor-pointer bg-transparent border-0 p-0"
+        className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0 p-0"
       />
       <div className="flex flex-col">
-        <span className="uppercase tracking-widest opacity-80">{label}</span>
+        <span className="uppercase tracking-[0.2em]" style={{ color: INK_SOFT }}>{label}</span>
         <span className="text-[10px] opacity-60">{value}</span>
       </div>
     </label>
   );
 }
-
 
 function NumberField({
   label,
@@ -710,7 +706,7 @@ function NumberField({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="uppercase tracking-widest opacity-80">{label}</span>
+      <span className="uppercase tracking-[0.2em]" style={{ color: INK_SOFT }}>{label}</span>
       <input
         type="number"
         value={value}
@@ -720,14 +716,13 @@ function NumberField({
           const n = parseFloat(e.target.value);
           if (!Number.isNaN(n)) onChange(n);
         }}
-        className="px-2 py-1.5 rounded bg-black/30 border outline-none text-sm"
-        style={{ borderColor: "rgba(255,180,200,0.3)", color: "#fff" }}
+        className="px-2 py-1.5 rounded-lg outline-none text-sm"
+        style={{ background: FIELD, border: `1px solid ${LINE_STRONG}`, color: "#fff" }}
       />
       {hint && <span className="text-[10px] opacity-60 leading-snug">{hint}</span>}
     </label>
   );
 }
-
 
 function CardImageSlot({
   label,
@@ -745,8 +740,8 @@ function CardImageSlot({
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div
-      className="rounded-md overflow-hidden border flex flex-col"
-      style={{ borderColor: "rgba(255,180,200,0.25)", background: "rgba(0,0,0,0.35)" }}
+      className="rounded-lg overflow-hidden border flex flex-col"
+      style={{ borderColor: LINE_STRONG, background: "rgba(0,0,0,0.35)" }}
     >
       <div
         className="aspect-[5/7] relative flex items-center justify-center text-[10px] opacity-70 cursor-pointer"
@@ -757,13 +752,13 @@ function CardImageSlot({
       >
         {!value && <span>Click to upload</span>}
         {isAudioCenter && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-[10px] uppercase tracking-widest text-pink-200">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-[10px] uppercase tracking-[0.2em] text-pink-200">
             Audio
           </div>
         )}
       </div>
       <div className="flex items-center justify-between px-2 py-1 text-[10px]">
-        <span className="uppercase tracking-widest opacity-70">{label}</span>
+        <span className="uppercase tracking-[0.2em] opacity-70">{label}</span>
         {value && (
           <button onClick={onClear} className="opacity-70 hover:opacity-100">
             clear
@@ -791,26 +786,21 @@ function ObsGuide() {
     <div
       className="rounded-2xl border overflow-hidden"
       style={{
-        borderColor: "rgba(255,180,200,0.22)",
-        background:
-          "linear-gradient(135deg, rgba(50,10,22,0.75), rgba(20,4,10,0.6))",
-        color: "#ffe2ec",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+        borderColor: LINE,
+        background: "linear-gradient(135deg, rgba(50,10,22,0.7), rgba(20,4,10,0.55))",
+        color: INK,
+        boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
       }}
     >
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-3 text-sm font-semibold tracking-[0.25em] uppercase"
-        style={{
-          background:
-            "linear-gradient(90deg, rgba(200,19,42,0.18), rgba(200,19,42,0.04))",
-          borderBottom: open ? "1px solid rgba(255,180,200,0.18)" : "none",
-        }}
+        className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold tracking-[0.25em] uppercase"
+        style={{ borderBottom: open ? `1px solid ${LINE}` : "none" }}
       >
         <span className="flex items-center gap-3">
-          <span aria-hidden style={{ color: "#ffb8cc", fontSize: 16, lineHeight: 1 }}>⛩</span>
-          <span>OBS Setup Guide</span>
-          <span className="opacity-60 text-[10px] tracking-[0.3em]">案内</span>
+          <span aria-hidden style={{ color: KANJI, fontSize: 16, lineHeight: 1 }}>⛩</span>
+          <span style={{ color: BRIGHT }}>OBS Setup Guide</span>
+          <span className="font-hakkou opacity-70 text-sm" style={{ color: KANJI }}>案内</span>
         </span>
         <span className="opacity-70 text-base">{open ? "−" : "+"}</span>
       </button>
@@ -819,7 +809,7 @@ function ObsGuide() {
           <p className="font-semibold mb-3 flex items-center gap-2" style={{ color: "#ffd0dc" }}>
             <span aria-hidden>❀</span> How to add this to OBS
           </p>
-          <ol className="space-y-2">
+          <ol className="space-y-2.5">
             {[
               "Press DOWNLOAD HTML",
               "A .html file will be saved to your computer",
@@ -832,11 +822,7 @@ function ObsGuide() {
               <li key={i} className="flex gap-3 items-start">
                 <span
                   className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold"
-                  style={{
-                    background: "linear-gradient(135deg,#c8132a,#8a0a1c)",
-                    color: "#fff0f4",
-                    boxShadow: "0 2px 8px rgba(200,19,42,0.4)",
-                  }}
+                  style={{ background: SEAL, color: BRIGHT, boxShadow: "0 2px 8px rgba(200,19,42,0.35)" }}
                 >
                   {i + 1}
                 </span>
@@ -845,16 +831,12 @@ function ObsGuide() {
             ))}
           </ol>
           <div
-            className="mt-4 text-xs leading-snug rounded-lg px-4 py-3 flex gap-3"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(255,200,215,0.10), rgba(255,200,215,0.03))",
-              border: "1px solid rgba(255,180,200,0.28)",
-            }}
+            className="mt-4 text-xs leading-snug rounded-xl px-4 py-3 flex gap-3"
+            style={{ background: "rgba(255,200,215,0.06)", border: `1px solid ${LINE}` }}
           >
-            <span aria-hidden style={{ color: "#ffb8cc", fontSize: 14 }}>🌸</span>
+            <span aria-hidden style={{ color: KANJI, fontSize: 14 }}>🌸</span>
             <p>
-              <span className="font-semibold tracking-wider uppercase text-[10px] mr-1" style={{ color: "#ffb8cc" }}>
+              <span className="font-semibold tracking-wider uppercase text-[10px] mr-1" style={{ color: KANJI }}>
                 Tip
               </span>
               Download 2 files — one with a 0.3s end break for positioning in OBS, and one

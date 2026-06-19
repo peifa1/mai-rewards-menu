@@ -417,11 +417,23 @@ export function TwitchOverlayBuilder() {
           </div>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-3">
+        {/* TIER EDITOR — the main working area. Tabs + per-tier controls live together. */}
+        <div
+          className="rounded-2xl border overflow-hidden"
+          style={{
+            borderColor: LINE_STRONG,
+            background: "rgba(45,12,22,0.4)",
+            boxShadow: "0 10px 34px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,200,215,0.04) inset",
+          }}
+        >
+          {/* Header */}
+          <div
+            className="flex items-center justify-between gap-2 px-4 py-3.5"
+            style={{ background: "linear-gradient(90deg, rgba(200,19,42,0.14), transparent)" }}
+          >
             <div className="flex items-center gap-2.5">
-              <span className="font-hakkou text-base leading-none" style={{ color: KANJI }}>段</span>
-              <span className="text-xs uppercase tracking-[0.25em]" style={{ color: INK_SOFT }}>Tiers</span>
+              <span className="font-hakkou text-lg leading-none" style={{ color: KANJI }}>段</span>
+              <span className="text-sm uppercase tracking-[0.28em] font-semibold" style={{ color: BRIGHT }}>Tiers</span>
             </div>
             <div className="flex items-center gap-1.5">
               <button
@@ -449,7 +461,9 @@ export function TwitchOverlayBuilder() {
               </button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+
+          {/* Tabs */}
+          <div className="flex flex-wrap gap-1.5 px-4 pb-3.5">
             {tierTabs.map((t) => (
               <button
                 key={t.idx}
@@ -465,21 +479,31 @@ export function TwitchOverlayBuilder() {
               </button>
             ))}
           </div>
-        </div>
 
-        <div className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs uppercase tracking-[0.25em]" style={{ color: INK_SOFT }}>Tier name</span>
-            <input
-              value={cfg.tierNames[activeTier]}
-              onChange={(e) => setTierName(activeTier, e.target.value)}
-              className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-pink-300/30"
-              style={{ background: FIELD, border: `1px solid ${LINE_STRONG}`, color: "#fff" }}
-              maxLength={32}
-            />
-          </label>
+          {/* Active tier body — everything here belongs to the selected tier */}
+          <div
+            className="flex flex-col gap-4 px-4 pt-4 pb-4"
+            style={{ borderTop: `1px solid ${LINE}`, background: PANEL }}
+          >
+            <div className="flex items-baseline gap-2.5">
+              <span className="text-[10px] uppercase tracking-[0.3em]" style={{ color: INK_SOFT }}>Now editing</span>
+              <span className="font-menu italic text-lg leading-none" style={{ color: BRIGHT }}>
+                {cfg.tierNames[activeTier] || `Tier ${activeTier + 1}`}
+              </span>
+            </div>
 
-          <div className="rounded-xl border p-3.5 flex flex-col gap-3" style={{ borderColor: LINE, background: CARD }}>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs uppercase tracking-[0.25em]" style={{ color: INK_SOFT }}>Tier name</span>
+              <input
+                value={cfg.tierNames[activeTier]}
+                onChange={(e) => setTierName(activeTier, e.target.value)}
+                className="px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-pink-300/30"
+                style={{ background: FIELD, border: `1px solid ${LINE_STRONG}`, color: "#fff" }}
+                maxLength={32}
+              />
+            </label>
+
+            <div className="rounded-xl border p-3.5 flex flex-col gap-3" style={{ borderColor: LINE, background: CARD }}>
             <SectionLabel kanji="音">Audio Card</SectionLabel>
             <SlotToggles
               values={cfg.audioSlots[activeTier]}
@@ -556,6 +580,7 @@ export function TwitchOverlayBuilder() {
                 />
               ))}
             </div>
+          </div>
           </div>
         </div>
 
@@ -780,64 +805,107 @@ function CardImageSlot({
   );
 }
 
+const OBS_STEPS: { title: string; detail?: string }[] = [
+  { title: "Press “DOWNLOAD HTML”", detail: "The button up top, by the preview." },
+  { title: "Save the file", detail: "A .html file lands on your computer." },
+  { title: "Open OBS" },
+  { title: "Add a Browser source", detail: "In your scene’s Sources panel, click + → Browser." },
+  { title: "Tick “Local File”", detail: "Then browse to the .html file you saved." },
+  { title: "Set the size", detail: "Width 1920 · Height 1080." },
+  { title: "Position it", detail: "Drag & scale it in your scene however you like ♡" },
+];
+
 function ObsGuide() {
   const [open, setOpen] = useState(true);
   return (
     <div
       className="rounded-2xl border overflow-hidden"
       style={{
-        borderColor: LINE,
-        background: "linear-gradient(135deg, rgba(50,10,22,0.7), rgba(20,4,10,0.55))",
+        borderColor: LINE_STRONG,
+        background: "linear-gradient(160deg, rgba(52,11,24,0.72), rgba(18,4,9,0.6))",
         color: INK,
-        boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+        boxShadow: "0 12px 34px rgba(0,0,0,0.32)",
       }}
     >
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold tracking-[0.25em] uppercase"
-        style={{ borderBottom: open ? `1px solid ${LINE}` : "none" }}
+        className="w-full flex items-center justify-between px-5 py-4 text-left"
+        style={{
+          borderBottom: open ? `1px solid ${LINE}` : "none",
+          background: "linear-gradient(90deg, rgba(200,19,42,0.16), transparent)",
+        }}
       >
-        <span className="flex items-center gap-3">
-          <span aria-hidden style={{ color: KANJI, fontSize: 16, lineHeight: 1 }}>⛩</span>
-          <span style={{ color: BRIGHT }}>OBS Setup Guide</span>
-          <span className="font-hakkou opacity-70 text-sm" style={{ color: KANJI }}>案内</span>
+        <span className="flex items-center gap-3.5">
+          <span
+            aria-hidden
+            className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg"
+            style={{ background: "rgba(200,19,42,0.18)", border: `1px solid ${LINE_STRONG}`, color: KANJI }}
+          >
+            ⛩
+          </span>
+          <span className="flex flex-col">
+            <span className="flex items-center gap-2">
+              <span className="text-sm font-semibold tracking-[0.22em] uppercase" style={{ color: BRIGHT }}>
+                OBS Setup Guide
+              </span>
+              <span className="font-hakkou text-sm opacity-75" style={{ color: KANJI }}>案内</span>
+            </span>
+            <span className="text-[11px] tracking-wide opacity-65" style={{ color: INK_SOFT }}>
+              Get your overlay into a stream in 7 quick steps
+            </span>
+          </span>
         </span>
-        <span className="opacity-70 text-base">{open ? "−" : "+"}</span>
+        <span
+          className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-base opacity-80"
+          style={{ border: `1px solid ${LINE}` }}
+        >
+          {open ? "−" : "+"}
+        </span>
       </button>
       {open && (
-        <div className="px-5 py-4 text-sm leading-relaxed">
-          <p className="font-semibold mb-3 flex items-center gap-2" style={{ color: "#ffd0dc" }}>
-            <span aria-hidden>❀</span> How to add this to OBS
-          </p>
-          <ol className="space-y-2.5">
-            {[
-              "Press DOWNLOAD HTML",
-              "A .html file will be saved to your computer",
-              "Open OBS",
-              "Add a Browser source to your scene",
-              "Tick Local File and import the .html file",
-              "Set Width: 1920 and Height: 1080",
-              "Adjust the size in your scene however you like ♡",
-            ].map((step, i) => (
-              <li key={i} className="flex gap-3 items-start">
-                <span
-                  className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold"
-                  style={{ background: SEAL, color: BRIGHT, boxShadow: "0 2px 8px rgba(200,19,42,0.35)" }}
-                >
-                  {i + 1}
-                </span>
-                <span className="pt-0.5">{step}</span>
-              </li>
-            ))}
+        <div className="px-5 py-5">
+          <ol className="relative flex flex-col">
+            {OBS_STEPS.map((step, i) => {
+              const last = i === OBS_STEPS.length - 1;
+              return (
+                <li key={i} className="relative flex gap-4 pb-5 last:pb-0">
+                  {/* connector line */}
+                  {!last && (
+                    <span
+                      aria-hidden
+                      className="absolute top-7 bottom-0 left-[13px] w-px"
+                      style={{ background: "linear-gradient(180deg, rgba(255,180,200,0.35), rgba(255,180,200,0.08))" }}
+                    />
+                  )}
+                  <span
+                    className="relative z-10 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold"
+                    style={{
+                      background: SEAL,
+                      color: BRIGHT,
+                      border: "1px solid rgba(255,200,215,0.45)",
+                      boxShadow: "0 2px 10px rgba(200,19,42,0.4)",
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="flex flex-col gap-0.5 pt-0.5">
+                    <span className="text-sm font-medium" style={{ color: BRIGHT }}>{step.title}</span>
+                    {step.detail && (
+                      <span className="text-xs leading-snug opacity-70" style={{ color: INK }}>{step.detail}</span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
           <div
-            className="mt-4 text-xs leading-snug rounded-xl px-4 py-3 flex gap-3"
-            style={{ background: "rgba(255,200,215,0.06)", border: `1px solid ${LINE}` }}
+            className="mt-5 text-xs leading-snug rounded-xl px-4 py-3.5 flex gap-3"
+            style={{ background: "rgba(255,200,215,0.06)", border: `1px solid ${LINE_STRONG}` }}
           >
-            <span aria-hidden style={{ color: KANJI, fontSize: 14 }}>🌸</span>
-            <p>
-              <span className="font-semibold tracking-wider uppercase text-[10px] mr-1" style={{ color: KANJI }}>
-                Tip
+            <span aria-hidden style={{ color: KANJI, fontSize: 15 }}>🌸</span>
+            <p style={{ color: INK }}>
+              <span className="font-semibold tracking-[0.18em] uppercase text-[10px] mr-1.5" style={{ color: KANJI }}>
+                Pro tip
               </span>
               Download 2 files — one with a 0.3s end break for positioning in OBS, and one
               with the real break length you want. The real one stays invisible between plays,

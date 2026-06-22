@@ -833,9 +833,14 @@ function AdjustOverlay({
 function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; images: ImgSlot[]; onUpdateSlot: SlotUpdater; index: number; total: number }) {
   const isTop = index === total - 1;
   const isMid = index === total - 2 && tier.premium;
-  const rowHeight = isTop ? 156 : tier.premium ? 142 : 128;
-  const nameColor = tier.premium ? "#fff8fa" : "#f7dde4";
-  const kanjiColor = tier.premium ? "#ffd6e0" : "#e8a8b8";
+  const isKami = tier.key === "kami";
+  // Compress row heights when the menu grows past 5 tiers so 6+ fit the 1080 canvas.
+  const compact = total >= 6;
+  const rowHeight = compact
+    ? (isTop ? 138 : tier.premium ? 124 : 114)
+    : (isTop ? 156 : tier.premium ? 142 : 128);
+  const nameColor = isKami ? "#ffffff" : tier.premium ? "#fff8fa" : "#f7dde4";
+  const kanjiColor = isKami ? ACCENT_KAMI : tier.premium ? "#ffd6e0" : "#e8a8b8";
 
   const groupWidthPct = 64;
   const mid = 50;
@@ -852,7 +857,14 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
     `polygon(${((mid + skew - s1Left) / s1Width) * 100}% 0, 100% 0, 100% 100%, 0 100%)`,
   ];
 
-  const prestigeBg: React.CSSProperties | undefined = isTop
+  const prestigeBg: React.CSSProperties | undefined = isKami && isTop
+    ? {
+        background:
+          "linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(10,5,8,0.72) 35%, rgba(20,8,14,0.35) 65%, transparent 92%)",
+        boxShadow:
+          "inset 0 0 70px rgba(0,0,0,0.7), inset 0 0 120px rgba(232,200,120,0.08)",
+      }
+    : isTop
     ? {
         background:
           "linear-gradient(90deg, rgba(255,180,200,0.16) 0%, rgba(255,150,175,0.09) 35%, transparent 72%)",
@@ -866,7 +878,9 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
       }
     : undefined;
 
-  const tierBorderColor = isTop ? ACCENT_TOP : isMid ? ACCENT_MID : "transparent";
+  const tierBorderColor = isKami && isTop
+    ? ACCENT_KAMI
+    : isTop ? ACCENT_TOP : isMid ? ACCENT_MID : "transparent";
   const borderWidth = isTop ? 4 : tier.premium ? 3 : 3;
 
   return (

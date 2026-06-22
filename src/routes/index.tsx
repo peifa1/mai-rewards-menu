@@ -860,9 +860,9 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
   const prestigeBg: React.CSSProperties | undefined = isKami && isTop
     ? {
         background:
-          "linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(10,5,8,0.72) 35%, rgba(20,8,14,0.35) 65%, transparent 92%)",
+          "linear-gradient(90deg, rgba(40,18,28,0.78) 0%, rgba(28,12,20,0.62) 35%, rgba(30,12,22,0.28) 70%, transparent 95%)",
         boxShadow:
-          "inset 0 0 70px rgba(0,0,0,0.7), inset 0 0 120px rgba(232,200,120,0.08)",
+          "inset 0 0 60px rgba(0,0,0,0.55), inset 0 0 110px rgba(232,200,120,0.10)",
       }
     : isTop
     ? {
@@ -899,7 +899,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
           style={{
             width: isTop ? 110 : 80,
             background: isKami && isTop
-              ? "linear-gradient(90deg, rgba(232,200,120,0.35) 0%, rgba(0,0,0,0.5) 45%, transparent 100%)"
+              ? "linear-gradient(90deg, rgba(232,200,120,0.28) 0%, rgba(30,14,22,0.40) 50%, transparent 100%)"
               : isTop
               ? "linear-gradient(90deg, rgba(255,200,160,0.30) 0%, rgba(255,180,200,0.18) 40%, transparent 100%)"
               : "linear-gradient(90deg, rgba(255,180,200,0.16) 0%, transparent 100%)",
@@ -949,7 +949,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
         style={{
           width: `${groupWidthPct}%`,
           background: isKami && isTop
-            ? "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.78) 100%)"
+            ? "linear-gradient(90deg, transparent 0%, rgba(20,8,14,0.40) 55%, rgba(20,8,14,0.58) 100%)"
             : "linear-gradient(90deg, transparent 0%, rgba(74,12,34,0.28) 55%, rgba(74,12,34,0.42) 100%)",
           mixBlendMode: "multiply",
         }}

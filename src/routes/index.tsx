@@ -860,9 +860,9 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
   const prestigeBg: React.CSSProperties | undefined = isKami && isTop
     ? {
         background:
-          "linear-gradient(90deg, rgba(40,18,28,0.78) 0%, rgba(28,12,20,0.62) 35%, rgba(30,12,22,0.28) 70%, transparent 95%)",
+          "linear-gradient(90deg, rgba(58,28,42,0.62) 0%, rgba(44,20,32,0.45) 40%, rgba(40,18,28,0.18) 75%, transparent 100%)",
         boxShadow:
-          "inset 0 0 60px rgba(0,0,0,0.55), inset 0 0 110px rgba(232,200,120,0.10)",
+          "inset 0 0 50px rgba(0,0,0,0.4), inset 0 0 110px rgba(232,200,120,0.10)",
       }
     : isTop
     ? {
@@ -873,8 +873,8 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
     : isMid
     ? {
         background:
-          "linear-gradient(90deg, rgba(255,170,190,0.07) 0%, rgba(255,140,165,0.04) 35%, transparent 70%)",
-        boxShadow: "inset 0 0 28px rgba(255,140,170,0.07)",
+          "linear-gradient(90deg, rgba(255,180,195,0.11) 0%, rgba(255,150,175,0.07) 38%, transparent 75%)",
+        boxShadow: "inset 0 0 36px rgba(255,150,180,0.11)",
       }
     : undefined;
 

@@ -979,13 +979,15 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
               className="font-menu"
               style={{
                 fontSize: isTop ? 26 : 20,
-                color: isTop ? ACCENT_TOP : ACCENT_MID,
+                color: isKami && isTop ? ACCENT_KAMI : isTop ? ACCENT_TOP : ACCENT_MID,
                 letterSpacing: "-0.15em",
                 marginRight: 4,
-                textShadow: isTop ? "0 0 12px rgba(255,200,140,0.6)" : "none",
+                textShadow: isKami && isTop
+                  ? "0 0 14px rgba(232,200,120,0.7), 0 0 2px rgba(0,0,0,0.9)"
+                  : isTop ? "0 0 12px rgba(255,200,140,0.6)" : "none",
               }}
             >
-              {isTop ? "✦✦" : "✦"}
+              {isKami && isTop ? "⛩" : isTop ? "✦✦" : "✦"}
             </div>
           )}
           <div
@@ -995,7 +997,9 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
               color: nameColor,
               lineHeight: 1,
               letterSpacing: "0.04em",
-              textShadow: isTop
+              textShadow: isKami && isTop
+                ? "0 2px 24px rgba(232,200,120,0.55), 0 0 1px rgba(255,240,200,0.6), 0 2px 8px rgba(0,0,0,0.85)"
+                : isTop
                 ? "0 2px 22px rgba(255,180,140,0.65), 0 0 1px rgba(255,235,210,0.7)"
                 : isMid
                 ? "0 2px 12px rgba(255,150,180,0.40)"

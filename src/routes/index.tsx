@@ -948,8 +948,9 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
         className="absolute top-0 right-0 h-full pointer-events-none"
         style={{
           width: `${groupWidthPct}%`,
-          background:
-            "linear-gradient(90deg, transparent 0%, rgba(74,12,34,0.28) 55%, rgba(74,12,34,0.42) 100%)",
+          background: isKami && isTop
+            ? "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.78) 100%)"
+            : "linear-gradient(90deg, transparent 0%, rgba(74,12,34,0.28) 55%, rgba(74,12,34,0.42) 100%)",
           mixBlendMode: "multiply",
         }}
       />

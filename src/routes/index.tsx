@@ -898,7 +898,9 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
           className="absolute left-0 top-0 h-full pointer-events-none"
           style={{
             width: isTop ? 110 : 80,
-            background: isTop
+            background: isKami && isTop
+              ? "linear-gradient(90deg, rgba(232,200,120,0.35) 0%, rgba(0,0,0,0.5) 45%, transparent 100%)"
+              : isTop
               ? "linear-gradient(90deg, rgba(255,200,160,0.30) 0%, rgba(255,180,200,0.18) 40%, transparent 100%)"
               : "linear-gradient(90deg, rgba(255,180,200,0.16) 0%, transparent 100%)",
           }}

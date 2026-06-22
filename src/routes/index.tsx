@@ -60,13 +60,15 @@ const ACCENT_STD = "#ffb8c8";
 const ACCENT_MID = "#ffc7a0";
 const ACCENT_TOP = "#ffd28a";
 
-// Default mic / visualizer accent per tier (Tomo pink, Okami warm, Danna gold).
+// Default mic / visualizer accent per tier (Tomo pink, Okami warm, Danna gold, Kami onyx-gold).
+const ACCENT_KAMI = "#e8c878";
 const TIER_ACCENT: Record<string, string> = {
   yokan: ACCENT_STD,
   sensu: ACCENT_STD,
   tomo: ACCENT_STD,
   okami: ACCENT_MID,
   danna: ACCENT_TOP,
+  kami: ACCENT_KAMI,
 };
 
 const PILL_MIC_BG = "linear-gradient(90deg, rgba(255,184,200,0.18) 0%, rgba(40,10,20,0.85) 45%, rgba(40,10,20,0.9) 100%)";

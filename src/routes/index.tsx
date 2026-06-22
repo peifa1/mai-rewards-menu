@@ -134,6 +134,15 @@ const INITIAL_TIERS: Tier[] = [
       p("MORE PICS AND COSPLAYS!!!"),
     ],
   },
+  {
+    key: "kami", name: "Kami Sama", kanji: "神様", premium: true,
+    perks: [
+      p(PREV_LABEL, PREV_STYLE),
+      p("Monthly Shikishi — original framed art", { badge: "SOLD OUT", badgeBg: "#1a1a1a", badgeTextColor: "#e8c878" }),
+      p("Golden Kami Charm (12-month reward)"),
+      p("Limited spaces — VIP treatment"),
+    ],
+  },
 ];
 
 type ImgSlot = { src: string; nsfw: boolean; zoom: number; posX: number; posY: number };
@@ -147,6 +156,7 @@ const DEFAULT_SLOTS: SlotsMap = {
   tomo:  [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
   okami: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
   danna: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
+  kami:  [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
 };
 
 const TEXT_STATE_CACHE_KEY = "iomaya-mai-text-state";

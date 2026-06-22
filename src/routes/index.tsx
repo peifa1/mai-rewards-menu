@@ -60,13 +60,15 @@ const ACCENT_STD = "#ffb8c8";
 const ACCENT_MID = "#ffc7a0";
 const ACCENT_TOP = "#ffd28a";
 
-// Default mic / visualizer accent per tier (Tomo pink, Okami warm, Danna gold).
+// Default mic / visualizer accent per tier (Tomo pink, Okami warm, Danna gold, Kami onyx-gold).
+const ACCENT_KAMI = "#e8c878";
 const TIER_ACCENT: Record<string, string> = {
   yokan: ACCENT_STD,
   sensu: ACCENT_STD,
   tomo: ACCENT_STD,
   okami: ACCENT_MID,
   danna: ACCENT_TOP,
+  kami: ACCENT_KAMI,
 };
 
 const PILL_MIC_BG = "linear-gradient(90deg, rgba(255,184,200,0.18) 0%, rgba(40,10,20,0.85) 45%, rgba(40,10,20,0.9) 100%)";
@@ -132,6 +134,15 @@ const INITIAL_TIERS: Tier[] = [
       p("MORE PICS AND COSPLAYS!!!"),
     ],
   },
+  {
+    key: "kami", name: "Kami Sama", kanji: "神様", premium: true,
+    perks: [
+      p(PREV_LABEL, PREV_STYLE),
+      p("Monthly Shikishi — original framed art", { badge: "SOLD OUT", badgeBg: "#1a1a1a", badgeTextColor: "#e8c878" }),
+      p("Golden Kami Charm (12-month reward)"),
+      p("Limited spaces — VIP treatment"),
+    ],
+  },
 ];
 
 type ImgSlot = { src: string; nsfw: boolean; zoom: number; posX: number; posY: number };
@@ -145,6 +156,7 @@ const DEFAULT_SLOTS: SlotsMap = {
   tomo:  [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
   okami: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
   danna: [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
+  kami:  [mk(PLACEHOLDER_IMG), mk(PLACEHOLDER_IMG)],
 };
 
 const TEXT_STATE_CACHE_KEY = "iomaya-mai-text-state";
@@ -821,9 +833,14 @@ function AdjustOverlay({
 function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; images: ImgSlot[]; onUpdateSlot: SlotUpdater; index: number; total: number }) {
   const isTop = index === total - 1;
   const isMid = index === total - 2 && tier.premium;
-  const rowHeight = isTop ? 156 : tier.premium ? 142 : 128;
-  const nameColor = tier.premium ? "#fff8fa" : "#f7dde4";
-  const kanjiColor = tier.premium ? "#ffd6e0" : "#e8a8b8";
+  const isKami = tier.key === "kami";
+  // Compress row heights when the menu grows past 5 tiers so 6+ fit the 1080 canvas.
+  const compact = total >= 6;
+  const rowHeight = compact
+    ? (isTop ? 138 : tier.premium ? 124 : 114)
+    : (isTop ? 156 : tier.premium ? 142 : 128);
+  const nameColor = isKami ? "#ffffff" : tier.premium ? "#fff8fa" : "#f7dde4";
+  const kanjiColor = isKami ? ACCENT_KAMI : tier.premium ? "#ffd6e0" : "#e8a8b8";
 
   const groupWidthPct = 64;
   const mid = 50;
@@ -840,7 +857,14 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
     `polygon(${((mid + skew - s1Left) / s1Width) * 100}% 0, 100% 0, 100% 100%, 0 100%)`,
   ];
 
-  const prestigeBg: React.CSSProperties | undefined = isTop
+  const prestigeBg: React.CSSProperties | undefined = isKami && isTop
+    ? {
+        background:
+          "linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(10,5,8,0.72) 35%, rgba(20,8,14,0.35) 65%, transparent 92%)",
+        boxShadow:
+          "inset 0 0 70px rgba(0,0,0,0.7), inset 0 0 120px rgba(232,200,120,0.08)",
+      }
+    : isTop
     ? {
         background:
           "linear-gradient(90deg, rgba(255,180,200,0.16) 0%, rgba(255,150,175,0.09) 35%, transparent 72%)",
@@ -854,7 +878,9 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
       }
     : undefined;
 
-  const tierBorderColor = isTop ? ACCENT_TOP : isMid ? ACCENT_MID : "transparent";
+  const tierBorderColor = isKami && isTop
+    ? ACCENT_KAMI
+    : isTop ? ACCENT_TOP : isMid ? ACCENT_MID : "transparent";
   const borderWidth = isTop ? 4 : tier.premium ? 3 : 3;
 
   return (
@@ -872,7 +898,9 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
           className="absolute left-0 top-0 h-full pointer-events-none"
           style={{
             width: isTop ? 110 : 80,
-            background: isTop
+            background: isKami && isTop
+              ? "linear-gradient(90deg, rgba(232,200,120,0.35) 0%, rgba(0,0,0,0.5) 45%, transparent 100%)"
+              : isTop
               ? "linear-gradient(90deg, rgba(255,200,160,0.30) 0%, rgba(255,180,200,0.18) 40%, transparent 100%)"
               : "linear-gradient(90deg, rgba(255,180,200,0.16) 0%, transparent 100%)",
           }}
@@ -920,8 +948,9 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
         className="absolute top-0 right-0 h-full pointer-events-none"
         style={{
           width: `${groupWidthPct}%`,
-          background:
-            "linear-gradient(90deg, transparent 0%, rgba(74,12,34,0.28) 55%, rgba(74,12,34,0.42) 100%)",
+          background: isKami && isTop
+            ? "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.78) 100%)"
+            : "linear-gradient(90deg, transparent 0%, rgba(74,12,34,0.28) 55%, rgba(74,12,34,0.42) 100%)",
           mixBlendMode: "multiply",
         }}
       />
@@ -950,13 +979,15 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
               className="font-menu"
               style={{
                 fontSize: isTop ? 26 : 20,
-                color: isTop ? ACCENT_TOP : ACCENT_MID,
+                color: isKami && isTop ? ACCENT_KAMI : isTop ? ACCENT_TOP : ACCENT_MID,
                 letterSpacing: "-0.15em",
                 marginRight: 4,
-                textShadow: isTop ? "0 0 12px rgba(255,200,140,0.6)" : "none",
+                textShadow: isKami && isTop
+                  ? "0 0 14px rgba(232,200,120,0.7), 0 0 2px rgba(0,0,0,0.9)"
+                  : isTop ? "0 0 12px rgba(255,200,140,0.6)" : "none",
               }}
             >
-              {isTop ? "✦✦" : "✦"}
+              {isKami && isTop ? "⛩" : isTop ? "✦✦" : "✦"}
             </div>
           )}
           <div
@@ -966,7 +997,9 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
               color: nameColor,
               lineHeight: 1,
               letterSpacing: "0.04em",
-              textShadow: isTop
+              textShadow: isKami && isTop
+                ? "0 2px 24px rgba(232,200,120,0.55), 0 0 1px rgba(255,240,200,0.6), 0 2px 8px rgba(0,0,0,0.85)"
+                : isTop
                 ? "0 2px 22px rgba(255,180,140,0.65), 0 0 1px rgba(255,235,210,0.7)"
                 : isMid
                 ? "0 2px 12px rgba(255,150,180,0.40)"

@@ -9,28 +9,30 @@ import {
 } from "@/lib/buildAudioTeaser";
 
 // ── Palette ───────────────────────────────────────────────────────────────
-const INK      = "#fbe0e7";
-const INK_SOFT = "#d49aaa";
+const INK      = "#fbeaea";
+const INK_DIM  = "#c08898";
+const ROSE     = "#e8a0b4";
 const KANJI    = "#ffb8c8";
-const LINE     = "rgba(255,160,185,0.12)";
-const LINE_STR = "rgba(255,160,185,0.28)";
-const PANEL    = "rgba(14,3,8,0.72)";
-const FIELD    = "rgba(8,2,5,0.6)";
+const LINE     = "rgba(255,150,180,0.10)";
+const LINE_STR = "rgba(255,150,180,0.22)";
+const PANEL    = "rgba(10,2,6,0.80)";
+const FIELD_BG = "rgba(255,140,170,0.04)";
 const SERIF    = "Georgia, 'Times New Roman', serif";
+const SANS     = "ui-sans-serif, system-ui, sans-serif";
 
-// ── All styles, always shown ──────────────────────────────────────────────
+// ── All styles ────────────────────────────────────────────────────────────
 const STYLES: { key: TeaserStyle; kanji: string; label: string }[] = [
-  { key: "waveform",   kanji: "波", label: "WAVEFORM"    },
-  { key: "nowplaying", kanji: "再", label: "NOW PLAYING" },
-  { key: "soundorb",   kanji: "球", label: "SOUND ORB"   },
+  { key: "waveform",   kanji: "波", label: "Waveform"    },
+  { key: "nowplaying", kanji: "再", label: "Now Playing" },
+  { key: "soundorb",   kanji: "球", label: "Sound Orb"   },
 ];
 
-// All templates are 390×488 (4:5 ratio — final output will be 1080×1350)
+// 4:5 ratio (final output: 1080×1350)
 const CARD_W = 390;
 const CARD_H = 488;
 
-// ── Per-style localStorage ────────────────────────────────────────────────
-function storageKey(style: TeaserStyle) { return `audio-teaser-cfg-${style}`; }
+// ── Storage ───────────────────────────────────────────────────────────────
+function storageKey(s: TeaserStyle) { return `audio-teaser-cfg-${s}`; }
 function loadStored(style: TeaserStyle): AudioTeaserConfig {
   try {
     const raw = localStorage.getItem(storageKey(style));
@@ -42,17 +44,17 @@ function saveStored(style: TeaserStyle, cfg: AudioTeaserConfig) {
   try { localStorage.setItem(storageKey(style), JSON.stringify(cfg)); } catch {}
 }
 
-// ── Compact field ─────────────────────────────────────────────────────────
+// ── Field (underline style) ───────────────────────────────────────────────
 function Field({
   label, value, onChange, placeholder,
 }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   const [focused, setFocused] = useState(false);
   return (
-    <div style={{ marginBottom: 10 }}>
+    <div style={{ marginBottom: 13 }}>
       <div style={{
-        fontSize: 8, letterSpacing: "0.32em", color: focused ? KANJI : INK_SOFT,
-        fontFamily: "sans-serif", textTransform: "uppercase", marginBottom: 4,
-        transition: "color 0.2s",
+        fontSize: 7.5, letterSpacing: "0.38em", textTransform: "uppercase",
+        fontFamily: SANS, color: focused ? ROSE : INK_DIM,
+        marginBottom: 5, transition: "color 0.18s",
       }}>{label}</div>
       <input
         value={value}
@@ -61,33 +63,40 @@ function Field({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={{
-          width: "100%", padding: "7px 10px",
-          background: FIELD,
-          border: `1px solid ${focused ? "rgba(255,160,185,0.55)" : LINE_STR}`,
-          borderRadius: 7, color: INK, fontSize: 13,
-          fontFamily: SERIF, outline: "none", boxSizing: "border-box",
-          boxShadow: focused ? "0 0 0 2px rgba(255,140,170,0.12)" : "none",
-          transition: "border-color 0.2s, box-shadow 0.2s",
+          width: "100%", padding: "3px 0 6px",
+          background: "transparent", border: "none",
+          borderBottom: `1px solid ${focused ? ROSE : LINE_STR}`,
+          color: INK, fontSize: 13, fontFamily: SERIF,
+          outline: "none", boxSizing: "border-box",
+          boxShadow: focused ? `0 1px 0 ${ROSE}` : "none",
+          transition: "border-color 0.18s, box-shadow 0.18s",
         }}
       />
     </div>
   );
 }
 
-// ── Section divider inside editor ────────────────────────────────────────
-function SectionLabel({ children }: { children: React.ReactNode }) {
+// ── Section box ───────────────────────────────────────────────────────────
+function Section({ title, accent, children }: {
+  title: string; accent?: boolean; children: React.ReactNode;
+}) {
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 8,
-      marginTop: 6, marginBottom: 10,
+      background: accent ? "rgba(255,140,170,0.06)" : FIELD_BG,
+      border: `1px solid ${accent ? "rgba(255,150,180,0.18)" : LINE}`,
+      borderRadius: 10,
+      padding: "12px 14px 4px",
+      marginBottom: 8,
     }}>
-      <div style={{ flex: 1, height: 1, background: LINE_STR }} />
-      <span style={{
-        fontSize: 7, letterSpacing: "0.42em", color: KANJI,
-        fontFamily: "sans-serif", textTransform: "uppercase", fontWeight: 600,
-        whiteSpace: "nowrap",
-      }}>{children}</span>
-      <div style={{ flex: 1, height: 1, background: LINE_STR }} />
+      <div style={{
+        fontSize: 7, letterSpacing: "0.52em", textTransform: "uppercase",
+        fontFamily: SANS, color: accent ? KANJI : INK_DIM,
+        marginBottom: 12, display: "flex", alignItems: "center", gap: 7,
+      }}>
+        <span style={{ opacity: accent ? 1 : 0.6 }}>{title}</span>
+        <div style={{ flex: 1, height: "1px", background: accent ? LINE_STR : LINE }} />
+      </div>
+      {children}
     </div>
   );
 }
@@ -124,7 +133,6 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [cfg, buildPreview]);
 
-  // Image upload
   const handleImage = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -134,7 +142,6 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
     e.target.value = "";
   }, [set]);
 
-  // Scale to fit ~290px wide column
   const colW = 290;
   const scale = colW / CARD_W;
   const displayH = Math.round(CARD_H * scale);
@@ -142,21 +149,23 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
   return (
     <div style={{ flex: "0 0 290px", display: "flex", flexDirection: "column", gap: 10 }}>
 
-      {/* Style label */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 2 }}>
-        <span style={{ fontSize: 22, color: KANJI, fontFamily: SERIF, lineHeight: 1 }}>{kanji}</span>
-        <div>
-          <div style={{ fontSize: 9, letterSpacing: "0.44em", color: INK_SOFT, fontFamily: "sans-serif", textTransform: "uppercase" }}>{label}</div>
-        </div>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
+        <span style={{ fontSize: 20, color: KANJI, fontFamily: SERIF, lineHeight: 1 }}>{kanji}</span>
+        <span style={{
+          fontSize: 10, letterSpacing: "0.4em", color: INK_DIM,
+          fontFamily: SANS, textTransform: "uppercase",
+        }}>{label}</span>
       </div>
 
-      {/* Preview iframe */}
+      {/* Preview */}
       <div style={{
         width: colW, height: displayH,
-        borderRadius: 10, overflow: "hidden",
-        border: `1px solid ${LINE}`,
-        background: "#0c0608",
+        borderRadius: 11, overflow: "hidden",
+        border: `1px solid ${LINE_STR}`,
+        background: "#080205",
         flexShrink: 0,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
       }}>
         {previewSrc && (
           <iframe
@@ -165,8 +174,7 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
             style={{
               width: CARD_W, height: CARD_H, border: "none",
               transform: `scale(${scale})`,
-              transformOrigin: "top left",
-              display: "block",
+              transformOrigin: "top left", display: "block",
             }}
             sandbox="allow-scripts"
           />
@@ -177,61 +185,67 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
       <div style={{
         background: PANEL,
         border: `1px solid ${LINE_STR}`,
+        borderTop: `2px solid rgba(255,150,180,0.35)`,
         borderRadius: 12,
-        padding: "16px 14px",
+        padding: "16px 14px 10px",
         display: "flex", flexDirection: "column",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+        boxShadow: "0 6px 28px rgba(0,0,0,0.5)",
       }}>
 
-        {/* Cover image */}
-        <label style={{ display: "block", marginBottom: cfg.image ? 4 : 12, cursor: "pointer" }}>
-          <div style={{ fontSize: 8, letterSpacing: "0.32em", color: INK_SOFT, fontFamily: "sans-serif", textTransform: "uppercase", marginBottom: 5 }}>Cover Image</div>
-          <div style={{
-            height: cfg.image ? 72 : 46, borderRadius: 8,
-            border: `1px dashed ${cfg.image ? "transparent" : LINE_STR}`,
-            background: cfg.image ? "transparent" : FIELD,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            overflow: "hidden", transition: "height 0.2s",
-          }}>
-            {cfg.image
-              ? <img src={cfg.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
-              : <span style={{ fontSize: 9, color: INK_SOFT, letterSpacing: "0.24em", fontFamily: "sans-serif" }}>＋ Upload</span>
-            }
-          </div>
-          <input type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
-        </label>
-        {cfg.image && (
-          <button onClick={() => set("image", "")} style={{
-            fontSize: 8, color: INK_SOFT, background: "none", border: "none",
-            cursor: "pointer", letterSpacing: "0.22em", fontFamily: "sans-serif",
-            marginBottom: 10, textAlign: "left", padding: 0, opacity: 0.7,
-          }}>✕ Remove</button>
+        {/* Cover image section */}
+        <Section title="Cover Image">
+          <label style={{ display: "block", cursor: "pointer", marginBottom: 4 }}>
+            <div style={{
+              height: cfg.image ? 70 : 42, borderRadius: 7,
+              border: `1px dashed ${cfg.image ? "transparent" : LINE_STR}`,
+              background: cfg.image ? "transparent" : "rgba(0,0,0,0.3)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              overflow: "hidden",
+            }}>
+              {cfg.image
+                ? <img src={cfg.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 7 }} />
+                : <span style={{ fontSize: 9, color: INK_DIM, letterSpacing: "0.3em", fontFamily: SANS }}>＋  Upload</span>
+              }
+            </div>
+            <input type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
+          </label>
+          {cfg.image && (
+            <button onClick={() => set("image", "")} style={{
+              fontSize: 8, color: INK_DIM, background: "none", border: "none",
+              cursor: "pointer", letterSpacing: "0.24em", fontFamily: SANS,
+              padding: "2px 0 8px", textAlign: "left", opacity: 0.65,
+            }}>✕  Remove</button>
+          )}
+        </Section>
+
+        {/* Card-internal fields */}
+        {style === "waveform" && (
+          <Section title="Card Text" accent>
+            <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
+            <Field label="Card Label" value={cfg.cardLabel} onChange={v => set("cardLabel", v)} placeholder="RP AUDIO" />
+          </Section>
+        )}
+        {style === "nowplaying" && (
+          <Section title="Card Text" accent>
+            <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
+            <Field label="Time Start" value={cfg.timeStart} onChange={v => set("timeStart", v)} placeholder="03:12" />
+          </Section>
+        )}
+        {style === "soundorb" && (
+          <Section title="Orb Caption" accent>
+            <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
+          </Section>
         )}
 
-        {/* Card-internal text fields — shown only for waveform / nowplaying */}
-        {style === "waveform" && (<>
-          <SectionLabel>Card Text</SectionLabel>
-          <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
-          <Field label="Card Label" value={cfg.cardLabel} onChange={v => set("cardLabel", v)} placeholder="RP AUDIO" />
-          <SectionLabel>Bottom Strip</SectionLabel>
-        </>)}
-        {style === "nowplaying" && (<>
-          <SectionLabel>Card Text</SectionLabel>
-          <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
-          <Field label="Time Start" value={cfg.timeStart} onChange={v => set("timeStart", v)} placeholder="03:12" />
-          <SectionLabel>Bottom Strip</SectionLabel>
-        </>)}
-        {style === "soundorb" && (<>
-          <SectionLabel>Orb Caption</SectionLabel>
-          <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
-          <SectionLabel>Bottom Strip</SectionLabel>
-        </>)}
+        {/* Bottom strip fields */}
+        <Section title="Bottom Strip">
+          <Field label="Title"          value={cfg.title}   onChange={v => set("title", v)}   placeholder="Whisper & Rain" />
+          <Field label="Eyebrow"        value={cfg.eyebrow} onChange={v => set("eyebrow", v)} placeholder="New Drop" />
+          <Field label="Genre"          value={cfg.genre}   onChange={v => set("genre", v)}   placeholder="ASMR Roleplay" />
+          <Field label="Badge"          value={cfg.badge}   onChange={v => set("badge", v)}   placeholder="Exclusive" />
+          <Field label="Duration (min)" value={cfg.minutes} onChange={v => set("minutes", v)} placeholder="24" />
+        </Section>
 
-        <Field label="Title"          value={cfg.title}   onChange={v => set("title", v)}   placeholder="Whisper & Rain" />
-        <Field label="Eyebrow"        value={cfg.eyebrow} onChange={v => set("eyebrow", v)} placeholder="New Drop" />
-        <Field label="Genre"          value={cfg.genre}   onChange={v => set("genre", v)}   placeholder="ASMR Roleplay" />
-        <Field label="Badge"          value={cfg.badge}   onChange={v => set("badge", v)}   placeholder="Exclusive" />
-        <Field label="Duration (min)" value={cfg.minutes} onChange={v => set("minutes", v)} placeholder="24" />
       </div>
     </div>
   );
@@ -242,10 +256,8 @@ export function AudioTeaserBuilder() {
   return (
     <div style={{
       padding: "28px 32px 60px",
-      display: "flex",
-      gap: 24,
-      justifyContent: "center",
-      alignItems: "flex-start",
+      display: "flex", gap: 24,
+      justifyContent: "center", alignItems: "flex-start",
       flexWrap: "wrap",
     }}>
       {STYLES.map(s => (

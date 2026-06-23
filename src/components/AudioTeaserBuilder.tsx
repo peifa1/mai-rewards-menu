@@ -24,9 +24,9 @@ const STYLES: { key: TeaserStyle; kanji: string; label: string }[] = [
   { key: "soundorb",   kanji: "球", label: "SOUND ORB"   },
 ];
 
-// All templates are now 390×693
+// All templates are 390×488 (4:5 ratio — final output will be 1080×1350)
 const CARD_W = 390;
-const CARD_H = 693;
+const CARD_H = 488;
 
 // ── Per-style localStorage ────────────────────────────────────────────────
 function storageKey(style: TeaserStyle) { return `audio-teaser-cfg-${style}`; }
@@ -60,6 +60,17 @@ function Field({
         }}
       />
     </div>
+  );
+}
+
+// ── Section divider inside editor ────────────────────────────────────────
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize: 7, letterSpacing: "0.36em", color: KANJI, fontFamily: "sans-serif",
+      textTransform: "uppercase", fontWeight: 700,
+      borderTop: `1px solid ${LINE_STR}`, paddingTop: 10, marginTop: 4, marginBottom: 8,
+    }}>{children}</div>
   );
 }
 
@@ -174,19 +185,30 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
           }}>✕ RESET IMAGE</button>
         )}
 
-        <Field label="Title"          value={cfg.title}     onChange={v => set("title", v)}     placeholder="Whisper & Rain" />
-        <Field label="Eyebrow"        value={cfg.eyebrow}   onChange={v => set("eyebrow", v)}   placeholder="New Drop" />
-        <Field label="ASMR Label"     value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
-        <Field label="Genre"          value={cfg.genre}     onChange={v => set("genre", v)}     placeholder="ASMR Roleplay" />
-        <Field label="Badge"          value={cfg.badge}     onChange={v => set("badge", v)}     placeholder="Exclusive" />
-        <Field label="Duration (min)" value={cfg.minutes}   onChange={v => set("minutes", v)}   placeholder="24" />
-
-        {style === "waveform" && (
+        {/* Card-internal text fields — shown only for waveform / nowplaying */}
+        {style === "waveform" && (<>
+          <SectionLabel>Card Text</SectionLabel>
+          <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
           <Field label="Card Label" value={cfg.cardLabel} onChange={v => set("cardLabel", v)} placeholder="RP AUDIO" />
-        )}
-        {style === "nowplaying" && (
+          <SectionLabel>Bottom Strip</SectionLabel>
+        </>)}
+        {style === "nowplaying" && (<>
+          <SectionLabel>Card Text</SectionLabel>
+          <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
           <Field label="Time Start" value={cfg.timeStart} onChange={v => set("timeStart", v)} placeholder="03:12" />
-        )}
+          <SectionLabel>Bottom Strip</SectionLabel>
+        </>)}
+        {style === "soundorb" && (<>
+          <SectionLabel>Orb Caption</SectionLabel>
+          <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
+          <SectionLabel>Bottom Strip</SectionLabel>
+        </>)}
+
+        <Field label="Title"          value={cfg.title}   onChange={v => set("title", v)}   placeholder="Whisper & Rain" />
+        <Field label="Eyebrow"        value={cfg.eyebrow} onChange={v => set("eyebrow", v)} placeholder="New Drop" />
+        <Field label="Genre"          value={cfg.genre}   onChange={v => set("genre", v)}   placeholder="ASMR Roleplay" />
+        <Field label="Badge"          value={cfg.badge}   onChange={v => set("badge", v)}   placeholder="Exclusive" />
+        <Field label="Duration (min)" value={cfg.minutes} onChange={v => set("minutes", v)} placeholder="24" />
       </div>
     </div>
   );

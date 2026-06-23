@@ -5,6 +5,7 @@ import { toPng } from "html-to-image";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 import { TwitchOverlayBuilder } from "@/components/TwitchOverlayBuilder";
 import { GamersuppsBuilder } from "@/components/GamersuppsBuilder";
+import { AudioTeaserBuilder } from "@/components/AudioTeaserBuilder";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 
 const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
@@ -217,10 +218,12 @@ function cacheTextState(state: PersistedState) {
 }
 
 
+type TopTab = "patreon" | "twitch" | "audio";
+
 function Index() {
-  const [tab, setTab] = useState<"patreon" | "twitch">(() => {
+  const [tab, setTab] = useState<TopTab>(() => {
     if (typeof window === "undefined") return "patreon";
-    return (localStorage.getItem("active-tab") as "patreon" | "twitch") || "patreon";
+    return (localStorage.getItem("active-tab") as TopTab) || "patreon";
   });
   useEffect(() => {
     try { localStorage.setItem("active-tab", tab); } catch {}
@@ -235,17 +238,14 @@ function Index() {
           style={{ animation: "sakura-spin 18s linear infinite", filter: "drop-shadow(0 0 10px rgba(255,160,190,0.55))" }}
         >
           <style>{`@keyframes sakura-spin { to { transform: rotate(360deg); } }`}</style>
-          {/* 5 petals */}
           {[0,72,144,216,288].map((deg) => (
             <ellipse key={deg} cx="50" cy="28" rx="14" ry="22"
               fill="#ffb8c8" opacity="0.90"
               transform={`rotate(${deg} 50 50)`}
             />
           ))}
-          {/* centre */}
           <circle cx="50" cy="50" r="10" fill="#ff8aaa" />
           <circle cx="50" cy="50" r="6" fill="#ffccd8" />
-          {/* stamens */}
           {[0,60,120,180,240,300].map((deg) => (
             <g key={deg} transform={`rotate(${deg} 50 50)`}>
               <line x1="50" y1="44" x2="50" y2="38" stroke="#c8132a" strokeWidth="1.4" />
@@ -258,7 +258,8 @@ function Index() {
         <div className="inline-flex rounded-full p-1 gap-1" style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,180,200,0.25)" }}>
           {([
             { id: "patreon", label: "Patreon Showcase" },
-            { id: "twitch", label: "Twitch Overlays" },
+            { id: "twitch",  label: "Twitch Overlays" },
+            { id: "audio",   label: "Audio Teasers" },
           ] as const).map(({ id, label }) => (
             <button
               key={id}
@@ -274,7 +275,7 @@ function Index() {
           ))}
         </div>
       </div>
-      {tab === "patreon" ? <PatreonShowcase /> : <TwitchOverlays />}
+      {tab === "patreon" ? <PatreonShowcase /> : tab === "twitch" ? <TwitchOverlays /> : <AudioTeaserBuilder />}
     </div>
   );
 }

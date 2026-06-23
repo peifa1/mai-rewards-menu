@@ -438,7 +438,7 @@ function PatreonShowcase() {
         cacheBust: true,
         pixelRatio: 2,
         width: 1080,
-        height: 1080,
+        height: 1280,
         fontEmbedCSS,
         filter: (node: HTMLElement) =>
           !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
@@ -573,14 +573,14 @@ function CanvasScaler({ children, innerRef }: { children: React.ReactNode; inner
     return () => window.removeEventListener("resize", update);
   }, []);
   return (
-    <div style={{ width: 1080 * scale, height: 1080 * scale }} className="relative">
+    <div style={{ width: 1080 * scale, height: 1280 * scale }} className="relative">
       <div
         ref={innerRef}
         style={{
           transform: `scale(${scale})`,
           transformOrigin: "top left",
           width: 1080,
-          height: 1080,
+          height: 1280,
           boxShadow:
             "0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,180,200,0.08), inset 0 0 120px rgba(0,0,0,0.35)",
           borderRadius: 8,
@@ -602,7 +602,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       className="relative font-menu"
       style={{
         width: 1080,
-        height: 1080,
+        height: 1280,
         overflow: "hidden",
         background:
           "radial-gradient(ellipse at 30% 20%, #6b1230 0%, #4a0c22 35%, #2a0712 70%, #1a040c 100%)",
@@ -834,11 +834,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
   const isTop = index === total - 1;
   const isMid = index === total - 2 && tier.premium;
   const isKami = tier.key === "kami";
-  // Compress row heights when the menu grows past 5 tiers so 6+ fit the 1080 canvas.
-  const compact = total >= 6;
-  const rowHeight = compact
-    ? (isTop ? 138 : tier.premium ? 124 : 114)
-    : (isTop ? 156 : tier.premium ? 142 : 128);
+  const rowHeight = isTop ? 156 : tier.premium ? 142 : 128;
   const nameColor = isKami ? "#ffffff" : tier.premium ? "#fff8fa" : "#f7dde4";
   const kanjiColor = isKami ? ACCENT_KAMI : tier.premium ? "#ffd6e0" : "#e8a8b8";
 

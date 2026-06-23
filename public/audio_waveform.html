@@ -200,34 +200,21 @@ document.getElementById('labelMeta').textContent     =
     wf.appendChild(b); bars.push(b);
   }
 
-  /* Audio reactivity (click to play) */
-  var audioCtx, analyser, dataArr, animFrame;
-  var bins = bars.map(function(){ return Math.floor(Math.random()*80)+2; });
-
-  document.addEventListener('click', function initAudio(){
-    if (audioCtx) return;
-    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    dataArr = new Uint8Array(analyser.frequencyBinCount);
-    var audio = document.getElementById('testAudio');
-    var src = audioCtx.createMediaElementSource(audio);
-    src.connect(analyser); analyser.connect(audioCtx.destination);
-    audio.play(); animate();
-    audio.onended = function(){
-      cancelAnimationFrame(animFrame);
-      bars.forEach(function(b){ b.style.height=''; });
-    };
-    document.removeEventListener('click', initAudio);
+  /* Audio reactivity — driven by the parent page via postMessage.
+     When no audio is playing, the idle CSS bar animation runs. */
+  function wfIdle(){ bars.forEach(function(b){ b.style.height=''; b.style.animation=''; }); }
+  window.addEventListener('message', function(e){
+    var d = e.data || {};
+    if (d.type === 'aud' && d.s) {
+      var s = d.s, n = s.length;
+      bars.forEach(function(b,i){
+        var v = s[Math.floor(i / bars.length * n)] || 0;
+        b.style.animation = 'none';
+        b.style.height = Math.max(3, Math.round(3 + v * 37)) + 'px';
+      });
+    } else if (d.type === 'audStop') {
+      wfIdle();
+    }
   });
-
-  function animate(){
-    animFrame = requestAnimationFrame(animate);
-    analyser.getByteFrequencyData(dataArr);
-    bars.forEach(function(b,i){
-      var h = Math.max(3, Math.round(dataArr[bins[i]]/255*(0.85+Math.random()*0.3)*36));
-      b.style.height = h+'px'; b.style.animation='none';
-    });
-  }
 </script>
 </body></html>

@@ -240,34 +240,21 @@ document.getElementById('labelMeta').textContent  =
     mwf.appendChild(mb); miniBars.push(mb);
   }
 
-  /* Audio reactivity (click to play) */
-  var audioCtx, analyser, dataArr, animFrame;
-  var bins = miniBars.map(function(){ return Math.floor(Math.random()*80)+2; });
-
-  document.addEventListener('click', function initAudio(){
-    if (audioCtx) return;
-    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    dataArr = new Uint8Array(analyser.frequencyBinCount);
-    var audio = document.getElementById('testAudio');
-    var src = audioCtx.createMediaElementSource(audio);
-    src.connect(analyser); analyser.connect(audioCtx.destination);
-    audio.play(); animate();
-    audio.onended = function(){
-      cancelAnimationFrame(animFrame);
-      miniBars.forEach(function(mb){ mb.style.height=''; });
-    };
-    document.removeEventListener('click', initAudio);
+  /* Audio reactivity — driven by the parent page via postMessage.
+     When no audio is playing, the idle CSS mini-bar animation runs. */
+  function npIdle(){ miniBars.forEach(function(mb){ mb.style.height=''; mb.style.animation=''; }); }
+  window.addEventListener('message', function(e){
+    var d = e.data || {};
+    if (d.type === 'aud' && d.s) {
+      var s = d.s, n = s.length;
+      miniBars.forEach(function(mb,i){
+        var v = s[Math.floor(i / miniBars.length * n)] || 0;
+        mb.style.animation = 'none';
+        mb.style.height = Math.max(2, Math.round(2 + v * 11)) + 'px';
+      });
+    } else if (d.type === 'audStop') {
+      npIdle();
+    }
   });
-
-  function animate(){
-    animFrame = requestAnimationFrame(animate);
-    analyser.getByteFrequencyData(dataArr);
-    miniBars.forEach(function(mb,i){
-      var h = Math.max(2, Math.round(dataArr[bins[i]]/255*(0.85+Math.random()*0.3)*12));
-      mb.style.height = h+'px'; mb.style.animation='none';
-    });
-  }
 </script>
 </body></html>

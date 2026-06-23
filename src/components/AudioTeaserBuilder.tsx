@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadAudioTeaserTemplate } from "@/lib/audioTeaserTemplate";
+import { useAudioEngine, formatTime } from "@/lib/useAudioEngine";
 import {
   buildAudioTeaserHtml,
   DEFAULT_AUDIO_TEASER_CONFIG,
@@ -102,7 +103,11 @@ function Section({ title, accent, children }: {
 }
 
 // ── Single card column ────────────────────────────────────────────────────
-function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string; label: string }) {
+function TeaserCard({ style, kanji, label, onWindow, audioMinutes }: {
+  style: TeaserStyle; kanji: string; label: string;
+  onWindow: (style: TeaserStyle, win: Window | null) => void;
+  audioMinutes: string | null;
+}) {
   const [cfg, setCfg] = useState<AudioTeaserConfig>(() => loadStored(style));
   const [previewSrc, setPreviewSrc] = useState("");
   const blobRef = useRef("");
@@ -132,6 +137,12 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
     debounceRef.current = setTimeout(() => buildPreview(cfg), 400);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [cfg, buildPreview]);
+
+  // Auto-fill the duration field from the uploaded audio.
+  useEffect(() => {
+    if (audioMinutes && audioMinutes !== cfg.minutes) set("minutes", audioMinutes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioMinutes]);
 
   const handleImage = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -171,6 +182,7 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
           <iframe
             key={previewSrc}
             src={previewSrc}
+            onLoad={e => onWindow(style, (e.currentTarget as HTMLIFrameElement).contentWindow)}
             style={{
               width: CARD_W, height: CARD_H, border: "none",
               transform: `scale(${scale})`,
@@ -251,18 +263,113 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
   );
 }
 
-// ── Main export ───────────────────────────────────────────────────────────
-export function AudioTeaserBuilder() {
+// ── Transport bar ─────────────────────────────────────────────────────────
+function Transport({ engine }: { engine: ReturnType<typeof useAudioEngine> }) {
+  const { hasAudio, fileName, playing, duration, currentTime, load, toggle, seek } = engine;
+
+  const onFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) load(f);
+    e.target.value = "";
+  }, [load]);
+
   return (
     <div style={{
-      padding: "28px 32px 60px",
-      display: "flex", gap: 24,
-      justifyContent: "center", alignItems: "flex-start",
-      flexWrap: "wrap",
+      width: "100%", maxWidth: 980, margin: "0 auto 6px",
+      background: PANEL, border: `1px solid ${LINE_STR}`,
+      borderTop: `2px solid rgba(255,150,180,0.35)`,
+      borderRadius: 14, padding: "16px 20px",
+      display: "flex", alignItems: "center", gap: 18,
+      boxShadow: "0 6px 28px rgba(0,0,0,0.45)",
     }}>
-      {STYLES.map(s => (
-        <TeaserCard key={s.key} style={s.key} kanji={s.kanji} label={s.label} />
-      ))}
+      {/* Upload */}
+      <label style={{ cursor: "pointer", flexShrink: 0 }}>
+        <span style={{
+          display: "inline-block", padding: "9px 16px", borderRadius: 9,
+          background: "rgba(255,140,170,0.10)", border: `1px solid ${LINE_STR}`,
+          color: ROSE, fontSize: 9, letterSpacing: "0.3em", textTransform: "uppercase",
+          fontFamily: SANS,
+        }}>♪  {hasAudio ? "Replace Audio" : "Upload Audio"}</span>
+        <input type="file" accept="audio/*" onChange={onFile} style={{ display: "none" }} />
+      </label>
+
+      {/* Play / pause */}
+      <button
+        onClick={toggle}
+        disabled={!hasAudio}
+        style={{
+          width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+          border: `1px solid ${hasAudio ? ROSE : LINE_STR}`,
+          background: hasAudio ? "rgba(255,140,170,0.12)" : "transparent",
+          color: hasAudio ? ROSE : INK_DIM,
+          cursor: hasAudio ? "pointer" : "default",
+          fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center",
+        }}
+      >{playing ? "❚❚" : "▶"}</button>
+
+      {/* Scrubber + time */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 12, color: INK, fontFamily: SERIF,
+          marginBottom: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}>
+          {hasAudio ? fileName : <span style={{ color: INK_DIM, fontFamily: SANS, fontSize: 10, letterSpacing: "0.16em" }}>No audio loaded — upload a file to drive all three previews</span>}
+        </div>
+        <input
+          type="range"
+          min={0} max={duration || 0} step={0.01} value={currentTime}
+          onChange={e => seek(Number(e.target.value))}
+          disabled={!hasAudio}
+          style={{ width: "100%", accentColor: ROSE, cursor: hasAudio ? "pointer" : "default" }}
+        />
+      </div>
+
+      <div style={{
+        flexShrink: 0, fontFamily: SANS, fontSize: 11, color: INK_DIM,
+        letterSpacing: "0.06em", minWidth: 86, textAlign: "right",
+      }}>{formatTime(currentTime)} / {formatTime(duration)}</div>
+    </div>
+  );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────
+export function AudioTeaserBuilder() {
+  const windowsRef = useRef<Map<TeaserStyle, Window>>(new Map());
+  const getTargets = useCallback(() => Array.from(windowsRef.current.values()), []);
+  const engine = useAudioEngine(getTargets);
+
+  const onWindow = useCallback((style: TeaserStyle, win: Window | null) => {
+    if (win) windowsRef.current.set(style, win);
+    else windowsRef.current.delete(style);
+  }, []);
+
+  const audioMinutes = engine.duration > 0
+    ? String(Math.max(1, Math.ceil(engine.duration / 60)))
+    : null;
+
+  return (
+    <div style={{ padding: "24px 32px 60px" }}>
+      {/* Hidden shared audio element */}
+      <audio
+        ref={engine.audioRef}
+        onLoadedMetadata={engine.onLoadedMetadata}
+        onEnded={engine.onEnded}
+        style={{ display: "none" }}
+      />
+
+      <Transport engine={engine} />
+
+      <div style={{
+        display: "flex", gap: 24, marginTop: 22,
+        justifyContent: "center", alignItems: "flex-start", flexWrap: "wrap",
+      }}>
+        {STYLES.map(s => (
+          <TeaserCard
+            key={s.key} style={s.key} kanji={s.kanji} label={s.label}
+            onWindow={onWindow} audioMinutes={audioMinutes}
+          />
+        ))}
+      </div>
     </div>
   );
 }

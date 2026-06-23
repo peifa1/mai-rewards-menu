@@ -187,5 +187,26 @@ document.getElementById('labelMeta').textContent     =
     el.style.backgroundImage = 'url(' + IMG + ')';
   });
 
+  /* Audio reactivity — driven by the parent page via postMessage.
+     The portrait breathes with the audio amplitude and the rings
+     brighten; with no audio the idle CSS pulse animation runs. */
+  var orbRings = document.querySelectorAll('.pulse-ring');
+  var orbPortrait = document.querySelector('.orb-portrait');
+  window.addEventListener('message', function(e){
+    var d = e.data || {};
+    if (d.type === 'aud') {
+      var a = d.amp || 0;
+      if (orbPortrait) {
+        orbPortrait.style.transform = 'scale(' + (1 + a * 0.14) + ')';
+        orbPortrait.style.boxShadow = '0 0 ' + Math.round(24 + a * 70) +
+          'px rgba(248,184,204,' + (0.3 + a * 0.5).toFixed(2) + ')';
+      }
+      orbRings.forEach(function(r){ r.style.opacity = (0.35 + a * 0.65).toFixed(2); });
+    } else if (d.type === 'audStop') {
+      if (orbPortrait) { orbPortrait.style.transform = ''; orbPortrait.style.boxShadow = ''; }
+      orbRings.forEach(function(r){ r.style.opacity = ''; });
+    }
+  });
+
 </script>
 </body></html>

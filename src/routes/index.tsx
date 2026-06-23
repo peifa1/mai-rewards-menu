@@ -602,7 +602,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       className="relative font-menu"
       style={{
         width: 1080,
-        height: 1080,
+        height: 1280,
         overflow: "hidden",
         background:
           "radial-gradient(ellipse at 30% 20%, #6b1230 0%, #4a0c22 35%, #2a0712 70%, #1a040c 100%)",

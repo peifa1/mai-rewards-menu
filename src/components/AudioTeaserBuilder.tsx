@@ -10,12 +10,13 @@ import {
 
 // ── Palette ───────────────────────────────────────────────────────────────
 const INK      = "#fbe0e7";
-const INK_SOFT = "#f0a8b8";
+const INK_SOFT = "#d49aaa";
 const KANJI    = "#ffb8c8";
-const LINE     = "rgba(255,180,200,0.16)";
-const LINE_STR = "rgba(255,180,200,0.30)";
-const PANEL    = "rgba(20,5,12,0.55)";
-const FIELD    = "rgba(20,5,12,0.7)";
+const LINE     = "rgba(255,160,185,0.12)";
+const LINE_STR = "rgba(255,160,185,0.28)";
+const PANEL    = "rgba(14,3,8,0.72)";
+const FIELD    = "rgba(8,2,5,0.6)";
+const SERIF    = "Georgia, 'Times New Roman', serif";
 
 // ── All styles, always shown ──────────────────────────────────────────────
 const STYLES: { key: TeaserStyle; kanji: string; label: string }[] = [
@@ -45,18 +46,28 @@ function saveStored(style: TeaserStyle, cfg: AudioTeaserConfig) {
 function Field({
   label, value, onChange, placeholder,
 }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [focused, setFocused] = useState(false);
   return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ fontSize: 8, letterSpacing: "0.28em", color: INK_SOFT, fontFamily: "sans-serif", textTransform: "uppercase", marginBottom: 3 }}>{label}</div>
+    <div style={{ marginBottom: 10 }}>
+      <div style={{
+        fontSize: 8, letterSpacing: "0.32em", color: focused ? KANJI : INK_SOFT,
+        fontFamily: "sans-serif", textTransform: "uppercase", marginBottom: 4,
+        transition: "color 0.2s",
+      }}>{label}</div>
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         style={{
-          width: "100%", padding: "5px 8px",
-          background: FIELD, border: `1px solid ${LINE_STR}`,
-          borderRadius: 5, color: INK, fontSize: 12,
-          fontFamily: "serif", outline: "none", boxSizing: "border-box",
+          width: "100%", padding: "7px 10px",
+          background: FIELD,
+          border: `1px solid ${focused ? "rgba(255,160,185,0.55)" : LINE_STR}`,
+          borderRadius: 7, color: INK, fontSize: 13,
+          fontFamily: SERIF, outline: "none", boxSizing: "border-box",
+          boxShadow: focused ? "0 0 0 2px rgba(255,140,170,0.12)" : "none",
+          transition: "border-color 0.2s, box-shadow 0.2s",
         }}
       />
     </div>
@@ -67,10 +78,17 @@ function Field({
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontSize: 7, letterSpacing: "0.36em", color: KANJI, fontFamily: "sans-serif",
-      textTransform: "uppercase", fontWeight: 700,
-      borderTop: `1px solid ${LINE_STR}`, paddingTop: 10, marginTop: 4, marginBottom: 8,
-    }}>{children}</div>
+      display: "flex", alignItems: "center", gap: 8,
+      marginTop: 6, marginBottom: 10,
+    }}>
+      <div style={{ flex: 1, height: 1, background: LINE_STR }} />
+      <span style={{
+        fontSize: 7, letterSpacing: "0.42em", color: KANJI,
+        fontFamily: "sans-serif", textTransform: "uppercase", fontWeight: 600,
+        whiteSpace: "nowrap",
+      }}>{children}</span>
+      <div style={{ flex: 1, height: 1, background: LINE_STR }} />
+    </div>
   );
 }
 
@@ -125,9 +143,11 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
     <div style={{ flex: "0 0 290px", display: "flex", flexDirection: "column", gap: 10 }}>
 
       {/* Style label */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 18, color: KANJI, fontFamily: "serif" }}>{kanji}</span>
-        <span style={{ fontSize: 9, letterSpacing: "0.32em", color: INK_SOFT, fontFamily: "sans-serif", fontWeight: 700 }}>{label}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 2 }}>
+        <span style={{ fontSize: 22, color: KANJI, fontFamily: SERIF, lineHeight: 1 }}>{kanji}</span>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: "0.44em", color: INK_SOFT, fontFamily: "sans-serif", textTransform: "uppercase" }}>{label}</div>
+        </div>
       </div>
 
       {/* Preview iframe */}
@@ -155,24 +175,27 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
 
       {/* Editor panel */}
       <div style={{
-        background: PANEL, border: `1px solid ${LINE}`,
-        borderRadius: 10, padding: "14px 12px",
+        background: PANEL,
+        border: `1px solid ${LINE_STR}`,
+        borderRadius: 12,
+        padding: "16px 14px",
         display: "flex", flexDirection: "column",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
       }}>
 
         {/* Cover image */}
-        <label style={{ display: "block", marginBottom: 8, cursor: "pointer" }}>
-          <div style={{ fontSize: 8, letterSpacing: "0.28em", color: INK_SOFT, fontFamily: "sans-serif", textTransform: "uppercase", marginBottom: 3 }}>COVER IMAGE</div>
+        <label style={{ display: "block", marginBottom: cfg.image ? 4 : 12, cursor: "pointer" }}>
+          <div style={{ fontSize: 8, letterSpacing: "0.32em", color: INK_SOFT, fontFamily: "sans-serif", textTransform: "uppercase", marginBottom: 5 }}>Cover Image</div>
           <div style={{
-            height: cfg.image ? 70 : 44, borderRadius: 6,
-            border: `1px dashed ${LINE_STR}`,
+            height: cfg.image ? 72 : 46, borderRadius: 8,
+            border: `1px dashed ${cfg.image ? "transparent" : LINE_STR}`,
             background: cfg.image ? "transparent" : FIELD,
             display: "flex", alignItems: "center", justifyContent: "center",
-            overflow: "hidden",
+            overflow: "hidden", transition: "height 0.2s",
           }}>
             {cfg.image
-              ? <img src={cfg.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <span style={{ fontSize: 10, color: INK_SOFT, letterSpacing: "0.2em", fontFamily: "sans-serif" }}>＋ UPLOAD</span>
+              ? <img src={cfg.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
+              : <span style={{ fontSize: 9, color: INK_SOFT, letterSpacing: "0.24em", fontFamily: "sans-serif" }}>＋ Upload</span>
             }
           </div>
           <input type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
@@ -180,9 +203,9 @@ function TeaserCard({ style, kanji, label }: { style: TeaserStyle; kanji: string
         {cfg.image && (
           <button onClick={() => set("image", "")} style={{
             fontSize: 8, color: INK_SOFT, background: "none", border: "none",
-            cursor: "pointer", letterSpacing: "0.2em", fontFamily: "sans-serif",
-            marginBottom: 8, textAlign: "left", padding: 0,
-          }}>✕ RESET IMAGE</button>
+            cursor: "pointer", letterSpacing: "0.22em", fontFamily: "sans-serif",
+            marginBottom: 10, textAlign: "left", padding: 0, opacity: 0.7,
+          }}>✕ Remove</button>
         )}
 
         {/* Card-internal text fields — shown only for waveform / nowplaying */}

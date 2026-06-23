@@ -103,10 +103,11 @@ function Section({ title, accent, children }: {
 }
 
 // ── Single card column ────────────────────────────────────────────────────
-function TeaserCard({ style, kanji, label, onWindow, audioMinutes }: {
+function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast }: {
   style: TeaserStyle; kanji: string; label: string;
   onWindow: (style: TeaserStyle, win: Window | null) => void;
   audioMinutes: string | null;
+  onBroadcast: (src: string) => void;
 }) {
   const [cfg, setCfg] = useState<AudioTeaserConfig>(() => loadStored(style));
   const [previewSrc, setPreviewSrc] = useState("");
@@ -192,6 +193,18 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes }: {
           />
         )}
       </div>
+
+      {/* Broadcast for OBS */}
+      <button
+        onClick={() => previewSrc && onBroadcast(previewSrc)}
+        disabled={!previewSrc}
+        style={{
+          width: colW, padding: "10px 0", borderRadius: 9,
+          border: `1px solid ${ROSE}`, background: "rgba(255,140,170,0.10)",
+          color: ROSE, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase",
+          fontFamily: SANS, cursor: previewSrc ? "pointer" : "default",
+        }}
+      >●  Broadcast for OBS</button>
 
       {/* Editor panel */}
       <div style={{
@@ -332,9 +345,116 @@ function Transport({ engine }: { engine: ReturnType<typeof useAudioEngine> }) {
   );
 }
 
+// ── Broadcast (OBS) overlay ───────────────────────────────────────────────
+function overlayBtn(primary: boolean): React.CSSProperties {
+  return {
+    padding: "8px 14px", borderRadius: 8,
+    border: `1px solid ${primary ? ROSE : LINE_STR}`,
+    background: primary ? "rgba(255,140,170,0.14)" : "rgba(0,0,0,0.45)",
+    color: primary ? ROSE : INK, fontSize: 10, letterSpacing: "0.18em",
+    textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
+  };
+}
+
+function BroadcastOverlay({ src, engine, onRegister, onClose }: {
+  src: string;
+  engine: ReturnType<typeof useAudioEngine>;
+  onRegister: (win: Window | null) => void;
+  onClose: () => void;
+}) {
+  const [vp, setVp] = useState(() => ({
+    w: typeof window !== "undefined" ? window.innerWidth : 1280,
+    h: typeof window !== "undefined" ? window.innerHeight : 800,
+  }));
+  const [showUI, setShowUI] = useState(true);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // Auto-hide the controls after inactivity so an OBS window capture stays clean.
+  const poke = useCallback(() => {
+    setShowUI(true);
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => setShowUI(false), 2600);
+  }, []);
+  useEffect(() => {
+    poke();
+    return () => { if (hideTimer.current) clearTimeout(hideTimer.current); };
+  }, [poke]);
+
+  // Stop audio + unregister the capture window on close.
+  useEffect(() => () => { onRegister(null); }, [onRegister]);
+
+  const ASPECT = CARD_W / CARD_H;
+  const targetH = Math.min(vp.h * 0.96, (vp.w * 0.96) / ASPECT);
+  const scale = targetH / CARD_H;
+  const dispW = Math.round(CARD_W * scale);
+  const dispH = Math.round(CARD_H * scale);
+
+  const start = useCallback(() => { engine.seek(0); void engine.play(); }, [engine]);
+
+  return (
+    <div
+      onMouseMove={poke}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999, background: "#000",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+    >
+      {/* Card rendered at capture size */}
+      <div style={{ width: dispW, height: dispH, position: "relative" }}>
+        <iframe
+          key={src}
+          src={src}
+          onLoad={e => onRegister((e.currentTarget as HTMLIFrameElement).contentWindow)}
+          style={{
+            width: CARD_W, height: CARD_H, border: "none",
+            transform: `scale(${scale})`, transformOrigin: "top left", display: "block",
+          }}
+          sandbox="allow-scripts"
+        />
+      </div>
+
+      {/* Controls (auto-hide) */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0,
+        display: "flex", alignItems: "center", gap: 12, padding: "14px 20px",
+        background: "linear-gradient(180deg, rgba(0,0,0,0.78), transparent)",
+        opacity: showUI ? 1 : 0, transition: "opacity 0.4s",
+        pointerEvents: showUI ? "auto" : "none",
+      }}>
+        <button onClick={start} style={overlayBtn(true)}>
+          {engine.playing ? "⟲  Restart" : "▶  Start from 0:00"}
+        </button>
+        {engine.playing && (
+          <button onClick={engine.pause} style={overlayBtn(false)}>❚❚  Pause</button>
+        )}
+        <div style={{ flex: 1 }} />
+        <span style={{ fontFamily: SANS, fontSize: 11, color: INK_DIM, letterSpacing: "0.08em" }}>
+          {formatTime(engine.currentTime)} / {formatTime(engine.duration)} · {dispW}×{dispH}px
+        </span>
+        <button onClick={() => { engine.pause(); onClose(); }} style={overlayBtn(false)}>✕  Exit</button>
+      </div>
+
+      {/* OBS hint */}
+      <div style={{
+        position: "fixed", bottom: 14, left: 0, right: 0, textAlign: "center",
+        fontFamily: SANS, fontSize: 10, color: INK_DIM, letterSpacing: "0.12em",
+        opacity: showUI ? 0.85 : 0, transition: "opacity 0.4s", pointerEvents: "none",
+      }}>
+        OBS: capture this window (crop to the {dispW}×{dispH} card) · start OBS recording, then press Start · trim the ends after
+      </div>
+    </div>
+  );
+}
+
 // ── Main export ───────────────────────────────────────────────────────────
 export function AudioTeaserBuilder() {
-  const windowsRef = useRef<Map<TeaserStyle, Window>>(new Map());
+  const windowsRef = useRef<Map<string, Window>>(new Map());
   const getTargets = useCallback(() => Array.from(windowsRef.current.values()), []);
   const engine = useAudioEngine(getTargets);
 
@@ -342,6 +462,13 @@ export function AudioTeaserBuilder() {
     if (win) windowsRef.current.set(style, win);
     else windowsRef.current.delete(style);
   }, []);
+
+  const registerBroadcast = useCallback((win: Window | null) => {
+    if (win) windowsRef.current.set("__broadcast__", win);
+    else windowsRef.current.delete("__broadcast__");
+  }, []);
+
+  const [broadcastSrc, setBroadcastSrc] = useState<string | null>(null);
 
   const audioMinutes = engine.duration > 0
     ? String(Math.max(1, Math.ceil(engine.duration / 60)))
@@ -367,9 +494,19 @@ export function AudioTeaserBuilder() {
           <TeaserCard
             key={s.key} style={s.key} kanji={s.kanji} label={s.label}
             onWindow={onWindow} audioMinutes={audioMinutes}
+            onBroadcast={setBroadcastSrc}
           />
         ))}
       </div>
+
+      {broadcastSrc && (
+        <BroadcastOverlay
+          src={broadcastSrc}
+          engine={engine}
+          onRegister={registerBroadcast}
+          onClose={() => setBroadcastSrc(null)}
+        />
+      )}
     </div>
   );
 }

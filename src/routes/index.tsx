@@ -834,11 +834,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
   const isTop = index === total - 1;
   const isMid = index === total - 2 && tier.premium;
   const isKami = tier.key === "kami";
-  // Compress row heights when the menu grows past 5 tiers so 6+ fit the 1080 canvas.
-  const compact = total >= 6;
-  const rowHeight = compact
-    ? (isTop ? 138 : tier.premium ? 124 : 114)
-    : (isTop ? 156 : tier.premium ? 142 : 128);
+  const rowHeight = isTop ? 156 : tier.premium ? 142 : 128;
   const nameColor = isKami ? "#ffffff" : tier.premium ? "#fff8fa" : "#f7dde4";
   const kanjiColor = isKami ? ACCENT_KAMI : tier.premium ? "#ffd6e0" : "#e8a8b8";
 

@@ -22,7 +22,7 @@ export function useAudioEngine(getTargets: () => Window[]) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const freqRef = useRef<Uint8Array | null>(null);
+  const freqRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const rafRef = useRef<number | null>(null);
   const objectUrlRef = useRef<string>("");
 
@@ -46,7 +46,7 @@ export function useAudioEngine(getTargets: () => Window[]) {
     analyser.connect(ctx.destination);
     ctxRef.current = ctx;
     analyserRef.current = analyser;
-    freqRef.current = new Uint8Array(analyser.frequencyBinCount);
+    freqRef.current = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
   }, []);
 
   const broadcast = useCallback((msg: unknown) => {

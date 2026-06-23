@@ -438,7 +438,7 @@ function PatreonShowcase() {
         cacheBust: true,
         pixelRatio: 2,
         width: 1080,
-        height: 1080,
+        height: 1280,
         fontEmbedCSS,
         filter: (node: HTMLElement) =>
           !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),

@@ -573,14 +573,14 @@ function CanvasScaler({ children, innerRef }: { children: React.ReactNode; inner
     return () => window.removeEventListener("resize", update);
   }, []);
   return (
-    <div style={{ width: 1080 * scale, height: 1080 * scale }} className="relative">
+    <div style={{ width: 1080 * scale, height: 1280 * scale }} className="relative">
       <div
         ref={innerRef}
         style={{
           transform: `scale(${scale})`,
           transformOrigin: "top left",
           width: 1080,
-          height: 1080,
+          height: 1280,
           boxShadow:
             "0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,180,200,0.08), inset 0 0 120px rgba(0,0,0,0.35)",
           borderRadius: 8,

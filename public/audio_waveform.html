@@ -232,12 +232,12 @@ document.getElementById('labelMeta').textContent     =
     bars.forEach(function(b, i){
       // 75% overall + 25% this bar's frequency band → subtle per-bar variation
       var band = s[Math.floor(i / bars.length * n)] || 0;
-      var target = overall * 0.75 + band * 0.25;
+      var target = overall * 0.60 + band * 0.40;
       barSmooth[i] += (target - barSmooth[i]) * 0.06; // slow, smooth
       barPhases[i] += barRates[i] * dt * Math.PI * 2;
       var e = barSmooth[i];
       var osc = Math.sin(barPhases[i]);
-      var h = 3 + e * 28 + osc * e * 8; // gentle wobble, not too tall
+      var h = 3 + e * 56 + osc * e * 16; // gentle wobble, not too tall
       b.style.animation = 'none';
       b.style.height = Math.max(3, Math.round(h)) + 'px';
     });

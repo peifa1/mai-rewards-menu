@@ -134,12 +134,12 @@ export function drawWaveformCard(
     wfPhases[i] += wfRates[i] * dt * Math.PI * 2;
     const band = bands[Math.floor((i / WF_N) * bands.length)] ?? 0;
     // 75% overall + 25% per-bar frequency — subtle variation, no single bar dominating
-    const target = overall * 0.75 + band * 0.25;
+    const target = overall * 0.60 + band * 0.40;
     wfSmooth[i] += (target - wfSmooth[i]) * 0.06;
     const e = wfSmooth[i];
     const osc = Math.sin(wfPhases[i]);
     // 2× scale of HTML: base=6, range=56, wobble=16
-    const bH = Math.max(6, Math.round(6 + e * 56 + osc * e * 16));
+    const bH = Math.max(6, Math.round(6 + e * 112 + osc * e * 32));
     const bX = bLeft + i * (bW + bGap);
     rrp(ctx, bX, bBottom - bH, bW, bH, 2);
     ctx.fill();

@@ -709,7 +709,6 @@ function BroadcastOverlay({ src, style, cfg, onClose }: {
               width: CARD_W, height: CARD_H, border: "none",
               transform: `scale(${scale})`, transformOrigin: "top left", display: "block",
             }}
-            sandbox="allow-scripts"
           />
         </div>
       </div>

@@ -335,7 +335,11 @@ function PatreonShowcase() {
     (async () => {
       const cached = readCachedTextState();
       if (cached) {
-        if (cached.tiers) setTiers(cached.tiers);
+        if (cached.tiers) {
+          const hasKami = cached.tiers.some(t => t.key === "kami");
+          const kamiTier = INITIAL_TIERS.find(t => t.key === "kami")!;
+          setTiers(hasKami ? cached.tiers : [...cached.tiers, kamiTier]);
+        }
         if (cached.dateText) setDateText(cached.dateText);
       }
 
@@ -356,7 +360,14 @@ function PatreonShowcase() {
       if (error) console.error("Load failed:", error);
       const payload = data?.data;
       if (payload && !userEditedText.current) {
-        if (payload.tiers) setTiers(payload.tiers);
+        if (payload.tiers) {
+          // Ensure kami tier always exists (migration for saved states without it)
+          const haKami = payload.tiers.some(t => t.key === "kami");
+          const kamiTier = INITIAL_TIERS.find(t => t.key === "kami")!;
+          const tiers = haKami ? payload.tiers : [...payload.tiers, kamiTier];
+          setTiers(tiers);
+          payload.tiers = tiers;
+        }
         if (payload.dateText) setDateText(payload.dateText);
         cacheTextState(payload);
       }

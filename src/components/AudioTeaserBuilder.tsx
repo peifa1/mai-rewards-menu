@@ -8,6 +8,8 @@ import {
   type AudioTeaserConfig,
   type TeaserStyle,
 } from "@/lib/buildAudioTeaser";
+import { supabase } from "@/integrations/supabase/client";
+import { triggerRender, cleanupRender } from "@/lib/renderApi";
 
 // ── Palette ───────────────────────────────────────────────────────────────
 const INK      = "#fbeaea";
@@ -21,16 +23,23 @@ const FIELD_BG = "rgba(255,140,170,0.04)";
 const SERIF    = "Georgia, 'Times New Roman', serif";
 const SANS     = "ui-sans-serif, system-ui, sans-serif";
 
-// ── All styles ────────────────────────────────────────────────────────────
 const STYLES: { key: TeaserStyle; kanji: string; label: string }[] = [
   { key: "waveform",   kanji: "波", label: "Waveform"    },
   { key: "nowplaying", kanji: "再", label: "Now Playing" },
   { key: "soundorb",   kanji: "球", label: "Sound Orb"   },
 ];
 
-// 4:5 ratio (final output: 1080×1350)
 const CARD_W = 390;
 const CARD_H = 488;
+
+// ── Render state ──────────────────────────────────────────────────────────
+type RenderPhase =
+  | { phase: "idle" }
+  | { phase: "uploading" }
+  | { phase: "queued"; jobId: string; audioPath: string; imagePath: string }
+  | { phase: "rendering"; jobId: string; audioPath: string; imagePath: string }
+  | { phase: "done"; jobId: string; audioPath: string; imagePath: string; downloadUrl: string }
+  | { phase: "error"; message: string };
 
 // ── Storage ───────────────────────────────────────────────────────────────
 function storageKey(s: TeaserStyle) { return `audio-teaser-cfg-${s}`; }
@@ -43,6 +52,10 @@ function loadStored(style: TeaserStyle): AudioTeaserConfig {
 }
 function saveStored(style: TeaserStyle, cfg: AudioTeaserConfig) {
   try { localStorage.setItem(storageKey(style), JSON.stringify(cfg)); } catch {}
+}
+
+function nanoid() {
+  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
 // ── Field (underline style) ───────────────────────────────────────────────
@@ -102,17 +115,101 @@ function Section({ title, accent, children }: {
   );
 }
 
+// ── Render status badge ───────────────────────────────────────────────────
+function RenderStatus({ state, onDownload, onDismiss }: {
+  state: RenderPhase;
+  onDownload: () => void;
+  onDismiss: () => void;
+}) {
+  if (state.phase === "idle") return null;
+
+  const phaseLabel: Record<string, string> = {
+    uploading: "Uploading…",
+    queued: "Queued — waiting for runner",
+    rendering: "Rendering…",
+    done: "Ready",
+    error: "Failed",
+  };
+
+  const isActive = state.phase === "uploading" || state.phase === "queued" || state.phase === "rendering";
+  const isDone = state.phase === "done";
+  const isError = state.phase === "error";
+
+  return (
+    <div style={{
+      marginTop: 6,
+      padding: "10px 12px",
+      borderRadius: 9,
+      background: isDone ? "rgba(120,200,140,0.10)" : isError ? "rgba(200,80,80,0.10)" : "rgba(255,140,170,0.06)",
+      border: `1px solid ${isDone ? "rgba(120,200,140,0.3)" : isError ? "rgba(200,80,80,0.3)" : LINE_STR}`,
+      display: "flex", alignItems: "center", gap: 10,
+    }}>
+      {/* Spinner or icon */}
+      {isActive && (
+        <div style={{
+          width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+          border: `2px solid ${LINE_STR}`,
+          borderTopColor: ROSE,
+          animation: "spin 0.8s linear infinite",
+        }} />
+      )}
+      {isDone && <span style={{ fontSize: 14, flexShrink: 0 }}>✓</span>}
+      {isError && <span style={{ fontSize: 14, flexShrink: 0, color: "#e88" }}>✕</span>}
+
+      {/* Label */}
+      <span style={{
+        fontFamily: SANS, fontSize: 9, letterSpacing: "0.18em",
+        color: isDone ? "rgba(140,220,160,0.9)" : isError ? "#e88" : INK_DIM,
+        flex: 1,
+      }}>
+        {isError ? (state as { phase: "error"; message: string }).message.slice(0, 80) : phaseLabel[state.phase]}
+      </span>
+
+      {/* Actions */}
+      {isDone && (
+        <button
+          onClick={onDownload}
+          style={{
+            padding: "5px 10px", borderRadius: 7,
+            border: "1px solid rgba(140,220,160,0.4)",
+            background: "rgba(120,200,140,0.12)",
+            color: "rgba(160,230,180,0.95)",
+            fontSize: 9, letterSpacing: "0.2em", fontFamily: SANS,
+            cursor: "pointer", flexShrink: 0,
+          }}
+        >
+          ▼ Download
+        </button>
+      )}
+      <button
+        onClick={onDismiss}
+        disabled={isActive}
+        style={{
+          background: "none", border: "none", color: INK_DIM, cursor: isActive ? "default" : "pointer",
+          fontSize: 11, padding: 0, opacity: isActive ? 0.3 : 0.6, flexShrink: 0,
+        }}
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 // ── Single card column ────────────────────────────────────────────────────
-function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast }: {
+function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, audioFile, audioDuration }: {
   style: TeaserStyle; kanji: string; label: string;
   onWindow: (style: TeaserStyle, win: Window | null) => void;
   audioMinutes: string | null;
   onBroadcast: (src: string) => void;
+  audioFile: File | null;
+  audioDuration: number;
 }) {
   const [cfg, setCfg] = useState<AudioTeaserConfig>(() => loadStored(style));
   const [previewSrc, setPreviewSrc] = useState("");
   const blobRef = useRef("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [renderState, setRenderState] = useState<RenderPhase>({ phase: "idle" });
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const set = useCallback(<K extends keyof AudioTeaserConfig>(key: K, val: AudioTeaserConfig[K]) => {
     setCfg(prev => {
@@ -139,7 +236,6 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast }
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [cfg, buildPreview]);
 
-  // Auto-fill the duration field from the uploaded audio.
   useEffect(() => {
     if (audioMinutes && audioMinutes !== cfg.minutes) set("minutes", audioMinutes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -154,9 +250,115 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast }
     e.target.value = "";
   }, [set]);
 
+  // Stop polling on unmount
+  useEffect(() => () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+  }, []);
+
+  const startPolling = useCallback((jobId: string, audioPath: string, imagePath: string) => {
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+    const outputUrl = `${SUPABASE_URL}/storage/v1/object/public/render-jobs/output/${jobId}.mp4`;
+    const errorUrl  = `${SUPABASE_URL}/storage/v1/object/public/render-jobs/output/${jobId}.error`;
+
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        // Check error first
+        const errResp = await fetch(errorUrl, { method: "HEAD" });
+        if (errResp.ok) {
+          clearInterval(pollRef.current!);
+          setRenderState({ phase: "error", message: "Render failed — check GitHub Actions logs" });
+          return;
+        }
+        // Check output
+        const outResp = await fetch(outputUrl, { method: "HEAD" });
+        if (outResp.ok) {
+          clearInterval(pollRef.current!);
+          setRenderState({ phase: "done", jobId, audioPath, imagePath, downloadUrl: outputUrl });
+        }
+      } catch { /* network blip, try again next tick */ }
+    }, 6000);
+  }, []);
+
+  const handleRender = useCallback(async () => {
+    if (!audioFile) return;
+    setRenderState({ phase: "uploading" });
+
+    try {
+      const jobId = nanoid();
+      const ext = audioFile.name.split(".").pop() ?? "mp3";
+      const audioPath = `audio/${jobId}.${ext}`;
+
+      // Upload audio
+      const { error: audioErr } = await supabase.storage
+        .from("render-jobs")
+        .upload(audioPath, audioFile, { contentType: audioFile.type || "audio/mpeg", upsert: false });
+      if (audioErr) throw new Error(`Audio upload: ${audioErr.message}`);
+
+      // Upload image (if any)
+      let imagePath = "";
+      if (cfg.image) {
+        imagePath = `images/${jobId}.webp`;
+        const blob = await fetch(cfg.image).then(r => r.blob());
+        const { error: imgErr } = await supabase.storage
+          .from("render-jobs")
+          .upload(imagePath, blob, { contentType: "image/webp", upsert: false });
+        if (imgErr) throw new Error(`Image upload: ${imgErr.message}`);
+      }
+
+      setRenderState({ phase: "queued", jobId, audioPath, imagePath });
+
+      // Trigger GitHub Actions via server function
+      await triggerRender({
+        data: {
+          jobId,
+          style,
+          config: {
+            title: cfg.title,
+            eyebrow: cfg.eyebrow,
+            genre: cfg.genre,
+            badge: cfg.badge,
+            minutes: cfg.minutes,
+            asmrLabel: cfg.asmrLabel,
+            cardLabel: cfg.cardLabel,
+            timeStart: cfg.timeStart,
+          },
+          audioPath,
+          imagePath,
+          durationSeconds: audioDuration,
+        },
+      });
+
+      setRenderState({ phase: "rendering", jobId, audioPath, imagePath });
+      startPolling(jobId, audioPath, imagePath);
+    } catch (e) {
+      setRenderState({ phase: "error", message: e instanceof Error ? e.message : String(e) });
+    }
+  }, [audioFile, cfg, style, audioDuration, startPolling]);
+
+  const handleDownload = useCallback(() => {
+    if (renderState.phase !== "done") return;
+    const { downloadUrl, jobId, audioPath, imagePath } = renderState;
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = `${style}-teaser-${jobId}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // Cleanup storage after download (best-effort)
+    cleanupRender({ data: { jobId, audioPath, imagePath } }).catch(() => {});
+    setRenderState({ phase: "idle" });
+  }, [renderState, style]);
+
+  const handleDismiss = useCallback(() => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    setRenderState({ phase: "idle" });
+  }, []);
+
   const colW = 290;
   const scale = colW / CARD_W;
   const displayH = Math.round(CARD_H * scale);
+  const isRendering = renderState.phase !== "idle" && renderState.phase !== "error" && renderState.phase !== "done";
 
   return (
     <div style={{ flex: "0 0 290px", display: "flex", flexDirection: "column", gap: 10 }}>
@@ -271,20 +473,52 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast }
           <Field label="Duration (min)" value={cfg.minutes} onChange={v => set("minutes", v)} placeholder="24" />
         </Section>
 
+        {/* Render MP4 button */}
+        <button
+          onClick={() => void handleRender()}
+          disabled={!audioFile || isRendering}
+          title={!audioFile ? "Upload an audio file first" : undefined}
+          style={{
+            marginTop: 4,
+            width: "100%", padding: "11px 0", borderRadius: 9,
+            border: `1px solid ${audioFile && !isRendering ? "rgba(200,160,120,0.5)" : LINE}`,
+            background: audioFile && !isRendering ? "rgba(200,160,100,0.10)" : "transparent",
+            color: audioFile && !isRendering ? "rgba(230,190,140,0.95)" : INK_DIM,
+            fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase",
+            fontFamily: SANS, cursor: audioFile && !isRendering ? "pointer" : "default",
+            opacity: isRendering ? 0.6 : 1,
+            transition: "all 0.2s",
+          }}
+        >
+          {!audioFile ? "⬛  Render MP4  (upload audio first)" : isRendering ? "◌  Rendering…" : "▶  Render MP4"}
+        </button>
+
+        {/* Render status */}
+        <RenderStatus
+          state={renderState}
+          onDownload={handleDownload}
+          onDismiss={handleDismiss}
+        />
       </div>
     </div>
   );
 }
 
 // ── Transport bar ─────────────────────────────────────────────────────────
-function Transport({ engine }: { engine: ReturnType<typeof useAudioEngine> }) {
+function Transport({
+  engine,
+  onAudioFile,
+}: {
+  engine: ReturnType<typeof useAudioEngine>;
+  onAudioFile: (f: File | null) => void;
+}) {
   const { hasAudio, fileName, playing, duration, currentTime, load, toggle, seek } = engine;
 
   const onFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f) load(f);
+    if (f) { load(f); onAudioFile(f); }
     e.target.value = "";
-  }, [load]);
+  }, [load, onAudioFile]);
 
   return (
     <div style={{
@@ -375,7 +609,6 @@ function BroadcastOverlay({ src, engine, onRegister, onClose }: {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Auto-hide the controls after inactivity so an OBS window capture stays clean.
   const poke = useCallback(() => {
     setShowUI(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -386,7 +619,6 @@ function BroadcastOverlay({ src, engine, onRegister, onClose }: {
     return () => { if (hideTimer.current) clearTimeout(hideTimer.current); };
   }, [poke]);
 
-  // Stop audio + unregister the capture window on close.
   useEffect(() => () => { onRegister(null); }, [onRegister]);
 
   const ASPECT = CARD_W / CARD_H;
@@ -405,7 +637,6 @@ function BroadcastOverlay({ src, engine, onRegister, onClose }: {
         display: "flex", alignItems: "center", justifyContent: "center",
       }}
     >
-      {/* Card rendered at capture size */}
       <div style={{ width: dispW, height: dispH, position: "relative" }}>
         <iframe
           key={src}
@@ -419,7 +650,6 @@ function BroadcastOverlay({ src, engine, onRegister, onClose }: {
         />
       </div>
 
-      {/* Controls (auto-hide) */}
       <div style={{
         position: "fixed", top: 0, left: 0, right: 0,
         display: "flex", alignItems: "center", gap: 12, padding: "14px 20px",
@@ -440,7 +670,6 @@ function BroadcastOverlay({ src, engine, onRegister, onClose }: {
         <button onClick={() => { engine.pause(); onClose(); }} style={overlayBtn(false)}>✕  Exit</button>
       </div>
 
-      {/* OBS hint */}
       <div style={{
         position: "fixed", bottom: 14, left: 0, right: 0, textAlign: "center",
         fontFamily: SANS, fontSize: 10, color: INK_DIM, letterSpacing: "0.12em",
@@ -452,11 +681,15 @@ function BroadcastOverlay({ src, engine, onRegister, onClose }: {
   );
 }
 
+// ── CSS keyframes for spinner ─────────────────────────────────────────────
+const spinStyle = `@keyframes spin { to { transform: rotate(360deg); } }`;
+
 // ── Main export ───────────────────────────────────────────────────────────
 export function AudioTeaserBuilder() {
   const windowsRef = useRef<Map<string, Window>>(new Map());
   const getTargets = useCallback(() => Array.from(windowsRef.current.values()), []);
   const engine = useAudioEngine(getTargets);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
 
   const onWindow = useCallback((style: TeaserStyle, win: Window | null) => {
     if (win) windowsRef.current.set(style, win);
@@ -476,6 +709,8 @@ export function AudioTeaserBuilder() {
 
   return (
     <div style={{ padding: "24px 32px 60px" }}>
+      <style>{spinStyle}</style>
+
       {/* Hidden shared audio element */}
       <audio
         ref={engine.audioRef}
@@ -484,7 +719,7 @@ export function AudioTeaserBuilder() {
         style={{ display: "none" }}
       />
 
-      <Transport engine={engine} />
+      <Transport engine={engine} onAudioFile={setAudioFile} />
 
       <div style={{
         display: "flex", gap: 24, marginTop: 22,
@@ -495,6 +730,8 @@ export function AudioTeaserBuilder() {
             key={s.key} style={s.key} kanji={s.kanji} label={s.label}
             onWindow={onWindow} audioMinutes={audioMinutes}
             onBroadcast={setBroadcastSrc}
+            audioFile={audioFile}
+            audioDuration={engine.duration}
           />
         ))}
       </div>

@@ -64,7 +64,7 @@ html,body{
   height:333px;
   border-radius:10px;
   overflow:hidden;
-  box-shadow:0 24px 60px -10px rgba(0,0,0,.7), 0 0 0 1.5px rgba(200,132,122,.5);
+  box-shadow:0 24px 60px -10px rgba(0,0,0,.7);
 }
 .audio-card > img.card-image{
   width:100%;height:100%;object-fit:cover;display:block;
@@ -204,16 +204,46 @@ document.getElementById('labelMeta').textContent     =
     wf.appendChild(b); bars.push(b);
   }
 
+  /* Per-bar oscillator state — each bar has its own phase and rate so they
+     move independently, like the CSS idle animation but audio-driven. */
+  var barPhases = bars.map(function(_, i){ return i * 0.7; });
+  var barRates  = bars.map(function(){ return 0.6 + Math.random() * 0.8; }); // 0.6–1.4 Hz
+  var barEnergy = bars.map(function(){ return 0; });
+  var wfT = Date.now();
+  var wfRunning = false;
+  var wfRaf = null;
+
   /* Audio reactivity — driven by parent postMessage OR mic self-start below */
   function wfApply(s){
-    var n=s.length;
-    bars.forEach(function(b,i){
-      var v=s[Math.floor(i/bars.length*n)]||0;
-      b.style.animation='none';
-      b.style.height=Math.max(3,Math.round(3+v*37))+'px';
+    var n = s.length;
+    // Store target energy per bar; the animation loop picks it up
+    bars.forEach(function(_, i){
+      var v = s[Math.floor(i / bars.length * n)] || 0;
+      barEnergy[i] = v;
     });
+    if (!wfRunning) { wfRunning = true; wfTick(); }
   }
-  function wfIdle(){ bars.forEach(function(b){ b.style.height=''; b.style.animation=''; }); }
+  function wfTick(){
+    if (!wfRunning) return;
+    var now = Date.now();
+    var dt = Math.min((now - wfT) / 1000, 0.05);
+    wfT = now;
+    bars.forEach(function(b, i){
+      barPhases[i] += barRates[i] * dt * Math.PI * 2;
+      var e = barEnergy[i];
+      // Oscillate around the energy value; amplitude scales with energy
+      var osc = Math.sin(barPhases[i]);
+      var h = 3 + e * 28 + osc * e * 16;
+      b.style.animation = 'none';
+      b.style.height = Math.max(3, Math.round(h)) + 'px';
+    });
+    wfRaf = requestAnimationFrame(wfTick);
+  }
+  function wfIdle(){
+    wfRunning = false;
+    if (wfRaf) { cancelAnimationFrame(wfRaf); wfRaf = null; }
+    bars.forEach(function(b){ b.style.height = ''; b.style.animation = ''; });
+  }
   window.addEventListener('message', function(e){
     var d = e.data || {};
     if (d.type === 'aud' && d.s) { wfApply(d.s); }

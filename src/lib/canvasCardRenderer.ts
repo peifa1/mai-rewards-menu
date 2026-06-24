@@ -13,6 +13,13 @@ export const OUT_H = 1352;
 // Persistent smoothing state for the Sound Orb (one recording at a time).
 let orbAmpSmooth = 0;
 
+// Per-bar oscillator state for the Waveform card — mirrors the HTML idle animation
+// where each bar breathes independently. Initialised once; reused across frames.
+const WF_N = 18;
+const wfPhases = Array.from({ length: WF_N }, (_, i) => i * 0.7);
+const wfRates  = Array.from({ length: WF_N }, () => 0.6 + Math.random() * 0.8);
+let   wfPrevT  = 0;
+
 // Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
 // and in offscreen canvas recording contexts (no network request needed).
 const _sakuraImg = (typeof window !== "undefined")
@@ -105,28 +112,28 @@ export function drawWaveformCard(
   ctx.fillRect(cX, cY, cW, cH);
   ctx.restore();
 
-  ctx.save();
-  ctx.strokeStyle = "rgba(200,132,122,0.5)";
-  ctx.lineWidth = 3;
-  rrp(ctx, cX, cY, cW, cH, 20);
-  ctx.stroke();
-  ctx.restore();
-
-  // Waveform bars — left-to-right, matching HTML template layout exactly
-  // HTML: 18 bars, 3px wide, 3px gap, max height ~40px in 333px card
-  // Canvas is 2× scale: 6px wide, 6px gap, max height ~80px in 666px card
-  const N = 18, bW = 6, bGap = 6;
-  const totalBW = N * bW + (N - 1) * bGap;
+  // Waveform bars — left-to-right with per-bar oscillator, matching HTML behaviour.
+  // Each bar has its own phase and rate so they move independently like the CSS
+  // idle animation, but amplitude is audio-driven.
+  const bW = 6, bGap = 6;
+  const totalBW = WF_N * bW + (WF_N - 1) * bGap;
   const bLeft = cX + (cW - totalBW) / 2;
-  const bBottom = cY + cH - 120; // matches HTML bottom:60px × 2
+  const bBottom = cY + cH - 120;
+
+  const now = Date.now() / 1000;
+  const dt = wfPrevT === 0 ? 0 : Math.min(now - wfPrevT, 0.05);
+  wfPrevT = now;
 
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
-  for (let i = 0; i < N; i++) {
-    const bandIdx = Math.floor((i / N) * bands.length);
-    const amp = bands[bandIdx] ?? 0;
-    // HTML formula: Math.max(3, 3 + v*37) — at 2× scale: Math.max(6, 6 + amp*74)
-    const bH = Math.max(6, 6 + amp * 74);
+  for (let i = 0; i < WF_N; i++) {
+    wfPhases[i] += wfRates[i] * dt * Math.PI * 2;
+    const bandIdx = Math.floor((i / WF_N) * bands.length);
+    const e = bands[bandIdx] ?? 0;
+    const osc = Math.sin(wfPhases[i]);
+    // Same formula as HTML: base + energy*scale + oscillation*energy
+    // At 2× scale: base=6 (HTML 3), energy*56 (HTML 28), osc*energy*32 (HTML 16)
+    const bH = Math.max(6, Math.round(6 + e * 56 + osc * e * 32));
     const bX = bLeft + i * (bW + bGap);
     rrp(ctx, bX, bBottom - bH, bW, bH, 2);
     ctx.fill();
@@ -198,13 +205,6 @@ export function drawNowPlayingCard(
   scrim.addColorStop(1, "rgba(8,3,6,0.88)");
   ctx.fillStyle = scrim;
   ctx.fillRect(cX, cY, cW, cH);
-  ctx.restore();
-
-  ctx.save();
-  ctx.strokeStyle = "rgba(200,132,122,0.5)";
-  ctx.lineWidth = 3;
-  rrp(ctx, cX, cY, cW, cH, 20);
-  ctx.stroke();
   ctx.restore();
 
   const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };

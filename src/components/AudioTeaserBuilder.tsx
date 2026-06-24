@@ -9,6 +9,12 @@ import {
   type TeaserStyle,
 } from "@/lib/buildAudioTeaser";
 import { dispatchRenderJob } from "@/lib/renderApi";
+import {
+  CANVAS_W, CANVAS_H,
+  drawWaveformCard,
+  drawNowPlayingCard,
+  drawSoundOrbCard,
+} from "@/lib/canvasCardRenderer";
 
 // ── Palette ───────────────────────────────────────────────────────────────
 const INK      = "#fbeaea";
@@ -209,6 +215,193 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   const [renderState, setRenderState] = useState<RenderPhase>({ phase: "idle" });
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ── Canvas recorder ──────────────────────────────────────────────────────
+  const imgElRef = useRef<HTMLImageElement | null>(null);
+  const [recState, setRecState] = useState<"idle" | "live" | "render">("idle");
+  const recMrRef = useRef<MediaRecorder | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const recAnimRef = useRef<number | null>(null);
+  const recAudioCtxRef = useRef<AudioContext | null>(null);
+  const recMicRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    if (!cfg.image) { imgElRef.current = null; return; }
+    const img = new Image();
+    img.src = cfg.image;
+    imgElRef.current = img;
+  }, [cfg.image]);
+
+  useEffect(() => () => {
+    if (recAnimRef.current) cancelAnimationFrame(recAnimRef.current);
+    recAudioCtxRef.current?.close();
+    recMicRef.current?.getTracks().forEach(t => t.stop());
+  }, []);
+
+  function getMimeType(): string {
+    if (MediaRecorder.isTypeSupported("video/mp4;codecs=avc1.42E01E,mp4a.40.2"))
+      return "video/mp4;codecs=avc1.42E01E,mp4a.40.2";
+    if (MediaRecorder.isTypeSupported("video/mp4")) return "video/mp4";
+    return "video/webm";
+  }
+
+  function computeBands(analyser: AnalyserNode, buf: Uint8Array<ArrayBuffer>, n: number): number[] {
+    analyser.getByteFrequencyData(buf);
+    const per = Math.floor(buf.length / n);
+    const out: number[] = [];
+    for (let b = 0; b < n; b++) {
+      let sum = 0;
+      for (let k = 0; k < per; k++) sum += buf[b * per + k];
+      out.push((sum / per) / 255);
+    }
+    return out;
+  }
+
+  function drawFrame(
+    ctx2d: CanvasRenderingContext2D,
+    bands: number[],
+    progress: number
+  ) {
+    const img = imgElRef.current;
+    if (style === "waveform") {
+      drawWaveformCard(ctx2d, cfg, img, bands);
+    } else if (style === "nowplaying") {
+      drawNowPlayingCard(ctx2d, cfg, img, bands, progress);
+    } else {
+      const amp = bands.reduce((a, b) => a + b, 0) / Math.max(1, bands.length);
+      drawSoundOrbCard(ctx2d, cfg, img, amp);
+    }
+  }
+
+  function finishRecording(mimeType: string) {
+    const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+    const blob = new Blob(recChunksRef.current, { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${style}-teaser.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function stopRec() {
+    if (recAnimRef.current) { cancelAnimationFrame(recAnimRef.current); recAnimRef.current = null; }
+    recMrRef.current?.stop();
+  }
+
+  const startLiveRecording = useCallback(async () => {
+    const mimeType = getMimeType();
+    let mic: MediaStream;
+    try {
+      mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch {
+      alert("Microphone access denied. Please allow mic permission and try again.");
+      return;
+    }
+    recMicRef.current = mic;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext as typeof AudioContext;
+    const audioCtx = new AudioCtx();
+    recAudioCtxRef.current = audioCtx;
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.82;
+    audioCtx.createMediaStreamSource(mic).connect(analyser);
+    const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = CANVAS_W; canvas.height = CANVAS_H;
+    const videoStream = canvas.captureStream(30);
+    const combined = new MediaStream([...videoStream.getVideoTracks(), ...mic.getAudioTracks()]);
+
+    const mr = new MediaRecorder(combined, { mimeType });
+    recChunksRef.current = [];
+    mr.ondataavailable = e => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
+    mr.onstop = () => {
+      finishRecording(mimeType);
+      setRecState("idle");
+      mic.getTracks().forEach(t => t.stop());
+      audioCtx.close();
+    };
+    recMrRef.current = mr;
+    mr.start();
+    setRecState("live");
+
+    const ctx2d = canvas.getContext("2d")!;
+    function tick() {
+      recAnimRef.current = requestAnimationFrame(tick);
+      const bands = computeBands(analyser, freqBuf, 18);
+      const progress = ((Date.now() / 1000) % 6) / 6;
+      drawFrame(ctx2d, bands, progress);
+    }
+    tick();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfg, style]);
+
+  const startRenderRecording = useCallback(async () => {
+    if (!audioFile) return;
+    const mimeType = getMimeType();
+
+    const arrayBuf = await audioFile.arrayBuffer();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext as typeof AudioContext;
+    const audioCtx = new AudioCtx();
+    recAudioCtxRef.current = audioCtx;
+
+    let audioBuf: AudioBuffer;
+    try {
+      audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+    } catch {
+      alert("Could not decode audio file.");
+      audioCtx.close();
+      return;
+    }
+
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.82;
+    const dest = audioCtx.createMediaStreamDestination();
+    analyser.connect(dest);
+
+    const source = audioCtx.createBufferSource();
+    source.buffer = audioBuf;
+    source.connect(analyser);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = CANVAS_W; canvas.height = CANVAS_H;
+    const videoStream = canvas.captureStream(30);
+    const combined = new MediaStream([...videoStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+
+    const mr = new MediaRecorder(combined, { mimeType });
+    recChunksRef.current = [];
+    mr.ondataavailable = e => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
+    mr.onstop = () => {
+      finishRecording(mimeType);
+      setRecState("idle");
+      audioCtx.close();
+    };
+    recMrRef.current = mr;
+    mr.start();
+    setRecState("render");
+
+    const startTime = audioCtx.currentTime;
+    source.start();
+    source.onended = () => stopRec();
+
+    const ctx2d = canvas.getContext("2d")!;
+    const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+    function tick() {
+      recAnimRef.current = requestAnimationFrame(tick);
+      const bands = computeBands(analyser, freqBuf, 18);
+      const progress = Math.min(1, (audioCtx.currentTime - startTime) / audioBuf.duration);
+      drawFrame(ctx2d, bands, progress);
+    }
+    tick();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioFile, cfg, style]);
+
   const set = useCallback(<K extends keyof AudioTeaserConfig>(key: K, val: AudioTeaserConfig[K]) => {
     setCfg(prev => {
       const next = { ...prev, [key]: val };
@@ -390,20 +583,62 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
         )}
       </div>
 
-      {/* Open for OBS — opens the configured card in a clean popup window */}
-      <button
-        onClick={() => {
-          if (!previewSrc) return;
-          window.open(previewSrc, `obs_${style}`, "popup,width=390,height=488");
-        }}
-        disabled={!previewSrc}
-        style={{
-          width: colW, padding: "10px 0", borderRadius: 9,
-          border: `1px solid ${ROSE}`, background: "rgba(255,140,170,0.10)",
-          color: ROSE, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase",
-          fontFamily: SANS, cursor: previewSrc ? "pointer" : "default",
-        }}
-      >⊞  Open for OBS</button>
+      {/* Recording buttons */}
+      <div style={{ display: "flex", gap: 6, width: colW }}>
+        {/* Record Live — mic + canvas → MP4 */}
+        {recState === "live" ? (
+          <button
+            onClick={stopRec}
+            style={{
+              flex: 1, padding: "10px 0", borderRadius: 9,
+              border: "1px solid rgba(255,100,100,0.6)", background: "rgba(255,80,80,0.12)",
+              color: "rgba(255,140,140,0.95)", fontSize: 9, letterSpacing: "0.26em",
+              textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
+              animation: "recpulse 1s ease-in-out infinite",
+            }}
+          >■  Stop Recording</button>
+        ) : (
+          <button
+            onClick={() => void startLiveRecording()}
+            disabled={recState !== "idle"}
+            style={{
+              flex: 1, padding: "10px 0", borderRadius: 9,
+              border: `1px solid rgba(255,100,100,${recState === "idle" ? "0.5" : "0.2"})`,
+              background: recState === "idle" ? "rgba(255,80,80,0.10)" : "transparent",
+              color: recState === "idle" ? "rgba(255,150,150,0.95)" : INK_DIM,
+              fontSize: 9, letterSpacing: "0.26em", textTransform: "uppercase",
+              fontFamily: SANS, cursor: recState === "idle" ? "pointer" : "default",
+            }}
+          >⏺  Record Live</button>
+        )}
+
+        {/* Render MP4 from audio file */}
+        {recState === "render" ? (
+          <button
+            onClick={stopRec}
+            style={{
+              flex: 1, padding: "10px 0", borderRadius: 9,
+              border: "1px solid rgba(255,100,100,0.6)", background: "rgba(255,80,80,0.12)",
+              color: "rgba(255,140,140,0.95)", fontSize: 9, letterSpacing: "0.26em",
+              textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
+            }}
+          >■  Stop</button>
+        ) : (
+          <button
+            onClick={() => void startRenderRecording()}
+            disabled={!audioFile || recState !== "idle"}
+            title={!audioFile ? "Upload audio first" : undefined}
+            style={{
+              flex: 1, padding: "10px 0", borderRadius: 9,
+              border: `1px solid ${audioFile && recState === "idle" ? "rgba(100,200,200,0.5)" : LINE}`,
+              background: audioFile && recState === "idle" ? "rgba(80,200,200,0.08)" : "transparent",
+              color: audioFile && recState === "idle" ? "rgba(140,220,220,0.95)" : INK_DIM,
+              fontSize: 9, letterSpacing: "0.26em", textTransform: "uppercase",
+              fontFamily: SANS, cursor: audioFile && recState === "idle" ? "pointer" : "default",
+            }}
+          >⬇  Render MP4</button>
+        )}
+      </div>
 
       {/* Editor panel */}
       <div style={{
@@ -578,7 +813,10 @@ function Transport({
 
 
 // ── CSS keyframes for spinner ─────────────────────────────────────────────
-const spinStyle = `@keyframes spin { to { transform: rotate(360deg); } }`;
+const spinStyle = `
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes recpulse { 0%,100% { opacity:1; } 50% { opacity:0.55; } }
+`;
 
 // ── Main export ───────────────────────────────────────────────────────────
 export function AudioTeaserBuilder() {

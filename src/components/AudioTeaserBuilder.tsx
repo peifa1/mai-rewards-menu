@@ -268,7 +268,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     if (style === "waveform") {
       drawWaveformCard(ctx2d, cfg, img, bands);
     } else if (style === "nowplaying") {
-      drawNowPlayingCard(ctx2d, cfg, img, bands, progress);
+      drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDuration || undefined);
     } else {
       const amp = bands.reduce((a, b) => a + b, 0) / Math.max(1, bands.length);
       drawSoundOrbCard(ctx2d, cfg, img, amp);
@@ -421,16 +421,21 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     ctx2d.imageSmoothingQuality = "high";
     const scaleX = OUT_W / CANVAS_W, scaleY = OUT_H / CANVAS_H;
     const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+    // Use MessageChannel instead of requestAnimationFrame so the render loop
+    // keeps running even when the user switches to another tab (RAF pauses
+    // in background tabs; MessageChannel ports are not throttled)
     let frameCount = 0;
+    let running = true;
     function fmt(s: number) {
       const m = Math.floor(s / 60), sec = Math.floor(s % 60);
       return `${m}:${String(sec).padStart(2, "0")}`;
     }
-    function tick() {
-      recAnimRef.current = requestAnimationFrame(tick);
+    const mc = new MessageChannel();
+    mc.port2.onmessage = () => {
+      if (!running) return;
+      recAnimRef.current = requestAnimationFrame(() => {});  // keep ref non-null as stop signal
       const elapsed = audioCtx.currentTime - startTime;
       const progress = Math.min(1, elapsed / audioBuf.duration);
-      // Update timer display ~every second (30 fps → every 30 frames)
       if (frameCount++ % 30 === 0) {
         const left = Math.max(0, audioBuf.duration - elapsed);
         setRenderTimeLeft(`${fmt(elapsed)} / ${fmt(audioBuf.duration)}  (${fmt(left)} left)`);
@@ -440,8 +445,20 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       ctx2d.scale(scaleX, scaleY);
       drawFrame(ctx2d, bands, progress);
       ctx2d.restore();
-    }
-    tick();
+      // Schedule next frame via MessageChannel (not throttled in background)
+      mc.port1.postMessage(null);
+    };
+
+    // Override stopRec cleanup to also stop the MessageChannel loop
+    const origStop = recMrRef;
+    void origStop; // prevent unused warning
+    recAnimRef.current = 1 as unknown as number; // mark as active
+    const stopLoop = () => { running = false; };
+    // Patch mr.onstop to also stop loop
+    const origOnStop = mr.onstop;
+    mr.onstop = (e) => { stopLoop(); origOnStop?.call(mr, e); };
+
+    mc.port1.postMessage(null); // kick off
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioFile, cfg, style]);
 
@@ -627,64 +644,50 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       </div>
 
       {/* Recording buttons */}
-      <div style={{ display: "flex", gap: 6, width: colW }}>
-        {/* Record Live — mic + canvas → MP4 */}
-        {recState === "live" ? (
-          <button
-            onClick={stopRec}
-            style={{
-              flex: 1, padding: "10px 0", borderRadius: 9,
-              border: "1px solid rgba(255,100,100,0.6)", background: "rgba(255,80,80,0.12)",
-              color: "rgba(255,140,140,0.95)", fontSize: 9, letterSpacing: "0.26em",
-              textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
-              animation: "recpulse 1s ease-in-out infinite",
-            }}
-          >■  Stop Recording</button>
-        ) : (
-          <button
-            onClick={() => void startLiveRecording()}
-            disabled={recState !== "idle"}
-            style={{
-              flex: 1, padding: "10px 0", borderRadius: 9,
-              border: `1px solid rgba(255,100,100,${recState === "idle" ? "0.5" : "0.2"})`,
-              background: recState === "idle" ? "rgba(255,80,80,0.10)" : "transparent",
-              color: recState === "idle" ? "rgba(255,150,150,0.95)" : INK_DIM,
-              fontSize: 9, letterSpacing: "0.26em", textTransform: "uppercase",
-              fontFamily: SANS, cursor: recState === "idle" ? "pointer" : "default",
-            }}
-          >⏺  Record Live</button>
-        )}
+      <div style={{ display: "flex", gap: 8, width: colW }}>
+        {/* Record Live */}
+        <button
+          onClick={recState === "live" ? stopRec : () => void startLiveRecording()}
+          disabled={recState === "render"}
+          style={{
+            flex: 1, padding: "9px 0", borderRadius: 8, cursor: recState === "render" ? "default" : "pointer",
+            border: recState === "live"
+              ? "1px solid rgba(255,90,90,0.7)"
+              : "1px solid rgba(255,100,120,0.35)",
+            background: recState === "live" ? "rgba(255,60,60,0.14)" : "rgba(255,100,120,0.07)",
+            color: recState === "live" ? "#ff9090" : recState === "render" ? INK_DIM : "#ffaabb",
+            fontSize: 10, fontFamily: SANS, letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            animation: recState === "live" ? "recpulse 1.2s ease-in-out infinite" : "none",
+            transition: "border 0.2s, background 0.2s",
+          }}
+        >{recState === "live" ? "■ Stop" : "⏺ Record"}</button>
 
-        {/* Render MP4 from audio file */}
-        {recState === "render" ? (
-          <button
-            onClick={stopRec}
-            style={{
-              flex: 1, padding: "10px 0", borderRadius: 9,
-              border: "1px solid rgba(255,100,100,0.6)", background: "rgba(255,80,80,0.12)",
-              color: "rgba(255,140,140,0.95)", fontSize: 8, letterSpacing: "0.12em",
-              textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
-              lineHeight: 1.5,
-            }}
-          ><div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-            <span>■  Stop</span>
-            {renderTimeLeft && <span style={{ fontSize: 7, opacity: 0.8, letterSpacing: "0.06em" }}>{renderTimeLeft}</span>}
-          </div></button>
-        ) : (
-          <button
-            onClick={() => void startRenderRecording()}
-            disabled={!audioFile || recState !== "idle"}
-            title={!audioFile ? "Upload audio first" : undefined}
-            style={{
-              flex: 1, padding: "10px 0", borderRadius: 9,
-              border: `1px solid ${audioFile && recState === "idle" ? "rgba(100,200,200,0.5)" : LINE}`,
-              background: audioFile && recState === "idle" ? "rgba(80,200,200,0.08)" : "transparent",
-              color: audioFile && recState === "idle" ? "rgba(140,220,220,0.95)" : INK_DIM,
-              fontSize: 9, letterSpacing: "0.26em", textTransform: "uppercase",
-              fontFamily: SANS, cursor: audioFile && recState === "idle" ? "pointer" : "default",
-            }}
-          >⬇  Render MP4</button>
-        )}
+        {/* Render MP4 */}
+        <button
+          onClick={recState === "render" ? stopRec : () => void startRenderRecording()}
+          disabled={(!audioFile && recState !== "render") || recState === "live"}
+          title={!audioFile && recState !== "render" ? "Upload audio first" : undefined}
+          style={{
+            flex: 1, padding: "9px 0", borderRadius: 8,
+            cursor: (recState === "live" || (!audioFile && recState === "idle")) ? "default" : "pointer",
+            border: recState === "render"
+              ? "1px solid rgba(255,90,90,0.7)"
+              : audioFile ? "1px solid rgba(100,210,210,0.4)" : "1px solid rgba(255,255,255,0.1)",
+            background: recState === "render" ? "rgba(255,60,60,0.14)" : audioFile ? "rgba(80,200,200,0.07)" : "transparent",
+            color: recState === "render" ? "#ff9090" : audioFile && recState === "idle" ? "#88dddd" : INK_DIM,
+            fontSize: 10, fontFamily: SANS, letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            transition: "border 0.2s, background 0.2s",
+          }}
+        >
+          {recState === "render"
+            ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, lineHeight: 1.3 }}>
+                <span>■ Stop</span>
+                {renderTimeLeft && <span style={{ fontSize: 7.5, opacity: 0.75, letterSpacing: "0.04em", textTransform: "none" }}>{renderTimeLeft}</span>}
+              </div>
+            : "⬇ Render"}
+        </button>
       </div>
 
       {/* Editor panel */}
@@ -734,7 +737,6 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
         {style === "nowplaying" && (
           <Section title="Card Text" accent>
             <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
-            <Field label="Time Start" value={cfg.timeStart} onChange={v => set("timeStart", v)} placeholder="03:12" />
           </Section>
         )}
         {style === "soundorb" && (
@@ -743,14 +745,6 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
           </Section>
         )}
 
-        {/* Bottom strip fields */}
-        <Section title="Bottom Strip">
-          <Field label="Title"          value={cfg.title}   onChange={v => set("title", v)}   placeholder="Whisper & Rain" />
-          <Field label="Eyebrow"        value={cfg.eyebrow} onChange={v => set("eyebrow", v)} placeholder="New Drop" />
-          <Field label="Genre"          value={cfg.genre}   onChange={v => set("genre", v)}   placeholder="ASMR Roleplay" />
-          <Field label="Badge"          value={cfg.badge}   onChange={v => set("badge", v)}   placeholder="Exclusive" />
-          <Field label="Duration (min)" value={cfg.minutes} onChange={v => set("minutes", v)} placeholder="24" />
-        </Section>
 
         {/* Render MP4 button */}
         <button

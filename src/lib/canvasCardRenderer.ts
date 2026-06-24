@@ -128,23 +128,6 @@ export function drawWaveformCard(
     ctx.restore();
   }
 
-  // Card text
-  const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
-  ctx.save();
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "20px ui-sans-serif, system-ui, sans-serif";
-  ls.letterSpacing = "6.8px";
-  ctx.textAlign = "center";
-  ctx.fillText(cfg.cardLabel || "RP AUDIO", cX + cW / 2, cY + cH - 56);
-  ctx.restore();
-
-  ctx.save();
-  ctx.fillStyle = "#f8b8cc";
-  ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
-  ls.letterSpacing = "5px";
-  ctx.textAlign = "center";
-  ctx.fillText(`— ${cfg.asmrLabel || "ASMR"} —`, cX + cW / 2, cY + cH - 26);
-  ctx.restore();
 }
 
 // ── Now Playing ───────────────────────────────────────────────────────────
@@ -154,7 +137,8 @@ export function drawNowPlayingCard(
   cfg: AudioTeaserConfig,
   imgEl: HTMLImageElement | null,
   bands: number[],
-  progress: number   // 0–1 for seek bar position
+  progress: number,   // 0–1 for seek bar position
+  durationSec?: number  // actual audio duration for time labels
 ) {
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 56);
@@ -189,49 +173,21 @@ export function drawNowPlayingCard(
 
   const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
 
-  // "NOW PLAYING"
-  ctx.save();
-  ctx.fillStyle = "#f8b8cc";
-  ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
-  ls.letterSpacing = "6px";
-  ctx.textAlign = "left";
-  ctx.fillText("NOW PLAYING", cX + 32, cY + 36);
-  ctx.restore();
-
-  // Title
-  ctx.save();
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `28px Georgia, "Times New Roman", serif`;
-  ls.letterSpacing = "0px";
-  ctx.textAlign = "left";
-  ctx.fillText(cfg.title || "Whisper & Rain", cX + 32, cY + cH - 100);
-  ctx.restore();
-
-  // Genre
-  ctx.save();
-  ctx.fillStyle = "#f8b8cc";
-  ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
-  ls.letterSpacing = "4px";
-  ctx.textAlign = "left";
-  ctx.fillText(
-    `${cfg.asmrLabel || "ASMR"} · ${cfg.minutes || "24"} MIN`,
-    cX + 32, cY + cH - 72
-  );
-  ctx.restore();
-
-  // Mini waveform bars (5 bars beside title)
+  // Mini waveform bars — bottom-center of card
   const avg = bands.length > 0 ? bands.reduce((a, b) => a + b, 0) / bands.length : 0;
-  const t = Date.now() / 1000;
+  const bCount = 5, bW2 = 3, bGap2 = 4;
+  const bTotalW = bCount * bW2 + (bCount - 1) * bGap2;
+  const bStartX = cX + (cW - bTotalW) / 2;
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
-  for (let i = 0; i < 5; i++) {
-    const h = 3 + (Math.sin(t * 3 + i * 1.2) * 0.5 + 0.5) * avg * 18;
-    ctx.fillRect(cX + 32 + 260 + i * 6, cY + cH - 100 - h, 2, h);
+  for (let i = 0; i < bCount; i++) {
+    const h = Math.max(3, bands[Math.floor(i / bCount * bands.length)] * 22);
+    ctx.fillRect(bStartX + i * (bW2 + bGap2), cY + cH - 80 - h, bW2, h);
   }
   ctx.restore();
 
   // Seek bar
-  const sL = cX + 32, sR = cX + cW - 32, sY = cY + cH - 60, sH = 6;
+  const sL = cX + 32, sR = cX + cW - 32, sY = cY + cH - 52, sH = 5;
   ctx.save();
   ctx.fillStyle = "rgba(255,255,255,0.18)";
   rrp(ctx, sL, sY, sR - sL, sH, 3);
@@ -241,15 +197,32 @@ export function drawNowPlayingCard(
   ctx.fill();
   ctx.restore();
 
-  // Time labels
+  // Time labels — use actual audio duration when available
+  function fmtSec(s: number) {
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return `${m}:${String(sec).padStart(2, "0")}`;
+  }
+  const totalSec = durationSec ?? 0;
+  const elapsedSec = totalSec * progress;
   ctx.save();
   ctx.fillStyle = "#a98a92";
   ctx.font = "18px ui-monospace, monospace";
   ls.letterSpacing = "0px";
   ctx.textAlign = "left";
-  ctx.fillText(cfg.timeStart || "03:12", sL, cY + cH - 30);
+  ctx.fillText(fmtSec(elapsedSec), sL, cY + cH - 24);
   ctx.textAlign = "right";
-  ctx.fillText(`${cfg.minutes || "24"}:00`, sR, cY + cH - 30);
+  ctx.fillText(fmtSec(totalSec), sR, cY + cH - 24);
+  ctx.restore();
+
+  // Average amplitude label centered above seek bar
+  ctx.save();
+  ctx.fillStyle = "#f8b8cc";
+  ctx.font = "16px ui-sans-serif, system-ui, sans-serif";
+  ls.letterSpacing = "5px";
+  ctx.textAlign = "center";
+  ctx.globalAlpha = 0.7 + avg * 0.3;
+  ctx.fillText("NOW PLAYING", cX + cW / 2, cY + cH - 100);
+  ctx.globalAlpha = 1;
   ctx.restore();
 }
 
@@ -269,14 +242,16 @@ export function drawSoundOrbCard(
   const orbR = 150;
   const t = Date.now() / 1000;
 
-  // 3 pulse rings
+  // Rings driven purely by amplitude — invisible when silent, pop when loud
+  // Each ring is offset in time so they cascade outward
   for (let i = 0; i < 3; i++) {
-    const phase = ((t / 3.2) + i / 3) % 1;
-    const r = orbR + phase * (330 - orbR);
-    const opacity = (1 - phase) * (0.35 + amp * 0.4);
+    const phase = ((t * (0.6 + amp * 1.4)) + i / 3) % 1;
+    const r = orbR * (1 + phase * 1.6);
+    const opacity = (1 - phase) * amp * 0.9;
+    if (opacity < 0.01) continue;
     ctx.save();
     ctx.strokeStyle = `rgba(248,184,204,${opacity.toFixed(3)})`;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5 + amp * 2;
     ctx.beginPath();
     ctx.arc(orbX, orbY, r, 0, Math.PI * 2);
     ctx.stroke();

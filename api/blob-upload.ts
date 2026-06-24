@@ -23,7 +23,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       onBeforeGenerateToken: async () => ({
         allowedContentTypes: [
           "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4", "audio/aac",
-          "audio/x-m4a", "image/webp", "image/jpeg", "image/png",
+          "audio/x-m4a", "audio/flac", "audio/webm",
+          "video/x-matroska", "video/webm", "video/mp4",
+          "image/webp", "image/jpeg", "image/png",
         ],
       }),
       onUploadCompleted: async () => {},

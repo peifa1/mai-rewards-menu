@@ -107,12 +107,13 @@ function Section({ title, accent, children }: {
 }
 
 // ── Single card column ────────────────────────────────────────────────────
-function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, audioDuration }: {
+function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, audioDuration, waveformData }: {
   style: TeaserStyle; kanji: string; label: string;
   onWindow: (style: TeaserStyle, win: Window | null) => void;
   audioMinutes: string | null;
   audioFile: File | null;
   audioDuration: number;
+  waveformData: number[];
 }) {
   const [cfg, setCfg] = useState<AudioTeaserConfig>(() => loadStored(style));
   const [previewSrc, setPreviewSrc] = useState("");
@@ -130,6 +131,15 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   const recMicRef = useRef<MediaStream | null>(null);
   const audioDurationRef = useRef(audioDuration);
   useEffect(() => { audioDurationRef.current = audioDuration; }, [audioDuration]);
+
+  const iframeWinRef = useRef<Window | null>(null);
+  const waveformDataRef = useRef(waveformData);
+  useEffect(() => {
+    waveformDataRef.current = waveformData;
+    if (waveformData.length > 0 && iframeWinRef.current) {
+      iframeWinRef.current.postMessage({ type: "waveform", data: waveformData }, "*");
+    }
+  }, [waveformData]);
 
   useEffect(() => {
     if (!cfg.image) { imgElRef.current = null; return; }
@@ -172,7 +182,8 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   ) {
     const img = imgElRef.current;
     if (style === "waveform") {
-      drawWaveformCard(ctx2d, cfg, img, bands);
+      const amp = bands.reduce((a, b) => a + b, 0) / Math.max(1, bands.length);
+      drawWaveformCard(ctx2d, cfg, img, waveformDataRef.current, amp);
     } else if (style === "nowplaying") {
       drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDurationRef.current || undefined);
     } else {
@@ -425,7 +436,14 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
           <iframe
             key={previewSrc}
             src={previewSrc}
-            onLoad={e => onWindow(style, (e.currentTarget as HTMLIFrameElement).contentWindow)}
+            onLoad={e => {
+              const win = (e.currentTarget as HTMLIFrameElement).contentWindow;
+              iframeWinRef.current = win;
+              onWindow(style, win);
+              if (waveformDataRef.current.length > 0 && win) {
+                win.postMessage({ type: "waveform", data: waveformDataRef.current }, "*");
+              }
+            }}
             style={{
               width: CARD_W, height: CARD_H, border: "none",
               transform: `scale(${scale})`,
@@ -620,6 +638,34 @@ export function AudioTeaserBuilder() {
   const getTargets = useCallback(() => Array.from(windowsRef.current.values()), []);
   const engine = useAudioEngine(getTargets);
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [waveformData, setWaveformData] = useState<number[]>([]);
+
+  // Pre-analyze uploaded audio → 40 normalized RMS amplitude values.
+  // This is what drives the waveform bar heights: shape comes from the file,
+  // real-time amplitude just scales it up/down.
+  useEffect(() => {
+    if (!audioFile) { setWaveformData([]); return; }
+    let cancelled = false;
+    audioFile.arrayBuffer().then(async buf => {
+      if (cancelled) return;
+      const audioCtx = new AudioContext();
+      const decoded = await audioCtx.decodeAudioData(buf);
+      audioCtx.close();
+      if (cancelled) return;
+      const samples = decoded.getChannelData(0);
+      const N = 40;
+      const step = Math.floor(samples.length / N);
+      const wf = Array.from({ length: N }, (_, i) => {
+        let sum = 0;
+        const start = i * step;
+        for (let j = 0; j < step; j++) sum += samples[start + j] ** 2;
+        return Math.sqrt(sum / step);
+      });
+      const max = Math.max(...wf, 0.001);
+      setWaveformData(wf.map(v => v / max));
+    }).catch(err => console.error("waveform analysis failed", err));
+    return () => { cancelled = true; };
+  }, [audioFile]);
 
   const onWindow = useCallback((style: TeaserStyle, win: Window | null) => {
     if (win) windowsRef.current.set(style, win);
@@ -654,6 +700,7 @@ export function AudioTeaserBuilder() {
             onWindow={onWindow} audioMinutes={audioMinutes}
             audioFile={audioFile}
             audioDuration={engine.duration}
+            waveformData={waveformData}
           />
         ))}
       </div>

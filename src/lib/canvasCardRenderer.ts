@@ -81,7 +81,8 @@ export function drawWaveformCard(
   ctx: CanvasRenderingContext2D,
   cfg: AudioTeaserConfig,
   imgEl: HTMLImageElement | null,
-  bands: number[]   // 18 values 0–1
+  waveformData: number[],  // 40 normalized RMS values from pre-analysis (0–1)
+  amp: number              // current overall amplitude from live audio (0–1)
 ) {
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 56);
@@ -116,12 +117,10 @@ export function drawWaveformCard(
 
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
-  const nb = bands.length;
-  const usable = Math.max(WF_N, Math.floor(nb * 0.6));
   for (let i = 0; i < WF_N; i++) {
-    const bandIdx = Math.min(Math.floor(i / WF_N * usable), nb - 1);
-    const amp = Math.sqrt(bands[bandIdx] ?? 0);
-    const halfH = Math.max(3, Math.round(3 + amp * 50));
+    // Bar height = pre-analyzed shape × current amplitude
+    const base = waveformData[i] ?? 0;
+    const halfH = Math.max(3, Math.round(3 + base * amp * 50));
     const bX = bLeft + i * (bW + bGap);
     rrp(ctx, bX, bCenterY - halfH, bW, halfH * 2, 2);
     ctx.fill();

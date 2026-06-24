@@ -204,24 +204,35 @@ document.getElementById('labelMeta').textContent     =
     wf.appendChild(b); bars.push(b);
   }
 
-  /* Audio reactivity — driven by parent postMessage OR mic self-start below */
-  function wfApply(s){
-    var n=s.length, nb=bars.length;
-    // Use lower 60% of spectrum where ASMR/voice energy lives
-    var usable=Math.max(nb, Math.floor(n*0.6));
+  /* Pre-analyzed waveform shape — set once on file load, bars scale to it */
+  var waveform = [];
+
+  function wfApply(amp){
+    var nb=bars.length;
     bars.forEach(function(b,i){
-      var bandIdx=Math.floor(i/nb*usable);
-      var v=s[Math.min(bandIdx,n-1)]||0;
-      v=Math.sqrt(v); // compress dynamic range so all bars stay visible
+      var base = waveform[i] || 0;
+      var h = Math.max(3, Math.round(3 + base * amp * 50));
       b.style.animation='none';
-      // Bars grow from center outward (up+down) — height is total bar size
-      b.style.height=Math.max(3,Math.round(3+v*50))+'px';
+      b.style.height=h+'px';
     });
   }
   function wfIdle(){ bars.forEach(function(b){ b.style.height=''; b.style.animation=''; }); }
   window.addEventListener('message', function(e){
     var d = e.data || {};
-    if (d.type === 'aud' && d.s) { wfApply(d.s); }
+    if (d.type === 'waveform' && d.data) {
+      waveform = d.data;
+      // Update idle bar heights to reflect the audio's actual shape
+      bars.forEach(function(b,i){
+        var h = Math.round(3 + (waveform[i]||0) * 24);
+        b.style.setProperty('--h0', h+'px');
+        b.style.setProperty('--h1', Math.round(h*0.6)+'px');
+        b.style.setProperty('--h2', Math.round(h*0.9)+'px');
+        b.style.setProperty('--h3', Math.round(h*0.75)+'px');
+        b.style.setProperty('--h4', Math.round(h*0.5)+'px');
+        b.style.setProperty('--h5', Math.round(h*0.8)+'px');
+      });
+    }
+    else if (d.type === 'aud' && d.amp !== undefined) { wfApply(d.amp); }
     else if (d.type === 'audStop') { wfIdle(); }
   });
 

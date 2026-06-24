@@ -592,26 +592,17 @@ function BroadcastOverlay({ src, style, cfg, onClose }: {
     : style === "nowplaying" ? "audio_nowplaying.html"
     : "audio_soundorb.html";
 
-  const buildObsUrl = useCallback(() => {
-    const base = `${window.location.origin}/${templateFile}`;
-    const p = new URLSearchParams();
-    p.set("title", cfg.title);
-    p.set("eyebrow", cfg.eyebrow);
-    p.set("genre", cfg.genre);
-    p.set("badge", cfg.badge);
-    p.set("minutes", cfg.minutes);
-    p.set("asmrLabel", cfg.asmrLabel);
-    if (style === "waveform") p.set("cardLabel", cfg.cardLabel);
-    if (style === "nowplaying") p.set("timeStart", cfg.timeStart);
-    return `${base}?${p.toString()}`;
-  }, [cfg, style, templateFile]);
-
   const handleCopyObsUrl = useCallback(() => {
-    navigator.clipboard.writeText(buildObsUrl()).then(() => {
+    // Store full config (including image data URL) in localStorage so the
+    // OBS Browser Source (same origin) can read it without URL length limits.
+    const storageKey = `obs_teaser_${style}`;
+    localStorage.setItem(storageKey, JSON.stringify(cfg));
+    const url = `${window.location.origin}/${templateFile}?obsKey=${encodeURIComponent(storageKey)}`;
+    navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }).catch(() => {});
-  }, [buildObsUrl]);
+  }, [cfg, style, templateFile]);
 
   const [vp, setVp] = useState(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 1280,

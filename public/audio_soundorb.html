@@ -172,12 +172,27 @@ var CONFIG = {
   eyebrow:     "New Drop",       // small eyebrow text on bottom strip
 };
 
-/* Override CONFIG from URL params (used when loaded as OBS Browser Source) */
+/* Load full config from localStorage when opened as OBS Browser Source */
 (function(){
   var p = new URLSearchParams(location.search);
-  ['title','eyebrow','genre','badge','minutes','asmrLabel'].forEach(function(k){
-    if(p.has(k)) CONFIG[k] = p.get(k);
-  });
+  var obsKey = p.get('obsKey');
+  if (obsKey) {
+    try {
+      var saved = JSON.parse(localStorage.getItem(obsKey) || 'null');
+      if (saved) {
+        ['title','eyebrow','genre','badge','minutes','asmrLabel'].forEach(function(k){
+          if (saved[k] !== undefined) CONFIG[k] = saved[k];
+        });
+        if (saved.image) IMG = saved.image;
+      }
+    } catch(e) {}
+  } else {
+    ['title','eyebrow','genre','badge','minutes','asmrLabel'].forEach(function(k){
+      if(p.has(k)) CONFIG[k] = p.get(k);
+    });
+    var imgUrl = p.get('imageUrl');
+    if(imgUrl) IMG = imgUrl;
+  }
 })();
 
 /* Apply config */

@@ -170,14 +170,27 @@ var CONFIG = {
   minutes:     "24",              // appears in meta line
 };
 
-/* Override CONFIG from URL params (used when loaded as OBS Browser Source) */
+/* Load full config from localStorage when opened as OBS Browser Source */
 (function(){
   var p = new URLSearchParams(location.search);
-  ['title','eyebrow','genre','badge','minutes','asmrLabel','cardLabel'].forEach(function(k){
-    if(p.has(k)) CONFIG[k] = p.get(k);
-  });
-  var imgUrl = p.get('imageUrl');
-  if(imgUrl) { var IMG = imgUrl; }
+  var obsKey = p.get('obsKey');
+  if (obsKey) {
+    try {
+      var saved = JSON.parse(localStorage.getItem(obsKey) || 'null');
+      if (saved) {
+        ['title','eyebrow','genre','badge','minutes','asmrLabel','cardLabel'].forEach(function(k){
+          if (saved[k] !== undefined) CONFIG[k] = saved[k];
+        });
+        if (saved.image) IMG = saved.image;
+      }
+    } catch(e) {}
+  } else {
+    ['title','eyebrow','genre','badge','minutes','asmrLabel','cardLabel'].forEach(function(k){
+      if(p.has(k)) CONFIG[k] = p.get(k);
+    });
+    var imgUrl = p.get('imageUrl');
+    if(imgUrl) IMG = imgUrl;
+  }
 })();
 
 /* Apply config */

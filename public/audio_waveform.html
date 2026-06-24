@@ -207,14 +207,14 @@ document.getElementById('labelMeta').textContent     =
   /* Audio reactivity — driven by parent postMessage OR mic self-start below */
   function wfApply(s){
     var n=s.length, nb=bars.length;
+    // Only use lower 55% of spectrum — ASMR/voice audio lives here.
+    // Spreading 18 bars across the full range leaves half mapped to silence.
+    var usable=Math.max(nb, Math.floor(n*0.55));
     bars.forEach(function(b,i){
-      // Log-scale band mapping: spreads bars across the spectrum musically
-      var bandIdx=Math.round(Math.pow(n, i/(nb-1)))-1;
-      bandIdx=Math.max(0,Math.min(n-1,bandIdx));
-      var v=s[bandIdx]||0;
-      // Boost higher bands — they naturally have less energy than bass
-      var boost=1+( i/nb)*2.5;
-      v=Math.min(1,v*boost);
+      var bandIdx=Math.floor(i/nb*usable);
+      var v=s[Math.min(bandIdx,n-1)]||0;
+      // sqrt compresses dynamic range: quiet bands become visible without clipping loud ones
+      v=Math.sqrt(v);
       b.style.animation='none';
       b.style.height=Math.max(3,Math.round(3+v*37))+'px';
     });

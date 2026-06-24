@@ -118,13 +118,10 @@ export function drawWaveformCard(
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
   const nb = bands.length;
+  const usable = Math.max(WF_N, Math.floor(nb * 0.55));
   for (let i = 0; i < WF_N; i++) {
-    // Log-scale band mapping — same as HTML template
-    let bandIdx = Math.round(Math.pow(nb, i / (WF_N - 1))) - 1;
-    bandIdx = Math.max(0, Math.min(nb - 1, bandIdx));
-    let amp = bands[bandIdx] ?? 0;
-    // Boost higher bands to compensate for natural bass dominance
-    amp = Math.min(1, amp * (1 + (i / WF_N) * 2.5));
+    const bandIdx = Math.min(Math.floor(i / WF_N * usable), nb - 1);
+    const amp = Math.sqrt(bands[bandIdx] ?? 0);
     const bH = Math.max(6, 6 + amp * 74);
     const bX = bLeft + i * (bW + bGap);
     rrp(ctx, bX, bBottom - bH, bW, bH, 2);

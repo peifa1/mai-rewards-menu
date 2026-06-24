@@ -13,7 +13,7 @@ export const OUT_H = 1352;
 // Persistent smoothing state for the Sound Orb (one recording at a time).
 let orbAmpSmooth = 0;
 
-const WF_N = 18;
+const WF_N = 40;
 
 // Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
 // and in offscreen canvas recording contexts (no network request needed).
@@ -107,24 +107,23 @@ export function drawWaveformCard(
   ctx.fillRect(cX, cY, cW, cH);
   ctx.restore();
 
-  // Waveform bars — left-to-right with per-bar oscillator, matching HTML behaviour.
-  // Each bar has its own phase and rate so they move independently like the CSS
-  // idle animation, but amplitude is audio-driven.
-  const bW = 6, bGap = 6;
+  // 40 symmetric bars — grow from center up AND down, matching reference visualizer
+  // 2× scale of HTML: 6px wide, 4px gap
+  const bW = 6, bGap = 4;
   const totalBW = WF_N * bW + (WF_N - 1) * bGap;
   const bLeft = cX + (cW - totalBW) / 2;
-  const bBottom = cY + cH - 120;
+  const bCenterY = cY + cH / 2 - 60;
 
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
   const nb = bands.length;
-  const usable = Math.max(WF_N, Math.floor(nb * 0.55));
+  const usable = Math.max(WF_N, Math.floor(nb * 0.6));
   for (let i = 0; i < WF_N; i++) {
     const bandIdx = Math.min(Math.floor(i / WF_N * usable), nb - 1);
     const amp = Math.sqrt(bands[bandIdx] ?? 0);
-    const bH = Math.max(6, 6 + amp * 74);
+    const halfH = Math.max(3, Math.round(3 + amp * 50));
     const bX = bLeft + i * (bW + bGap);
-    rrp(ctx, bX, bBottom - bH, bW, bH, 2);
+    rrp(ctx, bX, bCenterY - halfH, bW, halfH * 2, 2);
     ctx.fill();
   }
   ctx.restore();

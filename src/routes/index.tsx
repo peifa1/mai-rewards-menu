@@ -659,11 +659,11 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       ))}
 
       {[
-        { x: 120, y: 1060, r: 20, s: 0.7, o: 0.55 },
-        { x: 260, y: 1090, r: -35, s: 0.55, o: 0.45 },
-        { x: 820, y: 1070, r: 48, s: 0.6, o: 0.5 },
-        { x: 940, y: 1100, r: -12, s: 0.5, o: 0.45 },
-        { x: 60, y: 1105, r: 65, s: 0.45, o: 0.4 },
+        { x: 120, y: 1075, r: 20, s: 0.7, o: 0.55 },
+        { x: 260, y: 1105, r: -35, s: 0.55, o: 0.45 },
+        { x: 820, y: 1085, r: 48, s: 0.6, o: 0.5 },
+        { x: 940, y: 1115, r: -12, s: 0.5, o: 0.45 },
+        { x: 60, y: 1120, r: 65, s: 0.45, o: 0.4 },
       ].map((pt, i) => (
         <img
           key={`f${i}`}
@@ -981,7 +981,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
       </div>
 
       <div className="relative h-full flex items-center z-10">
-        <div className="flex items-baseline gap-4">
+        <div className="flex items-center gap-4">
           {tier.premium && (
             <div
               className="font-menu"

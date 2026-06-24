@@ -637,6 +637,8 @@ function BroadcastOverlay({ src, style, cfg, onClose }: {
         stream = s;
         const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         ctx = new Ctx();
+        // Resume immediately — AudioContext can start suspended if created outside a direct user gesture
+        void ctx.resume();
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.82;
@@ -649,6 +651,8 @@ function BroadcastOverlay({ src, style, cfg, onClose }: {
 
         const tick = () => {
           rafId = requestAnimationFrame(tick);
+          // Re-resume each tick in case context got suspended again
+          if (ctx!.state === "suspended") void ctx!.resume();
           analyser.getByteFrequencyData(freq);
           const per = Math.floor(freq.length / MIC_BANDS);
           const bands: number[] = new Array(MIC_BANDS);

@@ -195,11 +195,10 @@ function RenderStatus({ state, onDownload, onDismiss }: {
 }
 
 // ── Single card column ────────────────────────────────────────────────────
-function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, audioFile, audioDuration }: {
+function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, audioDuration }: {
   style: TeaserStyle; kanji: string; label: string;
   onWindow: (style: TeaserStyle, win: Window | null) => void;
   audioMinutes: string | null;
-  onBroadcast: (src: string, style: TeaserStyle, cfg: AudioTeaserConfig) => void;
   audioFile: File | null;
   audioDuration: number;
 }) {
@@ -391,9 +390,12 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
         )}
       </div>
 
-      {/* Broadcast for OBS */}
+      {/* Open for OBS — opens the configured card in a clean popup window */}
       <button
-        onClick={() => previewSrc && onBroadcast(previewSrc, style, cfg)}
+        onClick={() => {
+          if (!previewSrc) return;
+          window.open(previewSrc, `obs_${style}`, "popup,width=390,height=488");
+        }}
         disabled={!previewSrc}
         style={{
           width: colW, padding: "10px 0", borderRadius: 9,
@@ -401,7 +403,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
           color: ROSE, fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase",
           fontFamily: SANS, cursor: previewSrc ? "pointer" : "default",
         }}
-      >●  Broadcast for OBS</button>
+      >⊞  Open for OBS</button>
 
       {/* Editor panel */}
       <div style={{
@@ -574,205 +576,6 @@ function Transport({
   );
 }
 
-// ── Broadcast (OBS) overlay ───────────────────────────────────────────────
-const MIC_BANDS = 32;
-
-function BroadcastOverlay({ src, style, cfg, onClose }: {
-  src: string;
-  style: TeaserStyle;
-  cfg: AudioTeaserConfig;
-  onClose: () => void;
-}) {
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [micStatus, setMicStatus] = useState<"pending" | "active" | "denied">("pending");
-  const [pulse, setPulse] = useState(false);
-  const templateFile = style === "waveform" ? "audio_waveform.html"
-    : style === "nowplaying" ? "audio_nowplaying.html"
-    : "audio_soundorb.html";
-
-  const handleOpenCardWindow = useCallback(() => {
-    const storageKey = `obs_teaser_${style}`;
-    localStorage.setItem(storageKey, JSON.stringify(cfg));
-    const url = `${window.location.origin}/${templateFile}?obsKey=${encodeURIComponent(storageKey)}`;
-    window.open(url, `obs_card_${style}`, `popup,width=390,height=488`);
-  }, [cfg, style, templateFile]);
-
-  const [vp, setVp] = useState(() => ({
-    w: typeof window !== "undefined" ? window.innerWidth : 1280,
-    h: typeof window !== "undefined" ? window.innerHeight : 800,
-  }));
-
-  useEffect(() => {
-    const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  // Mic capture + analyser loop — all internal, doesn't touch the audio engine
-  useEffect(() => {
-    let rafId: number | null = null;
-    let cancelled = false;
-    let stream: MediaStream | null = null;
-    let ctx: AudioContext | null = null;
-
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-      .then(s => {
-        if (cancelled) { s.getTracks().forEach(t => t.stop()); return; }
-        stream = s;
-        const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        ctx = new Ctx();
-        // Resume immediately — AudioContext can start suspended if created outside a direct user gesture
-        void ctx.resume();
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.82;
-        const micSrc = ctx.createMediaStreamSource(s);
-        micSrc.connect(analyser);
-        // intentionally not connected to destination — no mic playback
-        const freq = new Uint8Array(analyser.frequencyBinCount);
-
-        setMicStatus("active");
-
-        const tick = () => {
-          rafId = requestAnimationFrame(tick);
-          // Re-resume each tick in case context got suspended again
-          if (ctx!.state === "suspended") void ctx!.resume();
-          analyser.getByteFrequencyData(freq);
-          const per = Math.floor(freq.length / MIC_BANDS);
-          const bands: number[] = new Array(MIC_BANDS);
-          let sum = 0;
-          for (let b = 0; b < MIC_BANDS; b++) {
-            let acc = 0;
-            for (let k = 0; k < per; k++) acc += freq[b * per + k];
-            const v = acc / per / 255;
-            bands[b] = v;
-            sum += v;
-          }
-          const amp = Math.min(1, (sum / MIC_BANDS) * 1.7);
-          try { iframeRef.current?.contentWindow?.postMessage({ type: "aud", s: bands, amp }, "*"); } catch {}
-        };
-        rafId = requestAnimationFrame(tick);
-      })
-      .catch(() => { if (!cancelled) setMicStatus("denied"); });
-
-    // Pulse the indicator dot every second while active
-    const pulseInterval = setInterval(() => setPulse(p => !p), 800);
-
-    return () => {
-      cancelled = true;
-      clearInterval(pulseInterval);
-      if (rafId != null) cancelAnimationFrame(rafId);
-      stream?.getTracks().forEach(t => t.stop());
-      ctx?.close().catch(() => {});
-    };
-  }, []);
-
-  const SIDEBAR_W = 160;
-  const availW = vp.w - SIDEBAR_W - 24;
-  const availH = vp.h - 24;
-  const scale = Math.min(availH / CARD_H, availW / CARD_W);
-  const dispW = Math.round(CARD_W * scale);
-  const dispH = Math.round(CARD_H * scale);
-
-  return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 9999, background: "#000",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      {/* Card — clean area for OBS to capture */}
-      <div style={{
-        flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-        height: "100%",
-      }}>
-        <div style={{ width: dispW, height: dispH, position: "relative", flexShrink: 0 }}>
-          <iframe
-            key={src}
-            src={src}
-            ref={iframeRef}
-            allow="microphone"
-            style={{
-              width: CARD_W, height: CARD_H, border: "none",
-              transform: `scale(${scale})`, transformOrigin: "top left", display: "block",
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Right sidebar — controls outside the card, OBS ignores this column */}
-      <div style={{
-        width: SIDEBAR_W, height: "100%", flexShrink: 0,
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", gap: 28,
-        padding: "24px 12px",
-        borderLeft: "1px solid rgba(255,150,180,0.07)",
-      }}>
-        {/* Mic status indicator */}
-        <div style={{ textAlign: "center" }}>
-          <div style={{
-            width: 9, height: 9, borderRadius: "50%", margin: "0 auto 8px",
-            background: micStatus === "active"
-              ? (pulse ? "#e8c878" : "rgba(232,200,120,0.45)")
-              : micStatus === "denied" ? "#c87878" : "#555",
-            boxShadow: micStatus === "active" && pulse ? "0 0 8px #e8c878" : "none",
-            transition: "background 0.4s, box-shadow 0.4s",
-          }} />
-          <div style={{
-            fontSize: 8, letterSpacing: "0.3em", textTransform: "uppercase",
-            fontFamily: SANS, color: micStatus === "active" ? INK_DIM : "#c87878",
-          }}>
-            {micStatus === "pending" ? "Mic…" : micStatus === "active" ? "Mic Live" : "Mic Denied"}
-          </div>
-          {micStatus === "denied" && (
-            <div style={{
-              fontSize: 7, color: "rgba(200,120,120,0.7)", fontFamily: SANS,
-              marginTop: 6, letterSpacing: "0.1em", lineHeight: 1.5,
-            }}>Allow mic in<br/>browser settings</div>
-          )}
-        </div>
-
-        {/* Dimensions hint */}
-        <div style={{
-          fontSize: 8, color: "rgba(255,255,255,0.18)", fontFamily: SANS,
-          letterSpacing: "0.12em", textAlign: "center", lineHeight: 1.8,
-        }}>
-          OBS: capture<br/>left area<br/>{dispW}×{dispH}
-        </div>
-
-        {/* Open card in popup for OBS */}
-        <div style={{ textAlign: "center" }}>
-          <button
-            onClick={handleOpenCardWindow}
-            style={{
-              padding: "8px 12px", borderRadius: 8,
-              border: `1px solid ${LINE_STR}`,
-              background: "rgba(255,140,170,0.08)",
-              color: ROSE,
-              fontSize: 8, letterSpacing: "0.2em",
-              textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
-              width: "100%",
-            }}
-          >⊞ OBS Window</button>
-          <div style={{
-            fontSize: 7, color: "rgba(255,255,255,0.2)", fontFamily: SANS,
-            marginTop: 5, letterSpacing: "0.1em", lineHeight: 1.6,
-          }}>Window Capture<br/>in OBS · 390×488</div>
-        </div>
-
-        {/* Exit */}
-        <button
-          onClick={onClose}
-          style={{
-            padding: "8px 16px", borderRadius: 8,
-            border: `1px solid ${LINE_STR}`,
-            background: "rgba(0,0,0,0.5)",
-            color: INK_DIM, fontSize: 9, letterSpacing: "0.22em",
-            textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
-          }}
-        >✕  Exit</button>
-      </div>
-    </div>
-  );
-}
 
 // ── CSS keyframes for spinner ─────────────────────────────────────────────
 const spinStyle = `@keyframes spin { to { transform: rotate(360deg); } }`;
@@ -788,8 +591,6 @@ export function AudioTeaserBuilder() {
     if (win) windowsRef.current.set(style, win);
     else windowsRef.current.delete(style);
   }, []);
-
-  const [broadcast, setBroadcast] = useState<{ src: string; style: TeaserStyle; cfg: AudioTeaserConfig } | null>(null);
 
   const audioMinutes = engine.duration > 0
     ? String(Math.max(1, Math.ceil(engine.duration / 60)))
@@ -817,21 +618,12 @@ export function AudioTeaserBuilder() {
           <TeaserCard
             key={s.key} style={s.key} kanji={s.kanji} label={s.label}
             onWindow={onWindow} audioMinutes={audioMinutes}
-            onBroadcast={(src, style, cfg) => setBroadcast({ src, style, cfg })}
             audioFile={audioFile}
             audioDuration={engine.duration}
           />
         ))}
       </div>
 
-      {broadcast && (
-        <BroadcastOverlay
-          src={broadcast.src}
-          style={broadcast.style}
-          cfg={broadcast.cfg}
-          onClose={() => setBroadcast(null)}
-        />
-      )}
     </div>
   );
 }

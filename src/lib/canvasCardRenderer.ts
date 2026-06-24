@@ -1,8 +1,13 @@
 import type { AudioTeaserConfig } from "./buildAudioTeaser";
 
-// Output canvas dimensions: 2× card size for crisp video
+// Logical draw dimensions (all draw functions use these coordinates)
 export const CANVAS_W = 780;
 export const CANVAS_H = 976;
+
+// Actual output canvas dimensions — 1080p-wide for X/social quality
+// The builder scales the context by (OUT_W/CANVAS_W) before drawing
+export const OUT_W = 1080;
+export const OUT_H = 1352;
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 

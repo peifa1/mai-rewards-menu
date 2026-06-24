@@ -10,7 +10,7 @@ import {
 } from "@/lib/buildAudioTeaser";
 import { dispatchRenderJob } from "@/lib/renderApi";
 import {
-  CANVAS_W, CANVAS_H,
+  CANVAS_W, CANVAS_H, OUT_W, OUT_H,
   drawWaveformCard,
   drawNowPlayingCard,
   drawSoundOrbCard,
@@ -294,7 +294,15 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     const mimeType = getMimeType();
     let mic: MediaStream;
     try {
-      mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      mic = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          sampleRate: 48000,
+        },
+        video: false,
+      });
     } catch {
       alert("Microphone access denied. Please allow mic permission and try again.");
       return;
@@ -312,11 +320,15 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     const freqBuf = new Uint8Array(analyser.frequencyBinCount);
 
     const canvas = document.createElement("canvas");
-    canvas.width = CANVAS_W; canvas.height = CANVAS_H;
+    canvas.width = OUT_W; canvas.height = OUT_H;
     const videoStream = canvas.captureStream(30);
     const combined = new MediaStream([...videoStream.getVideoTracks(), ...mic.getAudioTracks()]);
 
-    const mr = new MediaRecorder(combined, { mimeType });
+    const mr = new MediaRecorder(combined, {
+      mimeType,
+      videoBitsPerSecond: 12_000_000,
+      audioBitsPerSecond: 256_000,
+    });
     recChunksRef.current = [];
     mr.ondataavailable = e => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
     mr.onstop = () => {
@@ -330,11 +342,17 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     setRecState("live");
 
     const ctx2d = canvas.getContext("2d")!;
+    ctx2d.imageSmoothingEnabled = true;
+    ctx2d.imageSmoothingQuality = "high";
+    const scaleX = OUT_W / CANVAS_W, scaleY = OUT_H / CANVAS_H;
     function tick() {
       recAnimRef.current = requestAnimationFrame(tick);
       const bands = computeBands(analyser, freqBuf, 18);
       const progress = ((Date.now() / 1000) % 6) / 6;
+      ctx2d.save();
+      ctx2d.scale(scaleX, scaleY);
       drawFrame(ctx2d, bands, progress);
+      ctx2d.restore();
     }
     tick();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -370,11 +388,15 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     source.connect(analyser);
 
     const canvas = document.createElement("canvas");
-    canvas.width = CANVAS_W; canvas.height = CANVAS_H;
+    canvas.width = OUT_W; canvas.height = OUT_H;
     const videoStream = canvas.captureStream(30);
     const combined = new MediaStream([...videoStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
 
-    const mr = new MediaRecorder(combined, { mimeType });
+    const mr = new MediaRecorder(combined, {
+      mimeType,
+      videoBitsPerSecond: 12_000_000,
+      audioBitsPerSecond: 256_000,
+    });
     recChunksRef.current = [];
     mr.ondataavailable = e => { if (e.data.size > 0) recChunksRef.current.push(e.data); };
     mr.onstop = () => {
@@ -391,12 +413,18 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     source.onended = () => stopRec();
 
     const ctx2d = canvas.getContext("2d")!;
+    ctx2d.imageSmoothingEnabled = true;
+    ctx2d.imageSmoothingQuality = "high";
+    const scaleX = OUT_W / CANVAS_W, scaleY = OUT_H / CANVAS_H;
     const freqBuf = new Uint8Array(analyser.frequencyBinCount);
     function tick() {
       recAnimRef.current = requestAnimationFrame(tick);
       const bands = computeBands(analyser, freqBuf, 18);
       const progress = Math.min(1, (audioCtx.currentTime - startTime) / audioBuf.duration);
+      ctx2d.save();
+      ctx2d.scale(scaleX, scaleY);
       drawFrame(ctx2d, bands, progress);
+      ctx2d.restore();
     }
     tick();
   // eslint-disable-next-line react-hooks/exhaustive-deps

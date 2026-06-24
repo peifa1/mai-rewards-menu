@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadAudioTeaserTemplate } from "@/lib/audioTeaserTemplate";
-import { useAudioEngine, formatTime } from "@/lib/useAudioEngine";
+import { useAudioEngine } from "@/lib/useAudioEngine";
 import {
   buildAudioTeaserHtml,
   DEFAULT_AUDIO_TEASER_CONFIG,
@@ -8,7 +8,6 @@ import {
   type AudioTeaserConfig,
   type TeaserStyle,
 } from "@/lib/buildAudioTeaser";
-import { dispatchRenderJob } from "@/lib/renderApi";
 import {
   CANVAS_W, CANVAS_H, OUT_W, OUT_H,
   drawWaveformCard,
@@ -37,15 +36,6 @@ const STYLES: { key: TeaserStyle; kanji: string; label: string }[] = [
 const CARD_W = 390;
 const CARD_H = 488;
 
-// ── Render state ──────────────────────────────────────────────────────────
-type RenderPhase =
-  | { phase: "idle" }
-  | { phase: "uploading" }
-  | { phase: "queued"; jobId: string; audioUrl: string; imageUrl: string }
-  | { phase: "rendering"; jobId: string; audioUrl: string; imageUrl: string }
-  | { phase: "done"; jobId: string; audioUrl: string; imageUrl: string; downloadUrl: string }
-  | { phase: "error"; message: string };
-
 // ── Storage ───────────────────────────────────────────────────────────────
 function storageKey(s: TeaserStyle) { return `audio-teaser-cfg-${s}`; }
 function loadStored(style: TeaserStyle): AudioTeaserConfig {
@@ -57,10 +47,6 @@ function loadStored(style: TeaserStyle): AudioTeaserConfig {
 }
 function saveStored(style: TeaserStyle, cfg: AudioTeaserConfig) {
   try { localStorage.setItem(storageKey(style), JSON.stringify(cfg)); } catch {}
-}
-
-function nanoid() {
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
 // ── Field (underline style) ───────────────────────────────────────────────
@@ -120,86 +106,6 @@ function Section({ title, accent, children }: {
   );
 }
 
-// ── Render status badge ───────────────────────────────────────────────────
-function RenderStatus({ state, onDownload, onDismiss }: {
-  state: RenderPhase;
-  onDownload: () => void;
-  onDismiss: () => void;
-}) {
-  if (state.phase === "idle") return null;
-
-  const phaseLabel: Record<string, string> = {
-    uploading: "Uploading…",
-    queued: "Queued — waiting for runner",
-    rendering: "Rendering…",
-    done: "Ready",
-    error: "Failed",
-  };
-
-  const isActive = state.phase === "uploading" || state.phase === "queued" || state.phase === "rendering";
-  const isDone = state.phase === "done";
-  const isError = state.phase === "error";
-
-  return (
-    <div style={{
-      marginTop: 6,
-      padding: "10px 12px",
-      borderRadius: 9,
-      background: isDone ? "rgba(120,200,140,0.10)" : isError ? "rgba(200,80,80,0.10)" : "rgba(255,140,170,0.06)",
-      border: `1px solid ${isDone ? "rgba(120,200,140,0.3)" : isError ? "rgba(200,80,80,0.3)" : LINE_STR}`,
-      display: "flex", alignItems: "center", gap: 10,
-    }}>
-      {/* Spinner or icon */}
-      {isActive && (
-        <div style={{
-          width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
-          border: `2px solid ${LINE_STR}`,
-          borderTopColor: ROSE,
-          animation: "spin 0.8s linear infinite",
-        }} />
-      )}
-      {isDone && <span style={{ fontSize: 14, flexShrink: 0 }}>✓</span>}
-      {isError && <span style={{ fontSize: 14, flexShrink: 0, color: "#e88" }}>✕</span>}
-
-      {/* Label */}
-      <span style={{
-        fontFamily: SANS, fontSize: 9, letterSpacing: "0.18em",
-        color: isDone ? "rgba(140,220,160,0.9)" : isError ? "#e88" : INK_DIM,
-        flex: 1,
-      }}>
-        {isError ? (state as { phase: "error"; message: string }).message.slice(0, 80) : phaseLabel[state.phase]}
-      </span>
-
-      {/* Actions */}
-      {isDone && (
-        <button
-          onClick={onDownload}
-          style={{
-            padding: "5px 10px", borderRadius: 7,
-            border: "1px solid rgba(140,220,160,0.4)",
-            background: "rgba(120,200,140,0.12)",
-            color: "rgba(160,230,180,0.95)",
-            fontSize: 9, letterSpacing: "0.2em", fontFamily: SANS,
-            cursor: "pointer", flexShrink: 0,
-          }}
-        >
-          ▼ Download
-        </button>
-      )}
-      <button
-        onClick={onDismiss}
-        disabled={isActive}
-        style={{
-          background: "none", border: "none", color: INK_DIM, cursor: isActive ? "default" : "pointer",
-          fontSize: 11, padding: 0, opacity: isActive ? 0.3 : 0.6, flexShrink: 0,
-        }}
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
 // ── Single card column ────────────────────────────────────────────────────
 function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, audioDuration }: {
   style: TeaserStyle; kanji: string; label: string;
@@ -212,8 +118,6 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   const [previewSrc, setPreviewSrc] = useState("");
   const blobRef = useRef("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [renderState, setRenderState] = useState<RenderPhase>({ phase: "idle" });
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Canvas recorder ──────────────────────────────────────────────────────
   const imgElRef = useRef<HTMLImageElement | null>(null);
@@ -490,111 +394,9 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     e.target.value = "";
   }, [set]);
 
-  // Stop polling on unmount
-  useEffect(() => () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-  }, []);
-
-  const startPolling = useCallback((jobId: string, audioUrl: string, imageUrl: string) => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(async () => {
-      try {
-        const result = await fetch(`/api/check-render?jobId=${jobId}`).then(r => r.json()) as { status: string; downloadUrl: string };
-        if (result.status === "error") {
-          clearInterval(pollRef.current!);
-          setRenderState({ phase: "error", message: "Render failed — check GitHub Actions logs" });
-        } else if (result.status === "done" && result.downloadUrl) {
-          clearInterval(pollRef.current!);
-          setRenderState({ phase: "done", jobId, audioUrl, imageUrl, downloadUrl: result.downloadUrl });
-        }
-      } catch { /* network blip, try again next tick */ }
-    }, 6000);
-  }, []);
-
-  const handleRender = useCallback(async () => {
-    if (!audioFile) return;
-    setRenderState({ phase: "uploading" });
-
-    try {
-      const jobId = nanoid();
-      const ext = audioFile.name.split(".").pop() ?? "mp3";
-
-      // Dynamic import avoids SSR side-effects from @vercel/blob/client
-      const { upload } = await import("@vercel/blob/client");
-
-      // Upload audio directly to Vercel Blob CDN via client upload
-      const { url: audioUrl } = await upload(`audio/${jobId}.${ext}`, audioFile, {
-        access: "public",
-        handleUploadUrl: "/api/blob-upload",
-      });
-
-      // Upload image directly to Vercel Blob CDN (if any)
-      let imageUrl = "";
-      if (cfg.image) {
-        const imgBlob = await fetch(cfg.image).then(r => r.blob());
-        const imgFile = new File([imgBlob], `${jobId}.webp`, { type: "image/webp" });
-        const result = await upload(`images/${jobId}.webp`, imgFile, {
-          access: "public",
-          handleUploadUrl: "/api/blob-upload",
-        });
-        imageUrl = result.url;
-      }
-
-      setRenderState({ phase: "queued", jobId, audioUrl, imageUrl });
-
-      const dispatch = await dispatchRenderJob({
-        data: {
-          jobId, style,
-          config: {
-            title: cfg.title, eyebrow: cfg.eyebrow, genre: cfg.genre, badge: cfg.badge,
-            minutes: cfg.minutes, asmrLabel: cfg.asmrLabel,
-            cardLabel: cfg.cardLabel, timeStart: cfg.timeStart,
-          },
-          audioPath: audioUrl, imagePath: imageUrl, durationSeconds: audioDuration,
-        },
-      });
-      if (!dispatch.ok) throw new Error(dispatch.error ?? "Dispatch failed");
-
-      setRenderState({ phase: "rendering", jobId, audioUrl, imageUrl });
-      startPolling(jobId, audioUrl, imageUrl);
-    } catch (e: unknown) {
-      let msg = "Render failed";
-      if (e instanceof Error) msg = e.message;
-      else if (e && typeof e === "object" && "message" in e) msg = String((e as { message: unknown }).message);
-      else if (typeof e === "string") msg = e;
-      setRenderState({ phase: "error", message: msg.slice(0, 120) });
-    }
-  }, [audioFile, cfg, style, audioDuration, startPolling]);
-
-  const handleDownload = useCallback(() => {
-    if (renderState.phase !== "done") return;
-    const { downloadUrl, jobId, audioUrl, imageUrl } = renderState;
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = `${style}-teaser-${jobId}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    // Cleanup blobs after download (best-effort)
-    const toDelete = [downloadUrl, audioUrl];
-    if (imageUrl) toDelete.push(imageUrl);
-    fetch("/api/cleanup-render", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ urls: toDelete }),
-    }).catch(() => {});
-    setRenderState({ phase: "idle" });
-  }, [renderState, style]);
-
-  const handleDismiss = useCallback(() => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    setRenderState({ phase: "idle" });
-  }, []);
-
   const colW = 290;
   const scale = colW / CARD_W;
   const displayH = Math.round(CARD_H * scale);
-  const isRendering = renderState.phase !== "idle" && renderState.phase !== "error" && renderState.phase !== "done";
 
   return (
     <div style={{ flex: "0 0 290px", display: "flex", flexDirection: "column", gap: 10 }}>
@@ -725,6 +527,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
         )}
         {style === "nowplaying" && (
           <Section title="Card Text" accent>
+            <Field label="Title" value={cfg.title} onChange={v => set("title", v)} placeholder="Whisper & Rain" />
             <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
           </Section>
         )}
@@ -735,32 +538,6 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
         )}
 
 
-        {/* Render MP4 button */}
-        <button
-          onClick={() => void handleRender()}
-          disabled={!audioFile || isRendering}
-          title={!audioFile ? "Upload an audio file first" : undefined}
-          style={{
-            marginTop: 4,
-            width: "100%", padding: "11px 0", borderRadius: 9,
-            border: `1px solid ${audioFile && !isRendering ? "rgba(200,160,120,0.5)" : LINE}`,
-            background: audioFile && !isRendering ? "rgba(200,160,100,0.10)" : "transparent",
-            color: audioFile && !isRendering ? "rgba(230,190,140,0.95)" : INK_DIM,
-            fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase",
-            fontFamily: SANS, cursor: audioFile && !isRendering ? "pointer" : "default",
-            opacity: isRendering ? 0.6 : 1,
-            transition: "all 0.2s",
-          }}
-        >
-          {!audioFile ? "⬛  Render MP4  (upload audio first)" : isRendering ? "◌  Rendering…" : "▶  Render MP4"}
-        </button>
-
-        {/* Render status */}
-        <RenderStatus
-          state={renderState}
-          onDownload={handleDownload}
-          onDismiss={handleDismiss}
-        />
       </div>
     </div>
   );
@@ -774,7 +551,7 @@ function Transport({
   engine: ReturnType<typeof useAudioEngine>;
   onAudioFile: (f: File | null) => void;
 }) {
-  const { hasAudio, fileName, playing, duration, currentTime, load, toggle, seek } = engine;
+  const { hasAudio, fileName, playing, load, toggle } = engine;
 
   const onFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -802,10 +579,11 @@ function Transport({
         <input type="file" accept="audio/*" onChange={onFile} style={{ display: "none" }} />
       </label>
 
-      {/* Play / pause */}
+      {/* Play / pause — drives all three previews */}
       <button
         onClick={toggle}
         disabled={!hasAudio}
+        title={hasAudio ? (playing ? "Pause" : "Play — animates all previews") : "Upload audio first"}
         style={{
           width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
           border: `1px solid ${hasAudio ? ROSE : LINE_STR}`,
@@ -816,27 +594,13 @@ function Transport({
         }}
       >{playing ? "❚❚" : "▶"}</button>
 
-      {/* Scrubber + time */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 12, color: INK, fontFamily: SERIF,
-          marginBottom: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-        }}>
-          {hasAudio ? fileName : <span style={{ color: INK_DIM, fontFamily: SANS, fontSize: 10, letterSpacing: "0.16em" }}>No audio loaded — upload a file to drive all three previews</span>}
-        </div>
-        <input
-          type="range"
-          min={0} max={duration || 0} step={0.01} value={currentTime}
-          onChange={e => seek(Number(e.target.value))}
-          disabled={!hasAudio}
-          style={{ width: "100%", accentColor: ROSE, cursor: hasAudio ? "pointer" : "default" }}
-        />
-      </div>
-
+      {/* Status text */}
       <div style={{
-        flexShrink: 0, fontFamily: SANS, fontSize: 11, color: INK_DIM,
-        letterSpacing: "0.06em", minWidth: 86, textAlign: "right",
-      }}>{formatTime(currentTime)} / {formatTime(duration)}</div>
+        flex: 1, minWidth: 0, fontSize: 12, color: INK, fontFamily: SERIF,
+        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+      }}>
+        {hasAudio ? fileName : <span style={{ color: INK_DIM, fontFamily: SANS, fontSize: 10, letterSpacing: "0.16em" }}>Upload a file to drive all three previews</span>}
+      </div>
     </div>
   );
 }

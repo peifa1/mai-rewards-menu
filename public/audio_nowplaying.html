@@ -95,10 +95,17 @@ html,body{
   animation:spin 5s linear infinite;
   filter:drop-shadow(0 0 5px rgba(248,184,204,.7));
 }
-.np-card .np-playing-label{ display:none }
-.np-card .np-title-block{ display:none }
+.np-card .np-playing-label{
+  position:absolute;top:18px;left:16px;
+  font-family:ui-sans-serif,sans-serif;
+  font-size:9px;letter-spacing:.3em;color:var(--rose);
+}
+.np-card .np-title-block{
+  position:absolute;bottom:50px;left:16px;right:16px;
+  font-size:15px;color:#fff;line-height:1.25;
+}
 .np-card .np-genre-label{
-  display:none;font-family:ui-sans-serif,sans-serif;
+  display:block;font-family:ui-sans-serif,sans-serif;
   font-size:9px;letter-spacing:.2em;color:var(--rose);margin-top:4px;
 }
 /* Mini waveform */

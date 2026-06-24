@@ -194,13 +194,18 @@ document.getElementById('labelMeta').textContent     =
   /* Audio reactivity — driven by parent postMessage OR mic self-start below */
   var orbRings = document.querySelectorAll('.pulse-ring');
   var orbPortrait = document.querySelector('.orb-portrait');
+  var ampSmooth = 0;
   function orbApply(amp){
+    // Smooth the amplitude so the orb breathes gently, like water ripples,
+    // instead of jumping sharply with every spike.
+    ampSmooth += (amp - ampSmooth) * 0.08;
+    var a = ampSmooth;
     if (orbPortrait) {
-      orbPortrait.style.transform = 'scale(' + (1 + amp * 0.14) + ')';
-      orbPortrait.style.boxShadow = '0 0 ' + Math.round(24 + amp * 70) +
-        'px rgba(248,184,204,' + (0.3 + amp * 0.5).toFixed(2) + ')';
+      orbPortrait.style.transform = 'scale(' + (1 + a * 0.06) + ')';
+      orbPortrait.style.boxShadow = '0 0 ' + Math.round(24 + a * 50) +
+        'px rgba(248,184,204,' + (0.3 + a * 0.45).toFixed(2) + ')';
     }
-    orbRings.forEach(function(r){ r.style.opacity = (0.35 + amp * 0.65).toFixed(2); });
+    orbRings.forEach(function(r){ r.style.opacity = (0.3 + a * 0.55).toFixed(2); });
   }
   window.addEventListener('message', function(e){
     var d = e.data || {};

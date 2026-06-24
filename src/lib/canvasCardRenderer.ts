@@ -9,6 +9,9 @@ export const CANVAS_H = 976;
 export const OUT_W = 1080;
 export const OUT_H = 1352;
 
+// Persistent smoothing state for the Sound Orb (one recording at a time).
+let orbAmpSmooth = 0;
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function rrp(
@@ -128,6 +131,47 @@ export function drawWaveformCard(
     ctx.restore();
   }
 
+  // In-card text (matches the HTML template)
+  const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
+  ctx.save();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "20px ui-sans-serif, system-ui, sans-serif";
+  ls.letterSpacing = "6.8px";
+  ctx.textAlign = "center";
+  ctx.fillText(cfg.cardLabel || "RP AUDIO", cX + cW / 2, cY + cH - 56);
+  ctx.restore();
+
+  ctx.save();
+  ctx.fillStyle = "#f8b8cc";
+  ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
+  ls.letterSpacing = "5px";
+  ctx.textAlign = "center";
+  ctx.fillText(`— ${cfg.asmrLabel || "ASMR"} —`, cX + cW / 2, cY + cH - 26);
+  ctx.restore();
+}
+
+// Vector sakura blossom (replaces the template's spinning PNG)
+function drawSakura(ctx: CanvasRenderingContext2D, cx: number, cy: number, R: number, rot: number) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.fillStyle = "#f8b8cc";
+  ctx.shadowColor = "rgba(248,184,204,0.7)";
+  ctx.shadowBlur = 10;
+  for (let i = 0; i < 5; i++) {
+    ctx.save();
+    ctx.rotate((i / 5) * Math.PI * 2);
+    ctx.beginPath();
+    ctx.ellipse(0, -R * 0.55, R * 0.32, R * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#fff0f5";
+  ctx.beginPath();
+  ctx.arc(0, 0, R * 0.16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 // ── Now Playing ───────────────────────────────────────────────────────────
@@ -172,18 +216,51 @@ export function drawNowPlayingCard(
   ctx.restore();
 
   const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
+  const t = Date.now() / 1000;
 
-  // Mini waveform bars — bottom-center of card
-  const avg = bands.length > 0 ? bands.reduce((a, b) => a + b, 0) / bands.length : 0;
-  const bCount = 5, bW2 = 3, bGap2 = 4;
-  const bTotalW = bCount * bW2 + (bCount - 1) * bGap2;
-  const bStartX = cX + (cW - bTotalW) / 2;
+  // "NOW PLAYING" — top-left
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
-  for (let i = 0; i < bCount; i++) {
-    const h = Math.max(3, bands[Math.floor(i / bCount * bands.length)] * 22);
-    ctx.fillRect(bStartX + i * (bW2 + bGap2), cY + cH - 80 - h, bW2, h);
+  ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
+  ls.letterSpacing = "6px";
+  ctx.textAlign = "left";
+  ctx.fillText("NOW PLAYING", cX + 32, cY + 40);
+  ctx.restore();
+
+  // Spinning sakura — top-right
+  drawSakura(ctx, cX + cW - 52, cY + 52, 34, t * 1.2);
+
+  // Title — bottom-left, with mini waveform bars beside it
+  const titleY = cY + cH - 96;
+  ctx.save();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `30px Georgia, "Times New Roman", serif`;
+  ls.letterSpacing = "0px";
+  ctx.textAlign = "left";
+  const title = cfg.title || "Whisper & Rain";
+  ctx.fillText(title, cX + 32, titleY);
+  const titleW = ctx.measureText(title).width;
+  ctx.restore();
+
+  // Mini waveform bars beside the title (5 bars, audio-driven)
+  ctx.save();
+  ctx.fillStyle = "#f8b8cc";
+  for (let i = 0; i < 5; i++) {
+    const v = bands[Math.floor((i / 5) * bands.length)] ?? 0;
+    const h = Math.max(4, v * 26);
+    ctx.fillRect(cX + 32 + titleW + 16 + i * 8, titleY - h, 4, h);
   }
+  ctx.restore();
+
+  // Genre label under title (ASMR · N MIN)
+  const totalSec = durationSec ?? 0;
+  const mins = totalSec > 0 ? Math.max(1, Math.ceil(totalSec / 60)) : (cfg.minutes || "24");
+  ctx.save();
+  ctx.fillStyle = "#f8b8cc";
+  ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
+  ls.letterSpacing = "4px";
+  ctx.textAlign = "left";
+  ctx.fillText(`${cfg.asmrLabel || "ASMR"} · ${mins} MIN`, cX + 32, titleY + 30);
   ctx.restore();
 
   // Seek bar
@@ -202,7 +279,6 @@ export function drawNowPlayingCard(
     const m = Math.floor(s / 60), sec = Math.floor(s % 60);
     return `${m}:${String(sec).padStart(2, "0")}`;
   }
-  const totalSec = durationSec ?? 0;
   const elapsedSec = totalSec * progress;
   ctx.save();
   ctx.fillStyle = "#a98a92";
@@ -212,17 +288,6 @@ export function drawNowPlayingCard(
   ctx.fillText(fmtSec(elapsedSec), sL, cY + cH - 24);
   ctx.textAlign = "right";
   ctx.fillText(fmtSec(totalSec), sR, cY + cH - 24);
-  ctx.restore();
-
-  // Average amplitude label centered above seek bar
-  ctx.save();
-  ctx.fillStyle = "#f8b8cc";
-  ctx.font = "16px ui-sans-serif, system-ui, sans-serif";
-  ls.letterSpacing = "5px";
-  ctx.textAlign = "center";
-  ctx.globalAlpha = 0.7 + avg * 0.3;
-  ctx.fillText("NOW PLAYING", cX + cW / 2, cY + cH - 100);
-  ctx.globalAlpha = 1;
   ctx.restore();
 }
 
@@ -242,29 +307,34 @@ export function drawSoundOrbCard(
   const orbR = 150;
   const t = Date.now() / 1000;
 
-  // Rings driven purely by amplitude — invisible when silent, pop when loud
-  // Each ring is offset in time so they cascade outward
+  // Smooth the amplitude across frames so everything moves like water, not a
+  // strobe. amp only modulates intensity — never the ring expansion speed.
+  orbAmpSmooth += (amp - orbAmpSmooth) * 0.08;
+  const a = orbAmpSmooth;
+
+  // Ripple rings — constant slow expansion (3.2s period), 3 staggered, like
+  // ripples spreading on calm water. Brightness rises gently with the sound.
+  const period = 3.2;
   for (let i = 0; i < 3; i++) {
-    const phase = ((t * (0.6 + amp * 1.4)) + i / 3) % 1;
-    const r = orbR * (1 + phase * 1.6);
-    const opacity = (1 - phase) * amp * 0.9;
-    if (opacity < 0.01) continue;
+    const phase = (((t / period) + i / 3) % 1 + 1) % 1;
+    const r = orbR + phase * (orbR * 1.2);
+    const opacity = (1 - phase) * (0.28 + a * 0.5);
     ctx.save();
     ctx.strokeStyle = `rgba(248,184,204,${opacity.toFixed(3)})`;
-    ctx.lineWidth = 1.5 + amp * 2;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(orbX, orbY, r, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
 
-  // Orb portrait
-  const scale = 1 + amp * 0.14;
+  // Orb portrait — very soft, delicate breathing
+  const scale = 1 + a * 0.06;
   const r = orbR * scale;
 
   ctx.save();
-  ctx.shadowColor = `rgba(248,184,204,${(0.3 + amp * 0.5).toFixed(2)})`;
-  ctx.shadowBlur = Math.round(36 + amp * 70);
+  ctx.shadowColor = `rgba(248,184,204,${(0.3 + a * 0.45).toFixed(2)})`;
+  ctx.shadowBlur = Math.round(28 + a * 50);
   ctx.beginPath();
   ctx.arc(orbX, orbY, r, 0, Math.PI * 2);
   ctx.closePath();

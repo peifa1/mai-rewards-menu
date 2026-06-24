@@ -450,7 +450,7 @@ function PatreonShowcase() {
         cacheBust: true,
         pixelRatio: 2,
         width: 1080,
-        height: 1280,
+        height: 1360,
         fontEmbedCSS,
         filter: (node: HTMLElement) =>
           !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
@@ -585,14 +585,14 @@ function CanvasScaler({ children, innerRef }: { children: React.ReactNode; inner
     return () => window.removeEventListener("resize", update);
   }, []);
   return (
-    <div style={{ width: 1080 * scale, height: 1280 * scale }} className="relative">
+    <div style={{ width: 1080 * scale, height: 1360 * scale }} className="relative">
       <div
         ref={innerRef}
         style={{
           transform: `scale(${scale})`,
           transformOrigin: "top left",
           width: 1080,
-          height: 1280,
+          height: 1360,
           boxShadow:
             "0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,180,200,0.08), inset 0 0 120px rgba(0,0,0,0.35)",
           borderRadius: 8,
@@ -614,7 +614,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       className="relative font-menu"
       style={{
         width: 1080,
-        height: 1280,
+        height: 1360,
         overflow: "hidden",
         background:
           "radial-gradient(ellipse at 30% 20%, #6b1230 0%, #4a0c22 35%, #2a0712 70%, #1a040c 100%)",
@@ -659,11 +659,11 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       ))}
 
       {[
-        { x: 120, y: 1060, r: 20, s: 0.7, o: 0.55 },
-        { x: 260, y: 1110, r: -35, s: 0.55, o: 0.45 },
-        { x: 820, y: 1080, r: 48, s: 0.6, o: 0.5 },
-        { x: 940, y: 1120, r: -12, s: 0.5, o: 0.45 },
-        { x: 60, y: 1130, r: 65, s: 0.45, o: 0.4 },
+        { x: 120, y: 1140, r: 20, s: 0.7, o: 0.55 },
+        { x: 260, y: 1190, r: -35, s: 0.55, o: 0.45 },
+        { x: 820, y: 1160, r: 48, s: 0.6, o: 0.5 },
+        { x: 940, y: 1200, r: -12, s: 0.5, o: 0.45 },
+        { x: 60, y: 1210, r: 65, s: 0.45, o: 0.4 },
       ].map((pt, i) => (
         <img
           key={`f${i}`}

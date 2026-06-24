@@ -1,4 +1,5 @@
 import type { AudioTeaserConfig } from "./buildAudioTeaser";
+import { SAKURA_DATA_URL } from "./sakuraDataUrl";
 
 // Logical draw dimensions (all draw functions use these coordinates)
 export const CANVAS_W = 780;
@@ -12,9 +13,10 @@ export const OUT_H = 1352;
 // Persistent smoothing state for the Sound Orb (one recording at a time).
 let orbAmpSmooth = 0;
 
-// Sakura PNG — loaded once, used in Now Playing card
+// Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
+// and in offscreen canvas recording contexts (no network request needed).
 const _sakuraImg = (typeof window !== "undefined")
-  ? (() => { const i = new Image(); i.src = "/sakura_spin.png"; return i; })()
+  ? (() => { const i = new Image(); i.src = SAKURA_DATA_URL; return i; })()
   : null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -110,31 +112,26 @@ export function drawWaveformCard(
   ctx.stroke();
   ctx.restore();
 
-  // Waveform bars
+  // Waveform bars — left-to-right, matching HTML template layout exactly
+  // HTML: 18 bars, 3px wide, 3px gap, max height ~40px in 333px card
+  // Canvas is 2× scale: 6px wide, 6px gap, max height ~80px in 666px card
   const N = 18, bW = 6, bGap = 6;
   const totalBW = N * bW + (N - 1) * bGap;
   const bLeft = cX + (cW - totalBW) / 2;
-  const bBottom = cY + cH - 120;
+  const bBottom = cY + cH - 120; // matches HTML bottom:60px × 2
 
-  // Mirrored from center outward — inner bars use low-freq (loudest) bands
-  const half = N / 2; // 9
-  const centerX = cX + cW / 2;
-  for (let i = 0; i < half; i++) {
-    // i=0 is the innermost bar pair, i=8 is the outermost
-    const bandIdx = Math.floor((i / half) * (bands.length / 2));
+  ctx.save();
+  ctx.fillStyle = "#f8b8cc";
+  for (let i = 0; i < N; i++) {
+    const bandIdx = Math.floor((i / N) * bands.length);
     const amp = bands[bandIdx] ?? 0;
-    const bH = Math.max(8, amp * 80);
-    const offset = i * (bW + bGap);
-    ctx.save();
-    ctx.fillStyle = "#f8b8cc";
-    // Right side
-    rrp(ctx, centerX + offset + bGap / 2, bBottom - bH, bW, bH, 4);
+    // HTML formula: Math.max(3, 3 + v*37) — at 2× scale: Math.max(6, 6 + amp*74)
+    const bH = Math.max(6, 6 + amp * 74);
+    const bX = bLeft + i * (bW + bGap);
+    rrp(ctx, bX, bBottom - bH, bW, bH, 2);
     ctx.fill();
-    // Left side (mirror)
-    rrp(ctx, centerX - offset - bGap / 2 - bW, bBottom - bH, bW, bH, 4);
-    ctx.fill();
-    ctx.restore();
   }
+  ctx.restore();
 
   // In-card text (matches the HTML template)
   const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
@@ -252,9 +249,9 @@ export function drawNowPlayingCard(
   const totalSec = durationSec ?? 0;
   const durationLabel = totalSec > 0
     ? (totalSec < 60
-        ? `${Math.round(totalSec)} SEC`
-        : `${Math.max(1, Math.ceil(totalSec / 60))} MIN`)
-    : `${cfg.minutes || "24"} MIN`;
+        ? `0:${String(Math.round(totalSec)).padStart(2, "0")} Min`
+        : `${Math.max(1, Math.ceil(totalSec / 60))} Min`)
+    : `${cfg.minutes || "24"} Min`;
   const mins = durationLabel;
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
@@ -313,12 +310,13 @@ export function drawSoundOrbCard(
   orbAmpSmooth += (amp - orbAmpSmooth) * 0.08;
   const a = orbAmpSmooth;
 
-  // Ripple rings — constant slow expansion (3.2s period), 3 staggered, like
-  // ripples spreading on calm water. Brightness rises gently with the sound.
+  // Ripple rings — ease-out expansion matching CSS `animation: pulse 3.2s ease-out`
+  // Quadratic ease-out: starts fast, decelerates — same feel as the CSS preview.
   const period = 3.2;
   for (let i = 0; i < 3; i++) {
     const phase = (((t / period) + i / 3) % 1 + 1) % 1;
-    const r = orbR + phase * (orbR * 1.2);
+    const eased = 1 - Math.pow(1 - phase, 2); // quadratic ease-out
+    const r = orbR + eased * (orbR * 1.2);
     const opacity = (1 - phase) * a * 0.9;
     ctx.save();
     ctx.strokeStyle = `rgba(248,184,204,${opacity.toFixed(3)})`;

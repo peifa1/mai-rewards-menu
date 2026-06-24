@@ -1,5 +1,4 @@
-import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
 // Composition ID map: style key → Remotion composition name
 const COMPOSITION: Record<string, string> = {
@@ -8,128 +7,73 @@ const COMPOSITION: Record<string, string> = {
   soundorb: "SoundOrb",
 };
 
-function supabaseAdmin() {
-  const url = process.env.SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  if (!url || !key) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY on server");
-  return createClient(url, key);
-}
-
-export type TriggerRenderInput = {
-  jobId: string;
-  style: string;
-  config: {
-    title: string; eyebrow: string; genre: string; badge: string;
-    minutes: string; asmrLabel: string; cardLabel: string; timeStart: string;
-  };
-  audioPath: string;
-  imagePath: string;
-  durationSeconds: number;
+export type RenderConfig = {
+  title: string; eyebrow: string; genre: string; badge: string;
+  minutes: string; asmrLabel: string; cardLabel: string; timeStart: string;
 };
 
-export const triggerRender = createServerFn({ method: "POST" })
-  .validator((raw: unknown) => raw as TriggerRenderInput)
-  .handler(async ({ data }) => {
-    const { jobId, style, config, audioPath, imagePath, durationSeconds } = data;
-    const supabase = supabaseAdmin();
+export async function uploadToStorage(
+  path: string,
+  file: File | Blob,
+  contentType: string,
+): Promise<void> {
+  const { error } = await supabase.storage
+    .from("render-jobs")
+    .upload(path, file, { contentType, upsert: false });
+  if (error) throw new Error(error.message);
+}
 
-    // Create 2-hour signed URLs so GitHub Actions can fetch them
-    const audioSignedRes = await supabase.storage
-      .from("render-jobs")
-      .createSignedUrl(audioPath, 7200);
-    if (audioSignedRes.error) throw new Error(`Audio sign failed: ${audioSignedRes.error.message}`);
+export function publicUrl(path: string): string {
+  const base = import.meta.env.VITE_SUPABASE_URL as string;
+  return `${base}/storage/v1/object/public/render-jobs/${path}`;
+}
 
-    let imageSignedUrl = "";
-    if (imagePath) {
-      const imgRes = await supabase.storage.from("render-jobs").createSignedUrl(imagePath, 7200);
-      if (!imgRes.error) imageSignedUrl = imgRes.data.signedUrl;
-    }
+export async function dispatchRender(params: {
+  jobId: string;
+  style: string;
+  config: RenderConfig;
+  audioPublicUrl: string;
+  imagePublicUrl: string;
+  durationSeconds: number;
+}): Promise<void> {
+  const PAT   = import.meta.env.VITE_GITHUB_PAT   as string;
+  const OWNER = import.meta.env.VITE_GITHUB_OWNER  as string;
+  const REPO  = import.meta.env.VITE_GITHUB_REPO   as string;
 
-    const GITHUB_PAT = process.env.GITHUB_PAT;
-    const GITHUB_OWNER = process.env.GITHUB_OWNER ?? "peifa1";
-    const GITHUB_REPO = process.env.GITHUB_REPO ?? "mai-rewards-menu";
+  if (!PAT) throw new Error("VITE_GITHUB_PAT is not set — add it in Vercel environment variables");
 
-    if (!GITHUB_PAT) throw new Error("Missing GITHUB_PAT server env var");
+  const composition = COMPOSITION[params.style] ?? "Waveform";
 
-    const composition = COMPOSITION[style] ?? "Waveform";
-
-    const resp = await fetch(
-      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/render-teaser.yml/dispatches`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GITHUB_PAT}`,
-          Accept: "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ref: "main",
-          inputs: {
-            job_id: jobId,
-            style: composition,
-            config_json: JSON.stringify(config),
-            audio_url: audioSignedRes.data.signedUrl,
-            image_url: imageSignedUrl,
-            duration_seconds: String(Math.ceil(durationSeconds)),
-          },
-        }),
+  const resp = await fetch(
+    `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/render-teaser.yml/dispatches`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PAT}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        ref: "main",
+        inputs: {
+          job_id: params.jobId,
+          style: composition,
+          config_json: JSON.stringify(params.config),
+          audio_url: params.audioPublicUrl,
+          image_url: params.imagePublicUrl,
+          duration_seconds: String(Math.ceil(params.durationSeconds)),
+        },
+      }),
+    },
+  );
 
-    if (!resp.ok) {
-      const body = await resp.text();
-      throw new Error(`GitHub dispatch failed ${resp.status}: ${body}`);
-    }
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`GitHub dispatch failed (${resp.status}): ${body}`);
+  }
+}
 
-    return { jobId };
-  });
-
-export type PollRenderInput = { jobId: string };
-export type PollRenderResult =
-  | { status: "pending" }
-  | { status: "done"; downloadUrl: string }
-  | { status: "error"; message: string };
-
-export const pollRender = createServerFn({ method: "GET" })
-  .validator((raw: unknown) => raw as PollRenderInput)
-  .handler(async ({ data }): Promise<PollRenderResult> => {
-    const { jobId } = data;
-    const supabase = supabaseAdmin();
-
-    // Check for error file first
-    const errCheck = await supabase.storage
-      .from("render-jobs")
-      .createSignedUrl(`output/${jobId}.error`, 10);
-    if (!errCheck.error) {
-      // Error file exists — read its content
-      const errResp = await fetch(errCheck.data.signedUrl);
-      const msg = await errResp.text().catch(() => "Render failed");
-      return { status: "error", message: msg };
-    }
-
-    // Check for output file
-    const outCheck = await supabase.storage
-      .from("render-jobs")
-      .createSignedUrl(`output/${jobId}.mp4`, 3600);
-    if (!outCheck.error) {
-      return { status: "done", downloadUrl: outCheck.data.signedUrl };
-    }
-
-    return { status: "pending" };
-  });
-
-export const cleanupRender = createServerFn({ method: "POST" })
-  .validator((raw: unknown) => raw as { jobId: string; audioPath: string; imagePath: string })
-  .handler(async ({ data }) => {
-    const { jobId, audioPath, imagePath } = data;
-    const supabase = supabaseAdmin();
-    const toDelete: string[] = [
-      `output/${jobId}.mp4`,
-      `output/${jobId}.error`,
-      audioPath,
-    ];
-    if (imagePath) toDelete.push(imagePath);
-    await supabase.storage.from("render-jobs").remove(toDelete);
-    return { ok: true };
-  });
+export async function cleanupFiles(paths: string[]): Promise<void> {
+  await supabase.storage.from("render-jobs").remove(paths);
+}

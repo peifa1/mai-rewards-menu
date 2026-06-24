@@ -8,8 +8,7 @@ import {
   type AudioTeaserConfig,
   type TeaserStyle,
 } from "@/lib/buildAudioTeaser";
-import { supabase } from "@/integrations/supabase/client";
-import { triggerRender, cleanupRender } from "@/lib/renderApi";
+import { uploadToStorage, publicUrl, dispatchRender, cleanupFiles } from "@/lib/renderApi";
 
 // ── Palette ───────────────────────────────────────────────────────────────
 const INK      = "#fbeaea";
@@ -289,44 +288,32 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
       const ext = audioFile.name.split(".").pop() ?? "mp3";
       const audioPath = `audio/${jobId}.${ext}`;
 
-      // Upload audio
-      const { error: audioErr } = await supabase.storage
-        .from("render-jobs")
-        .upload(audioPath, audioFile, { contentType: audioFile.type || "audio/mpeg", upsert: false });
-      if (audioErr) throw new Error(`Audio upload: ${audioErr.message}`);
+      // Upload audio (use the file's MIME type; fall back for MKV which browsers often misreport)
+      const audioMime = audioFile.type || "audio/mpeg";
+      await uploadToStorage(audioPath, audioFile, audioMime);
 
       // Upload image (if any)
       let imagePath = "";
       if (cfg.image) {
         imagePath = `images/${jobId}.webp`;
         const blob = await fetch(cfg.image).then(r => r.blob());
-        const { error: imgErr } = await supabase.storage
-          .from("render-jobs")
-          .upload(imagePath, blob, { contentType: "image/webp", upsert: false });
-        if (imgErr) throw new Error(`Image upload: ${imgErr.message}`);
+        await uploadToStorage(imagePath, blob, "image/webp");
       }
 
       setRenderState({ phase: "queued", jobId, audioPath, imagePath });
 
-      // Trigger GitHub Actions via server function
-      await triggerRender({
-        data: {
-          jobId,
-          style,
-          config: {
-            title: cfg.title,
-            eyebrow: cfg.eyebrow,
-            genre: cfg.genre,
-            badge: cfg.badge,
-            minutes: cfg.minutes,
-            asmrLabel: cfg.asmrLabel,
-            cardLabel: cfg.cardLabel,
-            timeStart: cfg.timeStart,
-          },
-          audioPath,
-          imagePath,
-          durationSeconds: audioDuration,
+      // Dispatch GitHub Actions workflow — audio/image are accessed via public Supabase URLs
+      await dispatchRender({
+        jobId,
+        style,
+        config: {
+          title: cfg.title, eyebrow: cfg.eyebrow, genre: cfg.genre, badge: cfg.badge,
+          minutes: cfg.minutes, asmrLabel: cfg.asmrLabel,
+          cardLabel: cfg.cardLabel, timeStart: cfg.timeStart,
         },
+        audioPublicUrl: publicUrl(audioPath),
+        imagePublicUrl: imagePath ? publicUrl(imagePath) : "",
+        durationSeconds: audioDuration,
       });
 
       setRenderState({ phase: "rendering", jobId, audioPath, imagePath });
@@ -346,7 +333,9 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
     a.click();
     document.body.removeChild(a);
     // Cleanup storage after download (best-effort)
-    cleanupRender({ data: { jobId, audioPath, imagePath } }).catch(() => {});
+    const toDelete = [`output/${jobId}.mp4`, audioPath];
+    if (imagePath) toDelete.push(imagePath);
+    cleanupFiles(toDelete).catch(() => {});
     setRenderState({ phase: "idle" });
   }, [renderState, style]);
 

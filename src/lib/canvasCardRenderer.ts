@@ -108,12 +108,22 @@ export function drawWaveformCard(
   const bLeft = cX + (cW - totalBW) / 2;
   const bBottom = cY + cH - 120;
 
-  for (let i = 0; i < N; i++) {
-    const amp = bands[Math.floor((i / N) * bands.length)] ?? 0;
+  // Mirrored from center outward — inner bars use low-freq (loudest) bands
+  const half = N / 2; // 9
+  const centerX = cX + cW / 2;
+  for (let i = 0; i < half; i++) {
+    // i=0 is the innermost bar pair, i=8 is the outermost
+    const bandIdx = Math.floor((i / half) * (bands.length / 2));
+    const amp = bands[bandIdx] ?? 0;
     const bH = Math.max(8, amp * 80);
+    const offset = i * (bW + bGap);
     ctx.save();
     ctx.fillStyle = "#f8b8cc";
-    rrp(ctx, bLeft + i * (bW + bGap), bBottom - bH, bW, bH, 4);
+    // Right side
+    rrp(ctx, centerX + offset + bGap / 2, bBottom - bH, bW, bH, 4);
+    ctx.fill();
+    // Left side (mirror)
+    rrp(ctx, centerX - offset - bGap / 2 - bW, bBottom - bH, bW, bH, 4);
     ctx.fill();
     ctx.restore();
   }

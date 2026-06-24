@@ -218,6 +218,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   // ── Canvas recorder ──────────────────────────────────────────────────────
   const imgElRef = useRef<HTMLImageElement | null>(null);
   const [recState, setRecState] = useState<"idle" | "live" | "render">("idle");
+  const [renderTimeLeft, setRenderTimeLeft] = useState<string>("");
   const recMrRef = useRef<MediaRecorder | null>(null);
   const recChunksRef = useRef<Blob[]>([]);
   const recAnimRef = useRef<number | null>(null);
@@ -251,7 +252,9 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     for (let b = 0; b < n; b++) {
       let sum = 0;
       for (let k = 0; k < per; k++) sum += buf[b * per + k];
-      out.push((sum / per) / 255);
+      const raw = (sum / per) / 255;
+      // Square-root curve: boosts quiet ASMR voices without clipping loud ones
+      out.push(Math.min(1, Math.sqrt(raw) * 1.6));
     }
     return out;
   }
@@ -288,6 +291,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   function stopRec() {
     if (recAnimRef.current) { cancelAnimationFrame(recAnimRef.current); recAnimRef.current = null; }
     recMrRef.current?.stop();
+    setRenderTimeLeft("");
   }
 
   const startLiveRecording = useCallback(async () => {
@@ -417,10 +421,21 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     ctx2d.imageSmoothingQuality = "high";
     const scaleX = OUT_W / CANVAS_W, scaleY = OUT_H / CANVAS_H;
     const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+    let frameCount = 0;
+    function fmt(s: number) {
+      const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+      return `${m}:${String(sec).padStart(2, "0")}`;
+    }
     function tick() {
       recAnimRef.current = requestAnimationFrame(tick);
+      const elapsed = audioCtx.currentTime - startTime;
+      const progress = Math.min(1, elapsed / audioBuf.duration);
+      // Update timer display ~every second (30 fps → every 30 frames)
+      if (frameCount++ % 30 === 0) {
+        const left = Math.max(0, audioBuf.duration - elapsed);
+        setRenderTimeLeft(`${fmt(elapsed)} / ${fmt(audioBuf.duration)}  (${fmt(left)} left)`);
+      }
       const bands = computeBands(analyser, freqBuf, 18);
-      const progress = Math.min(1, (audioCtx.currentTime - startTime) / audioBuf.duration);
       ctx2d.save();
       ctx2d.scale(scaleX, scaleY);
       drawFrame(ctx2d, bands, progress);
@@ -647,10 +662,14 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
             style={{
               flex: 1, padding: "10px 0", borderRadius: 9,
               border: "1px solid rgba(255,100,100,0.6)", background: "rgba(255,80,80,0.12)",
-              color: "rgba(255,140,140,0.95)", fontSize: 9, letterSpacing: "0.26em",
+              color: "rgba(255,140,140,0.95)", fontSize: 8, letterSpacing: "0.12em",
               textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
+              lineHeight: 1.5,
             }}
-          >■  Stop</button>
+          ><div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <span>■  Stop</span>
+            {renderTimeLeft && <span style={{ fontSize: 7, opacity: 0.8, letterSpacing: "0.06em" }}>{renderTimeLeft}</span>}
+          </div></button>
         ) : (
           <button
             onClick={() => void startRenderRecording()}

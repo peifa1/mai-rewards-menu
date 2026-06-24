@@ -63,51 +63,6 @@ function drawBg(
   ctx.fillRect(0, 0, W, H);
 }
 
-function drawBottomStrip(ctx: CanvasRenderingContext2D, cfg: AudioTeaserConfig) {
-  const W = CANVAS_W, H = CANVAS_H;
-  const pad = 56;
-
-  const grad = ctx.createLinearGradient(0, H - 420, 0, H);
-  grad.addColorStop(0, "transparent");
-  grad.addColorStop(0.45, "rgba(6,2,4,0.92)");
-  grad.addColorStop(1, "rgba(6,2,4,0.92)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, H - 420, W, 420);
-
-  let y = H - 192;
-
-  ctx.save();
-  ctx.fillStyle = "#f8b8cc";
-  ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
-  (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "9px";
-  ctx.textAlign = "left";
-  ctx.fillText((cfg.eyebrow || "NEW DROP").toUpperCase(), pad, y);
-  ctx.restore();
-
-  y += 36;
-
-  ctx.save();
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `bold 46px Georgia, "Times New Roman", serif`;
-  (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "0px";
-  ctx.textAlign = "left";
-  ctx.fillText(cfg.title || "Whisper & Rain", pad, y);
-  ctx.restore();
-
-  y += 38;
-
-  ctx.save();
-  ctx.fillStyle = "#a98a92";
-  ctx.font = "22px ui-sans-serif, system-ui, sans-serif";
-  (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = "2px";
-  ctx.textAlign = "left";
-  ctx.fillText(
-    `${cfg.minutes || "24"} min · ${cfg.genre || "ASMR Roleplay"} · ${cfg.badge || "Exclusive"}`,
-    pad, y
-  );
-  ctx.restore();
-}
-
 // ── Waveform ──────────────────────────────────────────────────────────────
 
 export function drawWaveformCard(
@@ -119,11 +74,10 @@ export function drawWaveformCard(
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 56);
 
-  // Portrait card
-  const cardAreaH = CANVAS_H - 190;
+  // Portrait card — centered in full canvas
   const cW = 476, cH = 666;
   const cX = (W - cW) / 2;
-  const cY = (cardAreaH - cH) / 2;
+  const cY = (CANVAS_H - cH) / 2;
 
   ctx.save();
   rrp(ctx, cX, cY, cW, cH, 20);
@@ -181,8 +135,6 @@ export function drawWaveformCard(
   ctx.textAlign = "center";
   ctx.fillText(`— ${cfg.asmrLabel || "ASMR"} —`, cX + cW / 2, cY + cH - 26);
   ctx.restore();
-
-  drawBottomStrip(ctx, cfg);
 }
 
 // ── Now Playing ───────────────────────────────────────────────────────────
@@ -197,10 +149,9 @@ export function drawNowPlayingCard(
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 56);
 
-  const cardAreaH = CANVAS_H - 190;
   const cW = 476, cH = 666;
   const cX = (W - cW) / 2;
-  const cY = (cardAreaH - cH) / 2;
+  const cY = (CANVAS_H - cH) / 2;
 
   ctx.save();
   rrp(ctx, cX, cY, cW, cH, 20);
@@ -290,8 +241,6 @@ export function drawNowPlayingCard(
   ctx.textAlign = "right";
   ctx.fillText(`${cfg.minutes || "24"}:00`, sR, cY + cH - 30);
   ctx.restore();
-
-  drawBottomStrip(ctx, cfg);
 }
 
 // ── Sound Orb ─────────────────────────────────────────────────────────────
@@ -305,9 +254,8 @@ export function drawSoundOrbCard(
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 20);
 
-  const cardAreaH = CANVAS_H - 190;
   const orbX = W / 2;
-  const orbY = cardAreaH / 2;
+  const orbY = CANVAS_H / 2;
   const orbR = 150;
   const t = Date.now() / 1000;
 
@@ -356,8 +304,6 @@ export function drawSoundOrbCard(
   ctx.font = "20px ui-sans-serif, system-ui, sans-serif";
   ls.letterSpacing = "6.8px";
   ctx.textAlign = "center";
-  ctx.fillText(`· ${cfg.asmrLabel || "ASMR"} ·`, W / 2, cardAreaH - 100);
+  ctx.fillText(`· ${cfg.asmrLabel || "ASMR"} ·`, W / 2, orbY + 280);
   ctx.restore();
-
-  drawBottomStrip(ctx, cfg);
 }

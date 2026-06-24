@@ -1046,11 +1046,12 @@ function PerkPill({ perk, tierAccent = ACCENT_STD }: { perk: Perk; tierAccent?: 
   const color = perk.textColor || PILL_DEFAULT_TEXT;
   return (
     <div
-      className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest inline-flex items-center gap-1.5"
+      className="px-2.5 py-0.5 rounded-full text-[10px] tracking-widest inline-flex items-center gap-1.5"
       style={{
         background: bg,
         color,
         border: `1px solid ${border}`,
+        fontWeight: 700,
         boxShadow: perk.borderColor ? `0 0 10px ${accent}55` : "none",
       }}
     >

@@ -596,7 +596,7 @@ function Transport({
           color: ROSE, fontSize: 9, letterSpacing: "0.3em", textTransform: "uppercase",
           fontFamily: SANS,
         }}>♪  {hasAudio ? "Replace Audio" : "Upload Audio"}</span>
-        <input type="file" accept="audio/*" onChange={onFile} style={{ display: "none" }} />
+        <input type="file" accept="audio/*,video/*" onChange={onFile} style={{ display: "none" }} />
       </label>
 
       {/* Play / pause — drives all three previews */}

@@ -986,7 +986,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
             <div
               className="font-menu"
               style={{
-                fontSize: isTop ? 26 : 20,
+                fontSize: 20,
                 color: isKami && isTop ? ACCENT_KAMI : isTop ? ACCENT_TOP : ACCENT_MID,
                 letterSpacing: "-0.15em",
                 marginRight: 4,
@@ -1001,7 +1001,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
           <div
             className="font-menu"
             style={{
-              fontSize: isTop ? 66 : tier.premium ? 56 : 50,
+              fontSize: isTop ? 56 : tier.premium ? 56 : 50,
               color: nameColor,
               lineHeight: 1,
               letterSpacing: "0.04em",
@@ -1019,7 +1019,7 @@ function TierRow({ tier, images, onUpdateSlot, index, total }: { tier: Tier; ima
           <div
             className="font-menu"
             style={{
-              fontSize: isTop ? 34 : tier.premium ? 30 : 26,
+              fontSize: tier.premium ? 30 : 26,
               color: kanjiColor,
               opacity: 0.95,
             }}

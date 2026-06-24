@@ -199,7 +199,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
   style: TeaserStyle; kanji: string; label: string;
   onWindow: (style: TeaserStyle, win: Window | null) => void;
   audioMinutes: string | null;
-  onBroadcast: (src: string) => void;
+  onBroadcast: (src: string, style: TeaserStyle, cfg: AudioTeaserConfig) => void;
   audioFile: File | null;
   audioDuration: number;
 }) {
@@ -393,7 +393,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
 
       {/* Broadcast for OBS */}
       <button
-        onClick={() => previewSrc && onBroadcast(previewSrc)}
+        onClick={() => previewSrc && onBroadcast(previewSrc, style, cfg)}
         disabled={!previewSrc}
         style={{
           width: colW, padding: "10px 0", borderRadius: 9,
@@ -577,13 +577,41 @@ function Transport({
 // ── Broadcast (OBS) overlay ───────────────────────────────────────────────
 const MIC_BANDS = 32;
 
-function BroadcastOverlay({ src, onClose }: {
+function BroadcastOverlay({ src, style, cfg, onClose }: {
   src: string;
+  style: TeaserStyle;
+  cfg: AudioTeaserConfig;
   onClose: () => void;
 }) {
   const iframeWinRef = useRef<Window | null>(null);
   const [micStatus, setMicStatus] = useState<"pending" | "active" | "denied">("pending");
   const [pulse, setPulse] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const templateFile = style === "waveform" ? "audio_waveform.html"
+    : style === "nowplaying" ? "audio_nowplaying.html"
+    : "audio_soundorb.html";
+
+  const buildObsUrl = useCallback(() => {
+    const base = `${window.location.origin}/${templateFile}`;
+    const p = new URLSearchParams();
+    p.set("title", cfg.title);
+    p.set("eyebrow", cfg.eyebrow);
+    p.set("genre", cfg.genre);
+    p.set("badge", cfg.badge);
+    p.set("minutes", cfg.minutes);
+    p.set("asmrLabel", cfg.asmrLabel);
+    if (style === "waveform") p.set("cardLabel", cfg.cardLabel);
+    if (style === "nowplaying") p.set("timeStart", cfg.timeStart);
+    return `${base}?${p.toString()}`;
+  }, [cfg, style, templateFile]);
+
+  const handleCopyObsUrl = useCallback(() => {
+    navigator.clipboard.writeText(buildObsUrl()).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  }, [buildObsUrl]);
 
   const [vp, setVp] = useState(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 1280,
@@ -722,6 +750,26 @@ function BroadcastOverlay({ src, onClose }: {
           OBS: capture<br/>left area<br/>{dispW}×{dispH}
         </div>
 
+        {/* Copy OBS URL */}
+        <div style={{ textAlign: "center" }}>
+          <button
+            onClick={handleCopyObsUrl}
+            style={{
+              padding: "8px 12px", borderRadius: 8,
+              border: `1px solid ${copied ? "rgba(140,220,160,0.5)" : LINE_STR}`,
+              background: copied ? "rgba(120,200,140,0.12)" : "rgba(255,140,170,0.08)",
+              color: copied ? "rgba(160,230,180,0.95)" : ROSE,
+              fontSize: 8, letterSpacing: "0.2em",
+              textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
+              transition: "all 0.25s", width: "100%",
+            }}
+          >{copied ? "✓ Copied" : "⧉ OBS URL"}</button>
+          <div style={{
+            fontSize: 7, color: "rgba(255,255,255,0.2)", fontFamily: SANS,
+            marginTop: 5, letterSpacing: "0.1em", lineHeight: 1.6,
+          }}>Add as Browser<br/>Source · 390×488</div>
+        </div>
+
         {/* Exit */}
         <button
           onClick={onClose}
@@ -753,7 +801,7 @@ export function AudioTeaserBuilder() {
     else windowsRef.current.delete(style);
   }, []);
 
-  const [broadcastSrc, setBroadcastSrc] = useState<string | null>(null);
+  const [broadcast, setBroadcast] = useState<{ src: string; style: TeaserStyle; cfg: AudioTeaserConfig } | null>(null);
 
   const audioMinutes = engine.duration > 0
     ? String(Math.max(1, Math.ceil(engine.duration / 60)))
@@ -781,17 +829,19 @@ export function AudioTeaserBuilder() {
           <TeaserCard
             key={s.key} style={s.key} kanji={s.kanji} label={s.label}
             onWindow={onWindow} audioMinutes={audioMinutes}
-            onBroadcast={setBroadcastSrc}
+            onBroadcast={(src, style, cfg) => setBroadcast({ src, style, cfg })}
             audioFile={audioFile}
             audioDuration={engine.duration}
           />
         ))}
       </div>
 
-      {broadcastSrc && (
+      {broadcast && (
         <BroadcastOverlay
-          src={broadcastSrc}
-          onClose={() => setBroadcastSrc(null)}
+          src={broadcast.src}
+          style={broadcast.style}
+          cfg={broadcast.cfg}
+          onClose={() => setBroadcast(null)}
         />
       )}
     </div>

@@ -210,6 +210,14 @@ var CONFIG = {
   timeStart:   "03:12",          // seek bar left time
 };
 
+/* Override CONFIG from URL params (used when loaded as OBS Browser Source) */
+(function(){
+  var p = new URLSearchParams(location.search);
+  ['title','eyebrow','genre','badge','minutes','asmrLabel','timeStart'].forEach(function(k){
+    if(p.has(k)) CONFIG[k] = p.get(k);
+  });
+})();
+
 /* Apply config */
 document.getElementById('npTitle').innerHTML      = CONFIG.title;
 document.getElementById('npGenreLabel').textContent = CONFIG.asmrLabel + ' · ' + CONFIG.minutes + ' MIN';
@@ -240,21 +248,45 @@ document.getElementById('labelMeta').textContent  =
     mwf.appendChild(mb); miniBars.push(mb);
   }
 
-  /* Audio reactivity — driven by the parent page via postMessage.
-     When no audio is playing, the idle CSS mini-bar animation runs. */
+  /* Audio reactivity — driven by parent postMessage OR mic self-start below */
+  function npApply(s){
+    var n=s.length;
+    miniBars.forEach(function(mb,i){
+      var v=s[Math.floor(i/miniBars.length*n)]||0;
+      mb.style.animation='none';
+      mb.style.height=Math.max(2,Math.round(2+v*11))+'px';
+    });
+  }
   function npIdle(){ miniBars.forEach(function(mb){ mb.style.height=''; mb.style.animation=''; }); }
   window.addEventListener('message', function(e){
     var d = e.data || {};
-    if (d.type === 'aud' && d.s) {
-      var s = d.s, n = s.length;
-      miniBars.forEach(function(mb,i){
-        var v = s[Math.floor(i / miniBars.length * n)] || 0;
-        mb.style.animation = 'none';
-        mb.style.height = Math.max(2, Math.round(2 + v * 11)) + 'px';
-      });
-    } else if (d.type === 'audStop') {
-      npIdle();
-    }
+    if (d.type === 'aud' && d.s) { npApply(d.s); }
+    else if (d.type === 'audStop') { npIdle(); }
   });
+
+  /* Mic self-start — active when loaded directly as OBS Browser Source */
+  (function(){
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) return;
+    var BANDS=32;
+    navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(function(stream){
+      var Ctx=window.AudioContext||window.webkitAudioContext;
+      if(!Ctx) return;
+      var ctx=new Ctx(), an=ctx.createAnalyser();
+      an.fftSize=256; an.smoothingTimeConstant=0.82;
+      ctx.createMediaStreamSource(stream).connect(an);
+      var freq=new Uint8Array(an.frequencyBinCount);
+      (function tick(){
+        requestAnimationFrame(tick);
+        an.getByteFrequencyData(freq);
+        var per=Math.floor(freq.length/BANDS),s=[],sum=0;
+        for(var b=0;b<BANDS;b++){
+          var acc=0;
+          for(var k=0;k<per;k++) acc+=freq[b*per+k];
+          var v=acc/per/255; s.push(v); sum+=v;
+        }
+        npApply(s);
+      })();
+    }).catch(function(){});
+  })();
 </script>
 </body></html>

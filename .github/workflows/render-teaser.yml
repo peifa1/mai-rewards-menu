@@ -76,7 +76,10 @@ jobs:
             --props=/tmp/render-props.json \
             --codec=h264 \
             --crf=23 \
-            --concurrency=2
+            --concurrency=4 \
+            --gl=angle \
+            --image-format=jpeg \
+            --jpeg-quality=90
         env:
           REMOTION_CHROMIUM_FLAGS: "--disable-dev-shm-usage"
 

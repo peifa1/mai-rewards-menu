@@ -5,7 +5,7 @@ import { NowPlayingCard } from "./NowPlayingCard";
 import { SoundOrbCard } from "./SoundOrbCard";
 import type { RenderProps } from "./types";
 
-const FPS = 30;
+const FPS = 24;
 const WIDTH = 1080;
 const HEIGHT = 1350;
 

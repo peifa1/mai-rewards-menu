@@ -583,7 +583,7 @@ function BroadcastOverlay({ src, style, cfg, onClose }: {
   cfg: AudioTeaserConfig;
   onClose: () => void;
 }) {
-  const iframeWinRef = useRef<Window | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [micStatus, setMicStatus] = useState<"pending" | "active" | "denied">("pending");
   const [pulse, setPulse] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -665,7 +665,7 @@ function BroadcastOverlay({ src, style, cfg, onClose }: {
             sum += v;
           }
           const amp = Math.min(1, (sum / MIC_BANDS) * 1.7);
-          try { iframeWinRef.current?.postMessage({ type: "aud", s: bands, amp }, "*"); } catch {}
+          try { iframeRef.current?.contentWindow?.postMessage({ type: "aud", s: bands, amp }, "*"); } catch {}
         };
         rafId = requestAnimationFrame(tick);
       })
@@ -704,7 +704,8 @@ function BroadcastOverlay({ src, style, cfg, onClose }: {
           <iframe
             key={src}
             src={src}
-            onLoad={e => { iframeWinRef.current = (e.currentTarget as HTMLIFrameElement).contentWindow; }}
+            ref={iframeRef}
+            allow="microphone"
             style={{
               width: CARD_W, height: CARD_H, border: "none",
               transform: `scale(${scale})`, transformOrigin: "top left", display: "block",

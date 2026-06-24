@@ -586,22 +586,15 @@ function BroadcastOverlay({ src, style, cfg, onClose }: {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [micStatus, setMicStatus] = useState<"pending" | "active" | "denied">("pending");
   const [pulse, setPulse] = useState(false);
-  const [copied, setCopied] = useState(false);
-
   const templateFile = style === "waveform" ? "audio_waveform.html"
     : style === "nowplaying" ? "audio_nowplaying.html"
     : "audio_soundorb.html";
 
-  const handleCopyObsUrl = useCallback(() => {
-    // Store full config (including image data URL) in localStorage so the
-    // OBS Browser Source (same origin) can read it without URL length limits.
+  const handleOpenCardWindow = useCallback(() => {
     const storageKey = `obs_teaser_${style}`;
     localStorage.setItem(storageKey, JSON.stringify(cfg));
     const url = `${window.location.origin}/${templateFile}?obsKey=${encodeURIComponent(storageKey)}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {});
+    window.open(url, `obs_card_${style}`, `popup,width=390,height=488`);
   }, [cfg, style, templateFile]);
 
   const [vp, setVp] = useState(() => ({
@@ -745,24 +738,24 @@ function BroadcastOverlay({ src, style, cfg, onClose }: {
           OBS: capture<br/>left area<br/>{dispW}×{dispH}
         </div>
 
-        {/* Copy OBS URL */}
+        {/* Open card in popup for OBS */}
         <div style={{ textAlign: "center" }}>
           <button
-            onClick={handleCopyObsUrl}
+            onClick={handleOpenCardWindow}
             style={{
               padding: "8px 12px", borderRadius: 8,
-              border: `1px solid ${copied ? "rgba(140,220,160,0.5)" : LINE_STR}`,
-              background: copied ? "rgba(120,200,140,0.12)" : "rgba(255,140,170,0.08)",
-              color: copied ? "rgba(160,230,180,0.95)" : ROSE,
+              border: `1px solid ${LINE_STR}`,
+              background: "rgba(255,140,170,0.08)",
+              color: ROSE,
               fontSize: 8, letterSpacing: "0.2em",
               textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
-              transition: "all 0.25s", width: "100%",
+              width: "100%",
             }}
-          >{copied ? "✓ Copied" : "⧉ OBS URL"}</button>
+          >⊞ OBS Window</button>
           <div style={{
             fontSize: 7, color: "rgba(255,255,255,0.2)", fontFamily: SANS,
             marginTop: 5, letterSpacing: "0.1em", lineHeight: 1.6,
-          }}>Add as Browser<br/>Source · 390×488</div>
+          }}>Window Capture<br/>in OBS · 390×488</div>
         </div>
 
         {/* Exit */}

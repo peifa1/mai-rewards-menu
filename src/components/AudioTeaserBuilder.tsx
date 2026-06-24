@@ -301,7 +301,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
 
       setRenderState({ phase: "queued", jobId, audioUrl, imageUrl });
 
-      await dispatchRenderJob({
+      const dispatch = await dispatchRenderJob({
         data: {
           jobId, style,
           config: {
@@ -312,6 +312,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
           audioPath: audioUrl, imagePath: imageUrl, durationSeconds: audioDuration,
         },
       });
+      if (!dispatch.ok) throw new Error(dispatch.error ?? "Dispatch failed");
 
       setRenderState({ phase: "rendering", jobId, audioUrl, imageUrl });
       startPolling(jobId, audioUrl, imageUrl);

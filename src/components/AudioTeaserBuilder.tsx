@@ -221,7 +221,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   const [renderTimeLeft, setRenderTimeLeft] = useState<string>("");
   const recMrRef = useRef<MediaRecorder | null>(null);
   const recChunksRef = useRef<Blob[]>([]);
-  const recAnimRef = useRef<number | null>(null);
+  const recStopLoopRef = useRef<(() => void) | null>(null);
   const recAudioCtxRef = useRef<AudioContext | null>(null);
   const recMicRef = useRef<MediaStream | null>(null);
 
@@ -233,7 +233,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   }, [cfg.image]);
 
   useEffect(() => () => {
-    if (recAnimRef.current) cancelAnimationFrame(recAnimRef.current);
+    recStopLoopRef.current?.();
     recAudioCtxRef.current?.close();
     recMicRef.current?.getTracks().forEach(t => t.stop());
   }, []);
@@ -289,7 +289,8 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   }
 
   function stopRec() {
-    if (recAnimRef.current) { cancelAnimationFrame(recAnimRef.current); recAnimRef.current = null; }
+    recStopLoopRef.current?.();
+    recStopLoopRef.current = null;
     recMrRef.current?.stop();
     setRenderTimeLeft("");
   }
@@ -349,16 +350,15 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     ctx2d.imageSmoothingEnabled = true;
     ctx2d.imageSmoothingQuality = "high";
     const scaleX = OUT_W / CANVAS_W, scaleY = OUT_H / CANVAS_H;
-    function tick() {
-      recAnimRef.current = requestAnimationFrame(tick);
+    const intervalId = setInterval(() => {
       const bands = computeBands(analyser, freqBuf, 18);
       const progress = ((Date.now() / 1000) % 6) / 6;
       ctx2d.save();
       ctx2d.scale(scaleX, scaleY);
       drawFrame(ctx2d, bands, progress);
       ctx2d.restore();
-    }
-    tick();
+    }, 1000 / 30);
+    recStopLoopRef.current = () => clearInterval(intervalId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cfg, style]);
 
@@ -386,6 +386,13 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     analyser.smoothingTimeConstant = 0.82;
     const dest = audioCtx.createMediaStreamDestination();
     analyser.connect(dest);
+
+    // Keep AudioContext alive in background: Chrome suspends contexts that
+    // aren't connected to the speaker. A near-silent gain node prevents that.
+    const keepAlive = audioCtx.createGain();
+    keepAlive.gain.value = 0.0001;
+    analyser.connect(keepAlive);
+    keepAlive.connect(audioCtx.destination);
 
     const source = audioCtx.createBufferSource();
     source.buffer = audioBuf;
@@ -421,19 +428,13 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     ctx2d.imageSmoothingQuality = "high";
     const scaleX = OUT_W / CANVAS_W, scaleY = OUT_H / CANVAS_H;
     const freqBuf = new Uint8Array(analyser.frequencyBinCount);
-    // Use MessageChannel instead of requestAnimationFrame so the render loop
-    // keeps running even when the user switches to another tab (RAF pauses
-    // in background tabs; MessageChannel ports are not throttled)
-    let frameCount = 0;
-    let running = true;
+
     function fmt(s: number) {
       const m = Math.floor(s / 60), sec = Math.floor(s % 60);
       return `${m}:${String(sec).padStart(2, "0")}`;
     }
-    const mc = new MessageChannel();
-    mc.port2.onmessage = () => {
-      if (!running) return;
-      recAnimRef.current = requestAnimationFrame(() => {});  // keep ref non-null as stop signal
+    let frameCount = 0;
+    const intervalId = setInterval(() => {
       const elapsed = audioCtx.currentTime - startTime;
       const progress = Math.min(1, elapsed / audioBuf.duration);
       if (frameCount++ % 30 === 0) {
@@ -445,20 +446,8 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       ctx2d.scale(scaleX, scaleY);
       drawFrame(ctx2d, bands, progress);
       ctx2d.restore();
-      // Schedule next frame via MessageChannel (not throttled in background)
-      mc.port1.postMessage(null);
-    };
-
-    // Override stopRec cleanup to also stop the MessageChannel loop
-    const origStop = recMrRef;
-    void origStop; // prevent unused warning
-    recAnimRef.current = 1 as unknown as number; // mark as active
-    const stopLoop = () => { running = false; };
-    // Patch mr.onstop to also stop loop
-    const origOnStop = mr.onstop;
-    mr.onstop = (e) => { stopLoop(); origOnStop?.call(mr, e); };
-
-    mc.port1.postMessage(null); // kick off
+    }, 1000 / 30);
+    recStopLoopRef.current = () => clearInterval(intervalId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioFile, cfg, style]);
 

@@ -575,28 +575,20 @@ function Transport({
 }
 
 // ── Broadcast (OBS) overlay ───────────────────────────────────────────────
-function overlayBtn(primary: boolean): React.CSSProperties {
-  return {
-    padding: "8px 14px", borderRadius: 8,
-    border: `1px solid ${primary ? ROSE : LINE_STR}`,
-    background: primary ? "rgba(255,140,170,0.14)" : "rgba(0,0,0,0.45)",
-    color: primary ? ROSE : INK, fontSize: 10, letterSpacing: "0.18em",
-    textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
-  };
-}
+const MIC_BANDS = 32;
 
-function BroadcastOverlay({ src, engine, onRegister, onClose }: {
+function BroadcastOverlay({ src, onClose }: {
   src: string;
-  engine: ReturnType<typeof useAudioEngine>;
-  onRegister: (win: Window | null) => void;
   onClose: () => void;
 }) {
+  const iframeWinRef = useRef<Window | null>(null);
+  const [micStatus, setMicStatus] = useState<"pending" | "active" | "denied">("pending");
+  const [pulse, setPulse] = useState(false);
+
   const [vp, setVp] = useState(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 1280,
     h: typeof window !== "undefined" ? window.innerHeight : 800,
   }));
-  const [showUI, setShowUI] = useState(true);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
@@ -604,73 +596,143 @@ function BroadcastOverlay({ src, engine, onRegister, onClose }: {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const poke = useCallback(() => {
-    setShowUI(true);
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setShowUI(false), 2600);
-  }, []);
+  // Mic capture + analyser loop — all internal, doesn't touch the audio engine
   useEffect(() => {
-    poke();
-    return () => { if (hideTimer.current) clearTimeout(hideTimer.current); };
-  }, [poke]);
+    let rafId: number | null = null;
+    let cancelled = false;
+    let stream: MediaStream | null = null;
+    let ctx: AudioContext | null = null;
 
-  useEffect(() => () => { onRegister(null); }, [onRegister]);
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      .then(s => {
+        if (cancelled) { s.getTracks().forEach(t => t.stop()); return; }
+        stream = s;
+        const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        ctx = new Ctx();
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.82;
+        const micSrc = ctx.createMediaStreamSource(s);
+        micSrc.connect(analyser);
+        // intentionally not connected to destination — no mic playback
+        const freq = new Uint8Array(analyser.frequencyBinCount);
 
-  const ASPECT = CARD_W / CARD_H;
-  const targetH = Math.min(vp.h * 0.96, (vp.w * 0.96) / ASPECT);
-  const scale = targetH / CARD_H;
+        setMicStatus("active");
+
+        const tick = () => {
+          rafId = requestAnimationFrame(tick);
+          analyser.getByteFrequencyData(freq);
+          const per = Math.floor(freq.length / MIC_BANDS);
+          const bands: number[] = new Array(MIC_BANDS);
+          let sum = 0;
+          for (let b = 0; b < MIC_BANDS; b++) {
+            let acc = 0;
+            for (let k = 0; k < per; k++) acc += freq[b * per + k];
+            const v = acc / per / 255;
+            bands[b] = v;
+            sum += v;
+          }
+          const amp = Math.min(1, (sum / MIC_BANDS) * 1.7);
+          try { iframeWinRef.current?.postMessage({ type: "aud", s: bands, amp }, "*"); } catch {}
+        };
+        rafId = requestAnimationFrame(tick);
+      })
+      .catch(() => { if (!cancelled) setMicStatus("denied"); });
+
+    // Pulse the indicator dot every second while active
+    const pulseInterval = setInterval(() => setPulse(p => !p), 800);
+
+    return () => {
+      cancelled = true;
+      clearInterval(pulseInterval);
+      if (rafId != null) cancelAnimationFrame(rafId);
+      stream?.getTracks().forEach(t => t.stop());
+      ctx?.close().catch(() => {});
+    };
+  }, []);
+
+  const SIDEBAR_W = 160;
+  const availW = vp.w - SIDEBAR_W - 24;
+  const availH = vp.h - 24;
+  const scale = Math.min(availH / CARD_H, availW / CARD_W);
   const dispW = Math.round(CARD_W * scale);
   const dispH = Math.round(CARD_H * scale);
 
-  const start = useCallback(() => { engine.seek(0); void engine.play(); }, [engine]);
-
   return (
-    <div
-      onMouseMove={poke}
-      style={{
-        position: "fixed", inset: 0, zIndex: 9999, background: "#000",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}
-    >
-      <div style={{ width: dispW, height: dispH, position: "relative" }}>
-        <iframe
-          key={src}
-          src={src}
-          onLoad={e => onRegister((e.currentTarget as HTMLIFrameElement).contentWindow)}
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999, background: "#000",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      {/* Card — clean area for OBS to capture */}
+      <div style={{
+        flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+        height: "100%",
+      }}>
+        <div style={{ width: dispW, height: dispH, position: "relative", flexShrink: 0 }}>
+          <iframe
+            key={src}
+            src={src}
+            onLoad={e => { iframeWinRef.current = (e.currentTarget as HTMLIFrameElement).contentWindow; }}
+            style={{
+              width: CARD_W, height: CARD_H, border: "none",
+              transform: `scale(${scale})`, transformOrigin: "top left", display: "block",
+            }}
+            sandbox="allow-scripts"
+          />
+        </div>
+      </div>
+
+      {/* Right sidebar — controls outside the card, OBS ignores this column */}
+      <div style={{
+        width: SIDEBAR_W, height: "100%", flexShrink: 0,
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", gap: 28,
+        padding: "24px 12px",
+        borderLeft: "1px solid rgba(255,150,180,0.07)",
+      }}>
+        {/* Mic status indicator */}
+        <div style={{ textAlign: "center" }}>
+          <div style={{
+            width: 9, height: 9, borderRadius: "50%", margin: "0 auto 8px",
+            background: micStatus === "active"
+              ? (pulse ? "#e8c878" : "rgba(232,200,120,0.45)")
+              : micStatus === "denied" ? "#c87878" : "#555",
+            boxShadow: micStatus === "active" && pulse ? "0 0 8px #e8c878" : "none",
+            transition: "background 0.4s, box-shadow 0.4s",
+          }} />
+          <div style={{
+            fontSize: 8, letterSpacing: "0.3em", textTransform: "uppercase",
+            fontFamily: SANS, color: micStatus === "active" ? INK_DIM : "#c87878",
+          }}>
+            {micStatus === "pending" ? "Mic…" : micStatus === "active" ? "Mic Live" : "Mic Denied"}
+          </div>
+          {micStatus === "denied" && (
+            <div style={{
+              fontSize: 7, color: "rgba(200,120,120,0.7)", fontFamily: SANS,
+              marginTop: 6, letterSpacing: "0.1em", lineHeight: 1.5,
+            }}>Allow mic in<br/>browser settings</div>
+          )}
+        </div>
+
+        {/* Dimensions hint */}
+        <div style={{
+          fontSize: 8, color: "rgba(255,255,255,0.18)", fontFamily: SANS,
+          letterSpacing: "0.12em", textAlign: "center", lineHeight: 1.8,
+        }}>
+          OBS: capture<br/>left area<br/>{dispW}×{dispH}
+        </div>
+
+        {/* Exit */}
+        <button
+          onClick={onClose}
           style={{
-            width: CARD_W, height: CARD_H, border: "none",
-            transform: `scale(${scale})`, transformOrigin: "top left", display: "block",
+            padding: "8px 16px", borderRadius: 8,
+            border: `1px solid ${LINE_STR}`,
+            background: "rgba(0,0,0,0.5)",
+            color: INK_DIM, fontSize: 9, letterSpacing: "0.22em",
+            textTransform: "uppercase", fontFamily: SANS, cursor: "pointer",
           }}
-          sandbox="allow-scripts"
-        />
-      </div>
-
-      <div style={{
-        position: "fixed", top: 0, left: 0, right: 0,
-        display: "flex", alignItems: "center", gap: 12, padding: "14px 20px",
-        background: "linear-gradient(180deg, rgba(0,0,0,0.78), transparent)",
-        opacity: showUI ? 1 : 0, transition: "opacity 0.4s",
-        pointerEvents: showUI ? "auto" : "none",
-      }}>
-        <button onClick={start} style={overlayBtn(true)}>
-          {engine.playing ? "⟲  Restart" : "▶  Start from 0:00"}
-        </button>
-        {engine.playing && (
-          <button onClick={engine.pause} style={overlayBtn(false)}>❚❚  Pause</button>
-        )}
-        <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: SANS, fontSize: 11, color: INK_DIM, letterSpacing: "0.08em" }}>
-          {formatTime(engine.currentTime)} / {formatTime(engine.duration)} · {dispW}×{dispH}px
-        </span>
-        <button onClick={() => { engine.pause(); onClose(); }} style={overlayBtn(false)}>✕  Exit</button>
-      </div>
-
-      <div style={{
-        position: "fixed", bottom: 14, left: 0, right: 0, textAlign: "center",
-        fontFamily: SANS, fontSize: 10, color: INK_DIM, letterSpacing: "0.12em",
-        opacity: showUI ? 0.85 : 0, transition: "opacity 0.4s", pointerEvents: "none",
-      }}>
-        OBS: capture this window (crop to the {dispW}×{dispH} card) · start OBS recording, then press Start · trim the ends after
+        >✕  Exit</button>
       </div>
     </div>
   );
@@ -689,11 +751,6 @@ export function AudioTeaserBuilder() {
   const onWindow = useCallback((style: TeaserStyle, win: Window | null) => {
     if (win) windowsRef.current.set(style, win);
     else windowsRef.current.delete(style);
-  }, []);
-
-  const registerBroadcast = useCallback((win: Window | null) => {
-    if (win) windowsRef.current.set("__broadcast__", win);
-    else windowsRef.current.delete("__broadcast__");
   }, []);
 
   const [broadcastSrc, setBroadcastSrc] = useState<string | null>(null);
@@ -734,8 +791,6 @@ export function AudioTeaserBuilder() {
       {broadcastSrc && (
         <BroadcastOverlay
           src={broadcastSrc}
-          engine={engine}
-          onRegister={registerBroadcast}
           onClose={() => setBroadcastSrc(null)}
         />
       )}

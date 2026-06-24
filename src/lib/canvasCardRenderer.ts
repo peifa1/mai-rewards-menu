@@ -13,11 +13,12 @@ export const OUT_H = 1352;
 // Persistent smoothing state for the Sound Orb (one recording at a time).
 let orbAmpSmooth = 0;
 
-// Per-bar oscillator state for the Waveform card — mirrors the HTML idle animation
-// where each bar breathes independently. Initialised once; reused across frames.
-const WF_N = 18;
-const wfPhases = Array.from({ length: WF_N }, (_, i) => i * 0.7);
-const wfRates  = Array.from({ length: WF_N }, () => 0.6 + Math.random() * 0.8);
+// Per-bar oscillator state for the Waveform card.
+// Slow rates (0.15–0.35 Hz) + overall-amplitude driving gives a gentle, unified feel.
+const WF_N     = 18;
+const wfPhases = Array.from({ length: WF_N }, (_, i) => i * 1.1);
+const wfRates  = Array.from({ length: WF_N }, () => 0.15 + Math.random() * 0.2);
+const wfSmooth = Array.from({ length: WF_N }, () => 0);
 let   wfPrevT  = 0;
 
 // Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
@@ -124,16 +125,21 @@ export function drawWaveformCard(
   const dt = wfPrevT === 0 ? 0 : Math.min(now - wfPrevT, 0.05);
   wfPrevT = now;
 
+  // Overall amplitude — all bars breathe together
+  const overall = bands.length > 0 ? bands.reduce((a, b) => a + b, 0) / bands.length : 0;
+
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
   for (let i = 0; i < WF_N; i++) {
     wfPhases[i] += wfRates[i] * dt * Math.PI * 2;
-    const bandIdx = Math.floor((i / WF_N) * bands.length);
-    const e = bands[bandIdx] ?? 0;
+    const band = bands[Math.floor((i / WF_N) * bands.length)] ?? 0;
+    // 75% overall + 25% per-bar frequency — subtle variation, no single bar dominating
+    const target = overall * 0.75 + band * 0.25;
+    wfSmooth[i] += (target - wfSmooth[i]) * 0.06;
+    const e = wfSmooth[i];
     const osc = Math.sin(wfPhases[i]);
-    // Same formula as HTML: base + energy*scale + oscillation*energy
-    // At 2× scale: base=6 (HTML 3), energy*56 (HTML 28), osc*energy*32 (HTML 16)
-    const bH = Math.max(6, Math.round(6 + e * 56 + osc * e * 32));
+    // 2× scale of HTML: base=6, range=56, wobble=16
+    const bH = Math.max(6, Math.round(6 + e * 56 + osc * e * 16));
     const bX = bLeft + i * (bW + bGap);
     rrp(ctx, bX, bBottom - bH, bW, bH, 2);
     ctx.fill();

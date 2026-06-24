@@ -22,6 +22,9 @@ on:
       duration_seconds:
         description: "Audio duration in seconds"
         required: true
+      callback_url:
+        description: "Vercel URL to POST the finished MP4 to"
+        required: true
 
 jobs:
   render:
@@ -53,7 +56,7 @@ jobs:
 
       - name: Build props file
         run: |
-          cat > /tmp/render-props.json << 'PROPSEOF'
+          cat > /tmp/render-props.json << PROPSEOF
           {
             "style": "${{ inputs.style }}",
             "config": ${{ inputs.config_json }},
@@ -62,8 +65,6 @@ jobs:
             "durationSeconds": ${{ inputs.duration_seconds }}
           }
           PROPSEOF
-          echo "Props written:"
-          cat /tmp/render-props.json
 
       - name: Render video with Remotion
         working-directory: remotion
@@ -75,28 +76,23 @@ jobs:
             --props=/tmp/render-props.json \
             --codec=h264 \
             --crf=23 \
-            --concurrency=2 \
-            --log=verbose
+            --concurrency=2
         env:
           REMOTION_CHROMIUM_FLAGS: "--disable-dev-shm-usage"
 
-      - name: Upload MP4 to Supabase Storage
+      - name: Send MP4 to callback
         run: |
-          OUTPUT_PATH="output/${{ inputs.job_id }}.mp4"
-          curl -sf -X POST \
-            "${{ secrets.SUPABASE_URL }}/storage/v1/object/render-jobs/${OUTPUT_PATH}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+          curl -sf -X POST "${{ inputs.callback_url }}" \
+            -H "X-Render-Secret: ${{ secrets.RENDER_CALLBACK_SECRET }}" \
+            -H "X-Job-Id: ${{ inputs.job_id }}" \
             -H "Content-Type: video/mp4" \
             --data-binary @/tmp/render-output.mp4
-          echo "Uploaded to Supabase: render-jobs/${OUTPUT_PATH}"
 
-      - name: Write error file on failure
+      - name: Report failure to callback
         if: failure()
         run: |
-          ERROR_PATH="output/${{ inputs.job_id }}.error"
-          echo "Render failed. Check GitHub Actions logs." | \
-          curl -sf -X POST \
-            "${{ secrets.SUPABASE_URL }}/storage/v1/object/render-jobs/${ERROR_PATH}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+          curl -s -X POST "${{ inputs.callback_url }}" \
+            -H "X-Render-Secret: ${{ secrets.RENDER_CALLBACK_SECRET }}" \
+            -H "X-Job-Id: ${{ inputs.job_id }}" \
             -H "Content-Type: text/plain" \
-            --data-binary @-
+            -d "Render failed — check GitHub Actions run $GITHUB_RUN_ID"

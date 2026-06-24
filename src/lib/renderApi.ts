@@ -58,6 +58,16 @@ export const dispatchRenderJob = createServerFn({ method: "POST" })
     const REPO  = process.env.GITHUB_REPO  ?? "mai-rewards-menu";
     if (!PAT) throw new Error("Missing GITHUB_PAT server env var");
 
+    // Callback URL: GitHub Actions POSTs the finished MP4 here instead of
+    // uploading directly to Supabase (avoids exposing service role key in CI).
+    // VERCEL_URL is set automatically by Vercel on every deployment.
+    // VERCEL_URL is automatically set by Vercel on every deployment.
+    // APP_URL can override it (useful for preview vs production URLs).
+    const host = process.env.APP_URL
+      ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+    if (!host) throw new Error("Missing APP_URL env var — set it in Vercel to your site's URL");
+    const callbackUrl = `${host}/api/render-complete`;
+
     const resp = await fetch(
       `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/render-teaser.yml/dispatches`,
       {
@@ -77,6 +87,7 @@ export const dispatchRenderJob = createServerFn({ method: "POST" })
             audio_url: audioSigned.data.signedUrl,
             image_url: imageSignedUrl,
             duration_seconds: String(Math.ceil(data.durationSeconds)),
+            callback_url: callbackUrl,
           },
         }),
       },

@@ -1,28 +1,32 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 
-// Token endpoint for Vercel Blob client-side uploads.
-// The browser calls upload() from @vercel/blob/client, which hits this route
-// to get a short-lived upload token, then uploads the file directly to Vercel CDN.
+// Token endpoint for Vercel Blob client uploads.
+// Called automatically by @vercel/blob/client's upload() in the browser.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const body = await new Promise<HandleUploadBody>((resolve, reject) => {
-    let raw = "";
-    req.on("data", (chunk: Buffer) => { raw += chunk.toString(); });
-    req.on("end", () => { try { resolve(JSON.parse(raw)); } catch (e) { reject(e); } });
-    req.on("error", reject);
-  });
+  const body = req.body as HandleUploadBody;
+
+  const proto = (req.headers["x-forwarded-proto"] as string | undefined) ?? "https";
+  const host  = req.headers["host"] as string;
+  const url   = `${proto}://${host}${req.url}`;
+
+  // Flatten headers: Node gives string | string[] | undefined, Web Headers needs string
+  const flatHeaders: Record<string, string> = {};
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (v !== undefined) flatHeaders[k] = Array.isArray(v) ? v.join(", ") : v;
+  }
 
   try {
     const jsonResponse = await handleUpload({
       body,
-      request: req as unknown as Request,
-      onBeforeGenerateToken: async (pathname) => ({
-        allowedContentTypes: ["audio/*", "image/*", "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4", "image/webp", "image/jpeg", "image/png"],
-        tokenPayload: pathname,
+      request: new Request(url, { headers: new Headers(flatHeaders) }),
+      onBeforeGenerateToken: async () => ({
+        allowedContentTypes: [
+          "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4", "audio/aac",
+          "audio/x-m4a", "image/webp", "image/jpeg", "image/png",
+        ],
       }),
-      onUploadCompleted: async () => {
-        // Nothing to do — the URL is returned to the browser directly
-      },
+      onUploadCompleted: async () => {},
     });
     return res.status(200).json(jsonResponse);
   } catch (err) {

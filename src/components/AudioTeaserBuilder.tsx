@@ -8,7 +8,6 @@ import {
   type AudioTeaserConfig,
   type TeaserStyle,
 } from "@/lib/buildAudioTeaser";
-import { upload } from "@vercel/blob/client";
 import { dispatchRenderJob, checkRenderOutput, cleanupRenderFiles } from "@/lib/renderApi";
 
 // ── Palette ───────────────────────────────────────────────────────────────
@@ -279,13 +278,16 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
       const jobId = nanoid();
       const ext = audioFile.name.split(".").pop() ?? "mp3";
 
-      // Upload audio directly to Vercel Blob (client-side upload via token endpoint)
+      // Dynamic import avoids SSR side-effects from @vercel/blob/client
+      const { upload } = await import("@vercel/blob/client");
+
+      // Upload audio directly to Vercel Blob CDN via client upload
       const { url: audioUrl } = await upload(`audio/${jobId}.${ext}`, audioFile, {
         access: "public",
         handleUploadUrl: "/api/blob-upload",
       });
 
-      // Upload image directly to Vercel Blob (if any)
+      // Upload image directly to Vercel Blob CDN (if any)
       let imageUrl = "";
       if (cfg.image) {
         const imgBlob = await fetch(cfg.image).then(r => r.blob());

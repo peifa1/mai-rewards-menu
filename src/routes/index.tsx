@@ -1052,6 +1052,7 @@ function PerkPill({ perk, tierAccent = ACCENT_STD }: { perk: Perk; tierAccent?: 
         color,
         border: `1px solid ${border}`,
         fontWeight: 700,
+        fontFamily: "ui-sans-serif, system-ui, sans-serif",
         boxShadow: perk.borderColor ? `0 0 10px ${accent}55` : "none",
       }}
     >

@@ -8,7 +8,8 @@ import {
   type AudioTeaserConfig,
   type TeaserStyle,
 } from "@/lib/buildAudioTeaser";
-import { uploadToStorage, publicUrl, dispatchRender, cleanupFiles } from "@/lib/renderApi";
+import { supabase } from "@/integrations/supabase/client";
+import { dispatchRenderJob, checkRenderOutput, cleanupRenderFiles } from "@/lib/renderApi";
 
 // ── Palette ───────────────────────────────────────────────────────────────
 const INK      = "#fbeaea";
@@ -255,25 +256,16 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
   }, []);
 
   const startPolling = useCallback((jobId: string, audioPath: string, imagePath: string) => {
-    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-    const outputUrl = `${SUPABASE_URL}/storage/v1/object/public/render-jobs/output/${jobId}.mp4`;
-    const errorUrl  = `${SUPABASE_URL}/storage/v1/object/public/render-jobs/output/${jobId}.error`;
-
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        // Check error first
-        const errResp = await fetch(errorUrl, { method: "HEAD" });
-        if (errResp.ok) {
+        const result = await checkRenderOutput({ data: { jobId } });
+        if (result.status === "error") {
           clearInterval(pollRef.current!);
           setRenderState({ phase: "error", message: "Render failed — check GitHub Actions logs" });
-          return;
-        }
-        // Check output
-        const outResp = await fetch(outputUrl, { method: "HEAD" });
-        if (outResp.ok) {
+        } else if (result.status === "done" && result.downloadUrl) {
           clearInterval(pollRef.current!);
-          setRenderState({ phase: "done", jobId, audioPath, imagePath, downloadUrl: outputUrl });
+          setRenderState({ phase: "done", jobId, audioPath, imagePath, downloadUrl: result.downloadUrl });
         }
       } catch { /* network blip, try again next tick */ }
     }, 6000);
@@ -288,32 +280,37 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
       const ext = audioFile.name.split(".").pop() ?? "mp3";
       const audioPath = `audio/${jobId}.${ext}`;
 
-      // Upload audio (use the file's MIME type; fall back for MKV which browsers often misreport)
+      // Upload audio with anon key (bucket RLS allows anon INSERT)
       const audioMime = audioFile.type || "audio/mpeg";
-      await uploadToStorage(audioPath, audioFile, audioMime);
+      const { error: audioErr } = await supabase.storage
+        .from("render-jobs")
+        .upload(audioPath, audioFile, { contentType: audioMime, upsert: false });
+      if (audioErr) throw new Error(`Audio upload: ${audioErr.message}`);
 
       // Upload image (if any)
       let imagePath = "";
       if (cfg.image) {
         imagePath = `images/${jobId}.webp`;
         const blob = await fetch(cfg.image).then(r => r.blob());
-        await uploadToStorage(imagePath, blob, "image/webp");
+        const { error: imgErr } = await supabase.storage
+          .from("render-jobs")
+          .upload(imagePath, blob, { contentType: "image/webp", upsert: false });
+        if (imgErr) throw new Error(`Image upload: ${imgErr.message}`);
       }
 
       setRenderState({ phase: "queued", jobId, audioPath, imagePath });
 
-      // Dispatch GitHub Actions workflow — audio/image are accessed via public Supabase URLs
-      await dispatchRender({
-        jobId,
-        style,
-        config: {
-          title: cfg.title, eyebrow: cfg.eyebrow, genre: cfg.genre, badge: cfg.badge,
-          minutes: cfg.minutes, asmrLabel: cfg.asmrLabel,
-          cardLabel: cfg.cardLabel, timeStart: cfg.timeStart,
+      // Dispatch GitHub Actions via server function (signs URLs with service role key)
+      await dispatchRenderJob({
+        data: {
+          jobId, style,
+          config: {
+            title: cfg.title, eyebrow: cfg.eyebrow, genre: cfg.genre, badge: cfg.badge,
+            minutes: cfg.minutes, asmrLabel: cfg.asmrLabel,
+            cardLabel: cfg.cardLabel, timeStart: cfg.timeStart,
+          },
+          audioPath, imagePath, durationSeconds: audioDuration,
         },
-        audioPublicUrl: publicUrl(audioPath),
-        imagePublicUrl: imagePath ? publicUrl(imagePath) : "",
-        durationSeconds: audioDuration,
       });
 
       setRenderState({ phase: "rendering", jobId, audioPath, imagePath });
@@ -333,9 +330,9 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
     a.click();
     document.body.removeChild(a);
     // Cleanup storage after download (best-effort)
-    const toDelete = [`output/${jobId}.mp4`, audioPath];
+    const toDelete = [`output/${jobId}.mp4`, `output/${jobId}.error`, audioPath];
     if (imagePath) toDelete.push(imagePath);
-    cleanupFiles(toDelete).catch(() => {});
+    cleanupRenderFiles({ data: { paths: toDelete } }).catch(() => {});
     setRenderState({ phase: "idle" });
   }, [renderState, style]);
 

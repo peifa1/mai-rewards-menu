@@ -1,6 +1,10 @@
 'use server';
 import { createServerFn } from "@tanstack/react-start";
 
+// NOTE: @vercel/blob cannot be imported here — Nitro bundles as ESM but
+// @vercel/blob's transitive dep (@vercel/cli-config) uses require() at module
+// load time, which breaks ESM. Blob operations live in api/ instead.
+
 const COMPOSITION: Record<string, string> = {
   waveform: "Waveform",
   nowplaying: "NowPlaying",
@@ -31,7 +35,6 @@ export const dispatchRenderJob = createServerFn({ method: "POST" })
       const host = process.env.APP_URL
         ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
       if (!host) return { ok: false as const, error: "Missing APP_URL env var" };
-      const callbackUrl = `${host}/api/render-complete`;
 
       const resp = await fetch(
         `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/render-teaser.yml/dispatches`,
@@ -52,7 +55,7 @@ export const dispatchRenderJob = createServerFn({ method: "POST" })
               audio_url: data.audioPath,
               image_url: data.imagePath,
               duration_seconds: String(Math.ceil(data.durationSeconds)),
-              callback_url: callbackUrl,
+              callback_url: `${host}/api/render-complete`,
             },
           }),
         },
@@ -67,32 +70,4 @@ export const dispatchRenderJob = createServerFn({ method: "POST" })
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : String(e) };
     }
-  });
-
-export const checkRenderOutput = createServerFn({ method: "GET" })
-  .validator((d: unknown) => d as { jobId: string })
-  .handler(async ({ data }) => {
-    try {
-      const { list } = await import("@vercel/blob");
-
-      const { blobs: errBlobs } = await list({ prefix: `output/${data.jobId}.error` });
-      if (errBlobs.length > 0) return { status: "error" as const, downloadUrl: "" };
-
-      const { blobs: outBlobs } = await list({ prefix: `output/${data.jobId}.mp4` });
-      if (outBlobs.length > 0) return { status: "done" as const, downloadUrl: outBlobs[0].downloadUrl };
-
-      return { status: "pending" as const, downloadUrl: "" };
-    } catch {
-      return { status: "pending" as const, downloadUrl: "" };
-    }
-  });
-
-export const cleanupRenderFiles = createServerFn({ method: "POST" })
-  .validator((d: unknown) => d as { urls: string[] })
-  .handler(async ({ data }) => {
-    try {
-      const { del } = await import("@vercel/blob");
-      if (data.urls.length > 0) await del(data.urls);
-    } catch { /* best-effort */ }
-    return { ok: true };
   });

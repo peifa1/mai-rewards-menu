@@ -8,7 +8,7 @@ import {
   type AudioTeaserConfig,
   type TeaserStyle,
 } from "@/lib/buildAudioTeaser";
-import { dispatchRenderJob, checkRenderOutput, cleanupRenderFiles } from "@/lib/renderApi";
+import { dispatchRenderJob } from "@/lib/renderApi";
 
 // ── Palette ───────────────────────────────────────────────────────────────
 const INK      = "#fbeaea";
@@ -258,7 +258,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        const result = await checkRenderOutput({ data: { jobId } });
+        const result = await fetch(`/api/check-render?jobId=${jobId}`).then(r => r.json()) as { status: string; downloadUrl: string };
         if (result.status === "error") {
           clearInterval(pollRef.current!);
           setRenderState({ phase: "error", message: "Render failed — check GitHub Actions logs" });
@@ -337,7 +337,11 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
     // Cleanup blobs after download (best-effort)
     const toDelete = [downloadUrl, audioUrl];
     if (imageUrl) toDelete.push(imageUrl);
-    cleanupRenderFiles({ data: { urls: toDelete } }).catch(() => {});
+    fetch("/api/cleanup-render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urls: toDelete }),
+    }).catch(() => {});
     setRenderState({ phase: "idle" });
   }, [renderState, style]);
 

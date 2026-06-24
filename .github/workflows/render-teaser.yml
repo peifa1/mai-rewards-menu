@@ -82,7 +82,7 @@ jobs:
 
       - name: Send MP4 to callback
         run: |
-          curl -sf -X POST "${{ inputs.callback_url }}" \
+          curl -sfL -X POST "${{ inputs.callback_url }}" \
             -H "X-Render-Secret: ${{ secrets.RENDER_CALLBACK_SECRET }}" \
             -H "X-Job-Id: ${{ inputs.job_id }}" \
             -H "Content-Type: video/mp4" \
@@ -91,7 +91,7 @@ jobs:
       - name: Report failure to callback
         if: failure()
         run: |
-          curl -s -X POST "${{ inputs.callback_url }}" \
+          curl -sL -X POST "${{ inputs.callback_url }}" \
             -H "X-Render-Secret: ${{ secrets.RENDER_CALLBACK_SECRET }}" \
             -H "X-Job-Id: ${{ inputs.job_id }}" \
             -H "Content-Type: text/plain" \

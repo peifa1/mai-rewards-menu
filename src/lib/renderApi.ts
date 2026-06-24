@@ -32,9 +32,10 @@ export const dispatchRenderJob = createServerFn({ method: "POST" })
       const REPO  = process.env.GITHUB_REPO  ?? "mai-rewards-menu";
       if (!PAT) return { ok: false as const, error: "Missing GITHUB_PAT env var" };
 
-      const host = process.env.APP_URL
+      const rawHost = process.env.APP_URL
         ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
-      if (!host) return { ok: false as const, error: "Missing APP_URL env var" };
+      if (!rawHost) return { ok: false as const, error: "Missing APP_URL env var" };
+      const host = rawHost.replace(/\/+$/, "");
 
       const resp = await fetch(
         `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/render-teaser.yml/dispatches`,

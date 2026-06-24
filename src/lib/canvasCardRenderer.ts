@@ -13,13 +13,7 @@ export const OUT_H = 1352;
 // Persistent smoothing state for the Sound Orb (one recording at a time).
 let orbAmpSmooth = 0;
 
-// Per-bar oscillator state for the Waveform card.
-// Slow rates (0.15–0.35 Hz) + overall-amplitude driving gives a gentle, unified feel.
-const WF_N     = 18;
-const wfPhases = Array.from({ length: WF_N }, (_, i) => i * 1.1);
-const wfRates  = Array.from({ length: WF_N }, () => 0.15 + Math.random() * 0.2);
-const wfSmooth = Array.from({ length: WF_N }, () => 0);
-let   wfPrevT  = 0;
+const WF_N = 18;
 
 // Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
 // and in offscreen canvas recording contexts (no network request needed).
@@ -121,26 +115,11 @@ export function drawWaveformCard(
   const bLeft = cX + (cW - totalBW) / 2;
   const bBottom = cY + cH - 120;
 
-  const now = Date.now() / 1000;
-  const dt = wfPrevT === 0 ? 0 : Math.min(now - wfPrevT, 0.05);
-  wfPrevT = now;
-
-  // Overall amplitude — all bars breathe together
-  const overall = bands.length > 0 ? bands.reduce((a, b) => a + b, 0) / bands.length : 0;
-
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
   for (let i = 0; i < WF_N; i++) {
-    wfPhases[i] += wfRates[i] * dt * Math.PI * 2;
-    const band = bands[Math.floor((i / WF_N) * bands.length)] ?? 0;
-    // 75% overall + 25% per-bar frequency — subtle variation, no single bar dominating
-    const target = overall * 0.60 + band * 0.40;
-    const diff = target - wfSmooth[i];
-    wfSmooth[i] += diff * (diff > 0 ? 0.10 : 0.22);
-    const e = wfSmooth[i];
-    const osc = Math.sin(wfPhases[i]);
-    // 2× scale of HTML: base=6, range=148, wobble=40
-    const bH = Math.max(6, Math.round(6 + e * 148 + osc * e * 40));
+    const amp = bands[Math.floor((i / WF_N) * bands.length)] ?? 0;
+    const bH = Math.max(6, 6 + amp * 74);
     const bX = bLeft + i * (bW + bGap);
     rrp(ctx, bX, bBottom - bH, bW, bH, 2);
     ctx.fill();

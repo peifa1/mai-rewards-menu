@@ -8,7 +8,7 @@ import {
   type AudioTeaserConfig,
   type TeaserStyle,
 } from "@/lib/buildAudioTeaser";
-import { supabase } from "@/integrations/supabase/client";
+import { upload } from "@vercel/blob/client";
 import { dispatchRenderJob, checkRenderOutput, cleanupRenderFiles } from "@/lib/renderApi";
 
 // ── Palette ───────────────────────────────────────────────────────────────
@@ -36,9 +36,9 @@ const CARD_H = 488;
 type RenderPhase =
   | { phase: "idle" }
   | { phase: "uploading" }
-  | { phase: "queued"; jobId: string; audioPath: string; imagePath: string }
-  | { phase: "rendering"; jobId: string; audioPath: string; imagePath: string }
-  | { phase: "done"; jobId: string; audioPath: string; imagePath: string; downloadUrl: string }
+  | { phase: "queued"; jobId: string; audioUrl: string; imageUrl: string }
+  | { phase: "rendering"; jobId: string; audioUrl: string; imageUrl: string }
+  | { phase: "done"; jobId: string; audioUrl: string; imageUrl: string; downloadUrl: string }
   | { phase: "error"; message: string };
 
 // ── Storage ───────────────────────────────────────────────────────────────
@@ -255,7 +255,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
     if (pollRef.current) clearInterval(pollRef.current);
   }, []);
 
-  const startPolling = useCallback((jobId: string, audioPath: string, imagePath: string) => {
+  const startPolling = useCallback((jobId: string, audioUrl: string, imageUrl: string) => {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
@@ -265,7 +265,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
           setRenderState({ phase: "error", message: "Render failed — check GitHub Actions logs" });
         } else if (result.status === "done" && result.downloadUrl) {
           clearInterval(pollRef.current!);
-          setRenderState({ phase: "done", jobId, audioPath, imagePath, downloadUrl: result.downloadUrl });
+          setRenderState({ phase: "done", jobId, audioUrl, imageUrl, downloadUrl: result.downloadUrl });
         }
       } catch { /* network blip, try again next tick */ }
     }, 6000);
@@ -278,29 +278,27 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
     try {
       const jobId = nanoid();
       const ext = audioFile.name.split(".").pop() ?? "mp3";
-      const audioPath = `audio/${jobId}.${ext}`;
 
-      // Upload audio with anon key (bucket RLS allows anon INSERT)
-      const audioMime = audioFile.type || "audio/mpeg";
-      const { error: audioErr } = await supabase.storage
-        .from("render-jobs")
-        .upload(audioPath, audioFile, { contentType: audioMime, upsert: false });
-      if (audioErr) throw new Error(`Audio upload: ${audioErr.message}`);
+      // Upload audio directly to Vercel Blob (client-side upload via token endpoint)
+      const { url: audioUrl } = await upload(`audio/${jobId}.${ext}`, audioFile, {
+        access: "public",
+        handleUploadUrl: "/api/blob-upload",
+      });
 
-      // Upload image (if any)
-      let imagePath = "";
+      // Upload image directly to Vercel Blob (if any)
+      let imageUrl = "";
       if (cfg.image) {
-        imagePath = `images/${jobId}.webp`;
-        const blob = await fetch(cfg.image).then(r => r.blob());
-        const { error: imgErr } = await supabase.storage
-          .from("render-jobs")
-          .upload(imagePath, blob, { contentType: "image/webp", upsert: false });
-        if (imgErr) throw new Error(`Image upload: ${imgErr.message}`);
+        const imgBlob = await fetch(cfg.image).then(r => r.blob());
+        const imgFile = new File([imgBlob], `${jobId}.webp`, { type: "image/webp" });
+        const result = await upload(`images/${jobId}.webp`, imgFile, {
+          access: "public",
+          handleUploadUrl: "/api/blob-upload",
+        });
+        imageUrl = result.url;
       }
 
-      setRenderState({ phase: "queued", jobId, audioPath, imagePath });
+      setRenderState({ phase: "queued", jobId, audioUrl, imageUrl });
 
-      // Dispatch GitHub Actions via server function (signs URLs with service role key)
       await dispatchRenderJob({
         data: {
           jobId, style,
@@ -309,12 +307,12 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
             minutes: cfg.minutes, asmrLabel: cfg.asmrLabel,
             cardLabel: cfg.cardLabel, timeStart: cfg.timeStart,
           },
-          audioPath, imagePath, durationSeconds: audioDuration,
+          audioPath: audioUrl, imagePath: imageUrl, durationSeconds: audioDuration,
         },
       });
 
-      setRenderState({ phase: "rendering", jobId, audioPath, imagePath });
-      startPolling(jobId, audioPath, imagePath);
+      setRenderState({ phase: "rendering", jobId, audioUrl, imageUrl });
+      startPolling(jobId, audioUrl, imageUrl);
     } catch (e) {
       setRenderState({ phase: "error", message: e instanceof Error ? e.message : String(e) });
     }
@@ -322,17 +320,17 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
 
   const handleDownload = useCallback(() => {
     if (renderState.phase !== "done") return;
-    const { downloadUrl, jobId, audioPath, imagePath } = renderState;
+    const { downloadUrl, jobId, audioUrl, imageUrl } = renderState;
     const a = document.createElement("a");
     a.href = downloadUrl;
     a.download = `${style}-teaser-${jobId}.mp4`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    // Cleanup storage after download (best-effort)
-    const toDelete = [`output/${jobId}.mp4`, `output/${jobId}.error`, audioPath];
-    if (imagePath) toDelete.push(imagePath);
-    cleanupRenderFiles({ data: { paths: toDelete } }).catch(() => {});
+    // Cleanup blobs after download (best-effort)
+    const toDelete = [downloadUrl, audioUrl];
+    if (imageUrl) toDelete.push(imageUrl);
+    cleanupRenderFiles({ data: { urls: toDelete } }).catch(() => {});
     setRenderState({ phase: "idle" });
   }, [renderState, style]);
 

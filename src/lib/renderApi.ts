@@ -1,26 +1,12 @@
 'use server';
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
+import { list, del } from "@vercel/blob";
 
-// Composition ID map: style key → Remotion composition name
 const COMPOSITION: Record<string, string> = {
   waveform: "Waveform",
   nowplaying: "NowPlaying",
   soundorb: "SoundOrb",
 };
-
-function supabaseAdmin() {
-  const url = process.env.SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  if (!url || !key) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-  return createClient(url, key);
-}
-
-// ── Upload: returns an upload URL so the browser can PUT the file ──────────
-// For private buckets the browser still uploads with the anon key — this
-// just validates that the bucket exists and creates signed upload URLs.
-// (Supabase anon key can upload if INSERT policy is granted on the bucket.)
-// We keep this simple: browser uses anon key directly.
 
 export type DispatchInput = {
   jobId: string;
@@ -29,43 +15,22 @@ export type DispatchInput = {
     title: string; eyebrow: string; genre: string; badge: string;
     minutes: string; asmrLabel: string; cardLabel: string; timeStart: string;
   };
-  audioPath: string;
-  imagePath: string;
+  audioPath: string;  // Vercel Blob public URL
+  imagePath: string;  // Vercel Blob public URL (or empty)
   durationSeconds: number;
 };
 
 export const dispatchRenderJob = createServerFn({ method: "POST" })
   .validator((d: unknown) => d as DispatchInput)
   .handler(async ({ data }) => {
-    const supabase = supabaseAdmin();
-
-    // Create 2-hour signed URLs for GitHub Actions to download audio/image
-    const audioSigned = await supabase.storage
-      .from("render-jobs")
-      .createSignedUrl(data.audioPath, 7200);
-    if (audioSigned.error) throw new Error(`Sign audio: ${audioSigned.error.message}`);
-
-    let imageSignedUrl = "";
-    if (data.imagePath) {
-      const imgSigned = await supabase.storage
-        .from("render-jobs")
-        .createSignedUrl(data.imagePath, 7200);
-      if (!imgSigned.error) imageSignedUrl = imgSigned.data.signedUrl;
-    }
-
     const PAT   = process.env.GITHUB_PAT!;
     const OWNER = process.env.GITHUB_OWNER ?? "peifa1";
     const REPO  = process.env.GITHUB_REPO  ?? "mai-rewards-menu";
     if (!PAT) throw new Error("Missing GITHUB_PAT server env var");
 
-    // Callback URL: GitHub Actions POSTs the finished MP4 here instead of
-    // uploading directly to Supabase (avoids exposing service role key in CI).
-    // VERCEL_URL is set automatically by Vercel on every deployment.
-    // VERCEL_URL is automatically set by Vercel on every deployment.
-    // APP_URL can override it (useful for preview vs production URLs).
     const host = process.env.APP_URL
       ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
-    if (!host) throw new Error("Missing APP_URL env var — set it in Vercel to your site's URL");
+    if (!host) throw new Error("Missing APP_URL env var");
     const callbackUrl = `${host}/api/render-complete`;
 
     const resp = await fetch(
@@ -84,8 +49,9 @@ export const dispatchRenderJob = createServerFn({ method: "POST" })
             job_id: data.jobId,
             style: COMPOSITION[data.style] ?? "Waveform",
             config_json: JSON.stringify(data.config),
-            audio_url: audioSigned.data.signedUrl,
-            image_url: imageSignedUrl,
+            // Blob public URLs — GitHub Actions downloads them directly
+            audio_url: data.audioPath,
+            image_url: data.imagePath,
             duration_seconds: String(Math.ceil(data.durationSeconds)),
             callback_url: callbackUrl,
           },
@@ -104,34 +70,22 @@ export const dispatchRenderJob = createServerFn({ method: "POST" })
 export const checkRenderOutput = createServerFn({ method: "GET" })
   .validator((d: unknown) => d as { jobId: string })
   .handler(async ({ data }) => {
-    const supabase = supabaseAdmin();
-
-    // Check if error file exists
-    const { data: errList } = await supabase.storage
-      .from("render-jobs")
-      .list("output", { search: `${data.jobId}.error` });
-    if (errList && errList.length > 0) {
+    const { blobs: errBlobs } = await list({ prefix: `output/${data.jobId}.error` });
+    if (errBlobs.length > 0) {
       return { status: "error" as const, downloadUrl: "" };
     }
 
-    // Check if output MP4 exists
-    const { data: outList } = await supabase.storage
-      .from("render-jobs")
-      .list("output", { search: `${data.jobId}.mp4` });
-    if (outList && outList.length > 0) {
-      const signed = await supabase.storage
-        .from("render-jobs")
-        .createSignedUrl(`output/${data.jobId}.mp4`, 3600);
-      if (signed.data) return { status: "done" as const, downloadUrl: signed.data.signedUrl };
+    const { blobs: outBlobs } = await list({ prefix: `output/${data.jobId}.mp4` });
+    if (outBlobs.length > 0) {
+      return { status: "done" as const, downloadUrl: outBlobs[0].downloadUrl };
     }
 
     return { status: "pending" as const, downloadUrl: "" };
   });
 
 export const cleanupRenderFiles = createServerFn({ method: "POST" })
-  .validator((d: unknown) => d as { paths: string[] })
+  .validator((d: unknown) => d as { urls: string[] })
   .handler(async ({ data }) => {
-    const supabase = supabaseAdmin();
-    await supabase.storage.from("render-jobs").remove(data.paths);
+    if (data.urls.length > 0) await del(data.urls);
     return { ok: true };
   });

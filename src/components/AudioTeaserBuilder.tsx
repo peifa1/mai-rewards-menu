@@ -128,6 +128,8 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   const recStopLoopRef = useRef<(() => void) | null>(null);
   const recAudioCtxRef = useRef<AudioContext | null>(null);
   const recMicRef = useRef<MediaStream | null>(null);
+  const audioDurationRef = useRef(audioDuration);
+  useEffect(() => { audioDurationRef.current = audioDuration; }, [audioDuration]);
 
   useEffect(() => {
     if (!cfg.image) { imgElRef.current = null; return; }
@@ -172,7 +174,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     if (style === "waveform") {
       drawWaveformCard(ctx2d, cfg, img, bands);
     } else if (style === "nowplaying") {
-      drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDuration || undefined);
+      drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDurationRef.current || undefined);
     } else {
       const amp = bands.reduce((a, b) => a + b, 0) / Math.max(1, bands.length);
       drawSoundOrbCard(ctx2d, cfg, img, amp);

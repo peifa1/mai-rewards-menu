@@ -205,7 +205,7 @@ document.getElementById('labelMeta').textContent     =
       orbPortrait.style.boxShadow = '0 0 ' + Math.round(24 + a * 50) +
         'px rgba(248,184,204,' + (0.3 + a * 0.45).toFixed(2) + ')';
     }
-    orbRings.forEach(function(r){ r.style.opacity = (0.3 + a * 0.55).toFixed(2); });
+    orbRings.forEach(function(r){ r.style.opacity = (a * 0.9).toFixed(2); });
   }
   window.addEventListener('message', function(e){
     var d = e.data || {};

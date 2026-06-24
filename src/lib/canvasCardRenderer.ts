@@ -12,6 +12,11 @@ export const OUT_H = 1352;
 // Persistent smoothing state for the Sound Orb (one recording at a time).
 let orbAmpSmooth = 0;
 
+// Sakura PNG — loaded once, used in Now Playing card
+const _sakuraImg = (typeof window !== "undefined")
+  ? (() => { const i = new Image(); i.src = "/sakura_spin.png"; return i; })()
+  : null;
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function rrp(
@@ -150,28 +155,18 @@ export function drawWaveformCard(
   ctx.restore();
 }
 
-// Vector sakura blossom (replaces the template's spinning PNG)
-function drawSakura(ctx: CanvasRenderingContext2D, cx: number, cy: number, R: number, rot: number) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(rot);
-  ctx.fillStyle = "#f8b8cc";
-  ctx.shadowColor = "rgba(248,184,204,0.7)";
-  ctx.shadowBlur = 10;
-  for (let i = 0; i < 5; i++) {
+// Sakura PNG spinner — matches the HTML template's spinning img
+function drawSakura(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, rot: number) {
+  const img = _sakuraImg;
+  if (img?.complete && img.naturalWidth > 0) {
     ctx.save();
-    ctx.rotate((i / 5) * Math.PI * 2);
-    ctx.beginPath();
-    ctx.ellipse(0, -R * 0.55, R * 0.32, R * 0.5, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.shadowColor = "rgba(248,184,204,0.7)";
+    ctx.shadowBlur = 10;
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
     ctx.restore();
   }
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = "#fff0f5";
-  ctx.beginPath();
-  ctx.arc(0, 0, R * 0.16, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
 }
 
 // ── Now Playing ───────────────────────────────────────────────────────────
@@ -227,8 +222,8 @@ export function drawNowPlayingCard(
   ctx.fillText("NOW PLAYING", cX + 32, cY + 40);
   ctx.restore();
 
-  // Spinning sakura — top-right
-  drawSakura(ctx, cX + cW - 52, cY + 52, 34, t * 1.2);
+  // Spinning sakura — top-right (5s period matches CSS animation:spin 5s linear infinite)
+  drawSakura(ctx, cX + cW - 48, cY + 48, 52, t * (Math.PI * 2 / 5));
 
   // Title — bottom-left, with mini waveform bars beside it
   const titleY = cY + cH - 96;
@@ -242,25 +237,31 @@ export function drawNowPlayingCard(
   const titleW = ctx.measureText(title).width;
   ctx.restore();
 
-  // Mini waveform bars beside the title (5 bars, audio-driven)
+  // Mini waveform bars beside the title (9 bars, matching HTML template)
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
-  for (let i = 0; i < 5; i++) {
-    const v = bands[Math.floor((i / 5) * bands.length)] ?? 0;
-    const h = Math.max(4, v * 26);
-    ctx.fillRect(cX + 32 + titleW + 16 + i * 8, titleY - h, 4, h);
+  const N_MINI = 9;
+  for (let i = 0; i < N_MINI; i++) {
+    const v = bands[Math.floor((i / N_MINI) * bands.length)] ?? 0;
+    const h = Math.max(2, v * 26);
+    ctx.fillRect(cX + 32 + titleW + 12 + i * 6, titleY - h, 3, h);
   }
   ctx.restore();
 
-  // Genre label under title (ASMR · N MIN)
+  // Genre label under title (ASMR · N MIN or N SEC)
   const totalSec = durationSec ?? 0;
-  const mins = totalSec > 0 ? Math.max(1, Math.ceil(totalSec / 60)) : (cfg.minutes || "24");
+  const durationLabel = totalSec > 0
+    ? (totalSec < 60
+        ? `${Math.round(totalSec)} SEC`
+        : `${Math.max(1, Math.ceil(totalSec / 60))} MIN`)
+    : `${cfg.minutes || "24"} MIN`;
+  const mins = durationLabel;
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
   ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
   ls.letterSpacing = "4px";
   ctx.textAlign = "left";
-  ctx.fillText(`${cfg.asmrLabel || "ASMR"} · ${mins} MIN`, cX + 32, titleY + 30);
+  ctx.fillText(`${cfg.asmrLabel || "ASMR"} · ${mins}`, cX + 32, titleY + 30);
   ctx.restore();
 
   // Seek bar
@@ -318,7 +319,7 @@ export function drawSoundOrbCard(
   for (let i = 0; i < 3; i++) {
     const phase = (((t / period) + i / 3) % 1 + 1) % 1;
     const r = orbR + phase * (orbR * 1.2);
-    const opacity = (1 - phase) * (0.28 + a * 0.5);
+    const opacity = (1 - phase) * a * 0.9;
     ctx.save();
     ctx.strokeStyle = `rgba(248,184,204,${opacity.toFixed(3)})`;
     ctx.lineWidth = 1.5;

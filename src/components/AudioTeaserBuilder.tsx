@@ -315,8 +315,12 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
 
       setRenderState({ phase: "rendering", jobId, audioUrl, imageUrl });
       startPolling(jobId, audioUrl, imageUrl);
-    } catch (e) {
-      setRenderState({ phase: "error", message: e instanceof Error ? e.message : String(e) });
+    } catch (e: unknown) {
+      let msg = "Render failed";
+      if (e instanceof Error) msg = e.message;
+      else if (e && typeof e === "object" && "message" in e) msg = String((e as { message: unknown }).message);
+      else if (typeof e === "string") msg = e;
+      setRenderState({ phase: "error", message: msg.slice(0, 120) });
     }
   }, [audioFile, cfg, style, audioDuration, startPolling]);
 

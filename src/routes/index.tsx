@@ -450,7 +450,7 @@ function PatreonShowcase() {
         cacheBust: true,
         pixelRatio: 2,
         width: 1080,
-        height: 1440,
+        height: 1280,
         fontEmbedCSS,
         filter: (node: HTMLElement) =>
           !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
@@ -585,7 +585,7 @@ function CanvasScaler({ children, innerRef }: { children: React.ReactNode; inner
     return () => window.removeEventListener("resize", update);
   }, []);
   return (
-    <div style={{ width: 1080 * scale, height: 1440 * scale }} className="relative">
+    <div style={{ width: 1080 * scale, height: 1280 * scale }} className="relative">
       <div
         ref={innerRef}
         style={{
@@ -614,7 +614,7 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       className="relative font-menu"
       style={{
         width: 1080,
-        height: 1440,
+        height: 1280,
         overflow: "hidden",
         background:
           "radial-gradient(ellipse at 30% 20%, #6b1230 0%, #4a0c22 35%, #2a0712 70%, #1a040c 100%)",
@@ -659,11 +659,11 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       ))}
 
       {[
-        { x: 120, y: 1110, r: 20, s: 0.7, o: 0.55 },
-        { x: 260, y: 1160, r: -35, s: 0.55, o: 0.45 },
-        { x: 820, y: 1130, r: 48, s: 0.6, o: 0.5 },
-        { x: 940, y: 1170, r: -12, s: 0.5, o: 0.45 },
-        { x: 60, y: 1180, r: 65, s: 0.45, o: 0.4 },
+        { x: 120, y: 1060, r: 20, s: 0.7, o: 0.55 },
+        { x: 260, y: 1110, r: -35, s: 0.55, o: 0.45 },
+        { x: 820, y: 1080, r: 48, s: 0.6, o: 0.5 },
+        { x: 940, y: 1120, r: -12, s: 0.5, o: 0.45 },
+        { x: 60, y: 1130, r: 65, s: 0.45, o: 0.4 },
       ].map((pt, i) => (
         <img
           key={`f${i}`}
@@ -682,10 +682,9 @@ function Canvas({ tiers, slots, onUpdateSlot, dateText }: { tiers: Tier[]; slots
       {[
         { x: 18, y: 320, r: -22, s: 0.55, o: 0.18 },
         { x: 8, y: 470, r: 40, s: 0.45, o: 0.15 },
-        { x: 30, y: 620, r: -50, s: 0.5, o: 0.16 },
+        { x: 30, y: 610, r: -50, s: 0.5, o: 0.16 },
         { x: 10, y: 780, r: 25, s: 0.4, o: 0.14 },
-        { x: 36, y: 930, r: 60, s: 0.5, o: 0.16 },
-        { x: 14, y: 1060, r: -30, s: 0.45, o: 0.13 },
+        { x: 36, y: 880, r: 60, s: 0.5, o: 0.16 },
       ].map((pt, i) => (
         <img
           key={`b${i}`}

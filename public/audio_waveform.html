@@ -206,9 +206,15 @@ document.getElementById('labelMeta').textContent     =
 
   /* Audio reactivity — driven by parent postMessage OR mic self-start below */
   function wfApply(s){
-    var n=s.length;
+    var n=s.length, nb=bars.length;
     bars.forEach(function(b,i){
-      var v=s[Math.floor(i/bars.length*n)]||0;
+      // Log-scale band mapping: spreads bars across the spectrum musically
+      var bandIdx=Math.round(Math.pow(n, i/(nb-1)))-1;
+      bandIdx=Math.max(0,Math.min(n-1,bandIdx));
+      var v=s[bandIdx]||0;
+      // Boost higher bands — they naturally have less energy than bass
+      var boost=1+( i/nb)*2.5;
+      v=Math.min(1,v*boost);
       b.style.animation='none';
       b.style.height=Math.max(3,Math.round(3+v*37))+'px';
     });

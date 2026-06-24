@@ -8,7 +8,6 @@ import {
   type AudioTeaserConfig,
   type TeaserStyle,
 } from "@/lib/buildAudioTeaser";
-import { encodeVideoBlob, downloadBlob } from "@/lib/encodeVideo";
 
 // ── Palette ───────────────────────────────────────────────────────────────
 const INK      = "#fbeaea";
@@ -103,45 +102,17 @@ function Section({ title, accent, children }: {
   );
 }
 
-// ── Render progress bar ───────────────────────────────────────────────────
-function RenderProgress({ progress, stage }: { progress: number; stage: string }) {
-  return (
-    <div style={{ width: "100%", marginBottom: 10 }}>
-      <div style={{
-        fontSize: 8, letterSpacing: "0.28em", fontFamily: SANS,
-        color: ROSE, textTransform: "uppercase", marginBottom: 5,
-        display: "flex", justifyContent: "space-between",
-      }}>
-        <span>{stage === "video" ? "Rendering frames" : stage === "audio" ? "Encoding audio" : "Finalising"}</span>
-        <span>{Math.round(progress * 100)}%</span>
-      </div>
-      <div style={{ height: 3, background: "rgba(255,150,180,0.14)", borderRadius: 2 }}>
-        <div style={{
-          height: "100%", borderRadius: 2,
-          background: ROSE,
-          width: `${Math.round(progress * 100)}%`,
-          transition: "width 0.2s",
-        }} />
-      </div>
-    </div>
-  );
-}
-
 // ── Single card column ────────────────────────────────────────────────────
-function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, audioFile }: {
+function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast }: {
   style: TeaserStyle; kanji: string; label: string;
   onWindow: (style: TeaserStyle, win: Window | null) => void;
   audioMinutes: string | null;
   onBroadcast: (src: string) => void;
-  audioFile: File | null;
 }) {
   const [cfg, setCfg] = useState<AudioTeaserConfig>(() => loadStored(style));
   const [previewSrc, setPreviewSrc] = useState("");
   const blobRef = useRef("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [rendering, setRendering] = useState(false);
-  const [renderProgress, setRenderProgress] = useState(0);
-  const [renderStage, setRenderStage] = useState<"video" | "audio" | "mux">("video");
 
   const set = useCallback(<K extends keyof AudioTeaserConfig>(key: K, val: AudioTeaserConfig[K]) => {
     setCfg(prev => {
@@ -235,43 +206,6 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
         }}
       >●  Broadcast for OBS</button>
 
-      {/* Render MP4 */}
-      {rendering
-        ? <RenderProgress progress={renderProgress} stage={renderStage} />
-        : (
-          <button
-            disabled={!audioFile}
-            onClick={async () => {
-              if (!audioFile) return;
-              setRendering(true);
-              setRenderProgress(0);
-              try {
-                const blob = await encodeVideoBlob(style, cfg, audioFile, (frac, stage) => {
-                  setRenderProgress(frac);
-                  setRenderStage(stage);
-                });
-                const base = (cfg.title || style).replace(/[^a-z0-9]/gi, "_").toLowerCase();
-                downloadBlob(blob, `${base}_${style}.mp4`);
-              } catch (err) {
-                console.error("Render failed:", err);
-                alert(`Render failed: ${err instanceof Error ? err.message : String(err)}`);
-              } finally {
-                setRendering(false);
-                setRenderProgress(0);
-              }
-            }}
-            style={{
-              width: colW, padding: "10px 0", borderRadius: 9,
-              border: `1px solid ${audioFile ? "#a0e4b8" : LINE_STR}`,
-              background: audioFile ? "rgba(140,210,170,0.10)" : "transparent",
-              color: audioFile ? "#a0e4b8" : INK_DIM,
-              fontSize: 9, letterSpacing: "0.28em", textTransform: "uppercase",
-              fontFamily: SANS, cursor: audioFile ? "pointer" : "default",
-            }}
-          >▼  Render MP4{!audioFile ? "  (upload audio first)" : ""}</button>
-        )
-      }
-
       {/* Editor panel */}
       <div style={{
         background: PANEL,
@@ -343,15 +277,12 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, onBroadcast, 
 }
 
 // ── Transport bar ─────────────────────────────────────────────────────────
-function Transport({ engine, onAudioFile }: {
-  engine: ReturnType<typeof useAudioEngine>;
-  onAudioFile: (f: File) => void;
-}) {
+function Transport({ engine }: { engine: ReturnType<typeof useAudioEngine> }) {
   const { hasAudio, fileName, playing, duration, currentTime, load, toggle, seek } = engine;
 
   const onFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f) { load(f); onAudioFile(f); }
+    if (f) load(f);
     e.target.value = "";
   }, [load]);
 
@@ -526,7 +457,6 @@ export function AudioTeaserBuilder() {
   const windowsRef = useRef<Map<string, Window>>(new Map());
   const getTargets = useCallback(() => Array.from(windowsRef.current.values()), []);
   const engine = useAudioEngine(getTargets);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
 
   const onWindow = useCallback((style: TeaserStyle, win: Window | null) => {
     if (win) windowsRef.current.set(style, win);
@@ -554,7 +484,7 @@ export function AudioTeaserBuilder() {
         style={{ display: "none" }}
       />
 
-      <Transport engine={engine} onAudioFile={setAudioFile} />
+      <Transport engine={engine} />
 
       <div style={{
         display: "flex", gap: 24, marginTop: 22,
@@ -564,7 +494,7 @@ export function AudioTeaserBuilder() {
           <TeaserCard
             key={s.key} style={s.key} kanji={s.kanji} label={s.label}
             onWindow={onWindow} audioMinutes={audioMinutes}
-            onBroadcast={setBroadcastSrc} audioFile={audioFile}
+            onBroadcast={setBroadcastSrc}
           />
         ))}
       </div>

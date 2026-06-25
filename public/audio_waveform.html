@@ -221,7 +221,7 @@ document.getElementById('labelMeta').textContent     =
   var isPlaying = false;
   var wfLastFrameT = 0; // for time-delta smoothing
 
-  function wfApplyFFT(freqBuf, sampleRate, fftSize) {
+  function wfApplyFFT(freqBuf, sampleRate, fftSize, freqL, freqR) {
     // Time-delta so attack/decay matches renderer regardless of monitor Hz.
     // Formula: alpha_dt = 1 - (1 - alpha_60fps)^(dt*60)
     var now = performance.now();
@@ -231,6 +231,7 @@ document.getElementById('labelMeta').textContent     =
     var atk = 1 - Math.pow(1 - WF_ATK, dtN);
     var dec = 1 - Math.pow(1 - WF_DEC, dtN);
 
+    var stereo = !!(freqL && freqR);
     var binHz = sampleRate / fftSize;
     var minHz = 60, maxHz = 18000;
     var target = new Array(N);
@@ -239,10 +240,22 @@ document.getElementById('labelMeta').textContent     =
       var fHi = minHz * Math.pow(maxHz / minHz, (i + 1) / N);
       var bLo = Math.max(0, Math.floor(fLo / binHz));
       var bHi = Math.min(freqBuf.length - 1, Math.ceil(fHi / binHz));
-      var sum2 = 0, cnt = Math.max(1, bHi - bLo + 1);
-      for (var k = bLo; k <= bHi; k++) { var v = freqBuf[k] / 255; sum2 += v * v; }
-      var rms = Math.sqrt(sum2 / cnt);
+      var cnt = Math.max(1, bHi - bLo + 1);
       var pos = i / (N - 1);
+      var rms;
+      if (stereo) {
+        var sumL = 0, sumR = 0;
+        for (var k = bLo; k <= bHi; k++) {
+          var vL = freqL[k] / 255; sumL += vL * vL;
+          var vR = freqR[k] / 255; sumR += vR * vR;
+        }
+        // Blend: bar 0 = pure left channel, bar N-1 = pure right channel
+        rms = Math.sqrt(sumL / cnt) * (1 - pos) + Math.sqrt(sumR / cnt) * pos;
+      } else {
+        var sum2 = 0;
+        for (var k2 = bLo; k2 <= bHi; k2++) { var v2 = freqBuf[k2] / 255; sum2 += v2 * v2; }
+        rms = Math.sqrt(sum2 / cnt);
+      }
       target[i] = Math.min(1, rms * (1 + WF_TILT * pos) * WF_GAIN);
     }
     // Neighbor smoothing
@@ -272,7 +285,9 @@ document.getElementById('labelMeta').textContent     =
         lastSampleRate = d.sampleRate;
         lastFftSize = d.fftSize || 4096;
         isPlaying = true;
-        wfApplyFFT(lastFreqBuf, lastSampleRate, lastFftSize);
+        var freqL = d.freqL ? new Uint8Array(d.freqL) : null;
+        var freqR = d.freqR ? new Uint8Array(d.freqR) : null;
+        wfApplyFFT(lastFreqBuf, lastSampleRate, lastFftSize, freqL, freqR);
       }
     }
     else if (d.type === 'audStop') { isPlaying = false; wfIdle(); }

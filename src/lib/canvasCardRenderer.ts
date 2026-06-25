@@ -95,9 +95,11 @@ export function drawWaveformCard(
   ctx: CanvasRenderingContext2D,
   cfg: AudioTeaserConfig,
   imgEl: HTMLImageElement | null,
-  freqBuf: Uint8Array,     // raw FFT byte array from AnalyserNode
-  sampleRate: number,      // AudioContext.sampleRate
-  dt: number = 1 / 60     // seconds since last frame — for frame-rate-independent smoothing
+  freqBuf: Uint8Array,          // mono/fallback FFT
+  sampleRate: number,
+  dt: number = 1 / 60,
+  freqL?: Uint8Array,           // left channel FFT (stereo spatial)
+  freqR?: Uint8Array            // right channel FFT (stereo spatial)
 ) {
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 56);
@@ -131,19 +133,32 @@ export function drawWaveformCard(
   // Match HTML: bars at bottom:52px, height:56px → center = cH - (52+28)*2 from card top
   const bCenterY = cY + cH - 160;
 
-  // Per-bar log-spaced FFT with tilt + attack/decay (matches sandbox)
+  // Per-bar log-spaced FFT with stereo spatial blend + tilt + gain
   const binHz   = sampleRate / (freqBuf.length * 2);
   const minHz   = 60, maxHz = 18000;
+  const stereo  = !!(freqL && freqR);
   const target  = new Float32Array(WF_N);
   for (let i = 0; i < WF_N; i++) {
     const fLo = minHz * Math.pow(maxHz / minHz, i / WF_N);
     const fHi = minHz * Math.pow(maxHz / minHz, (i + 1) / WF_N);
     const bLo = Math.max(0, Math.floor(fLo / binHz));
     const bHi = Math.min(freqBuf.length - 1, Math.ceil(fHi / binHz));
-    let sum2 = 0, cnt = Math.max(1, bHi - bLo + 1);
-    for (let k = bLo; k <= bHi; k++) { const v = freqBuf[k] / 255; sum2 += v * v; }
-    const rms = Math.sqrt(sum2 / cnt);
-    const pos = i / (WF_N - 1);
+    const cnt  = Math.max(1, bHi - bLo + 1);
+    const pos  = i / (WF_N - 1);
+    let rms: number;
+    if (stereo) {
+      let sumL = 0, sumR = 0;
+      for (let k = bLo; k <= bHi; k++) {
+        const vL = freqL![k] / 255; sumL += vL * vL;
+        const vR = freqR![k] / 255; sumR += vR * vR;
+      }
+      // Blend: bar 0 = pure left channel, bar N-1 = pure right channel
+      rms = Math.sqrt(sumL / cnt) * (1 - pos) + Math.sqrt(sumR / cnt) * pos;
+    } else {
+      let sum2 = 0;
+      for (let k = bLo; k <= bHi; k++) { const v = freqBuf[k] / 255; sum2 += v * v; }
+      rms = Math.sqrt(sum2 / cnt);
+    }
     target[i] = Math.min(1, rms * (1 + WF_TILT * pos) * WF_GAIN);
   }
   // Neighbor smoothing

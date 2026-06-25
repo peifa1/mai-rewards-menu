@@ -16,13 +16,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const BANDS = 32;
 
-export type AudioFramePayload = { type: "aud"; s: number[]; amp: number; freq?: number[]; sampleRate?: number; fftSize?: number };
+export type AudioFramePayload = { type: "aud"; s: number[]; amp: number; freq?: number[]; freqL?: number[]; freqR?: number[]; sampleRate?: number; fftSize?: number };
 
 export function useAudioEngine(getTargets: () => Window[]) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const analyserLRef = useRef<AnalyserNode | null>(null);
+  const analyserRRef = useRef<AnalyserNode | null>(null);
   const freqRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
+  const freqLRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
+  const freqRRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const rafRef = useRef<number | null>(null);
   const objectUrlRef = useRef<string>("");
 
@@ -41,12 +45,26 @@ export function useAudioEngine(getTargets: () => Window[]) {
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 4096;
     analyser.smoothingTimeConstant = 0.65;
+    const analyserL = ctx.createAnalyser();
+    analyserL.fftSize = 4096;
+    analyserL.smoothingTimeConstant = 0.65;
+    const analyserR = ctx.createAnalyser();
+    analyserR.fftSize = 4096;
+    analyserR.smoothingTimeConstant = 0.65;
     const src = ctx.createMediaElementSource(audio);
+    const splitter = ctx.createChannelSplitter(2);
     src.connect(analyser);
     analyser.connect(ctx.destination);
+    src.connect(splitter);
+    splitter.connect(analyserL, 0);
+    splitter.connect(analyserR, 1);
     ctxRef.current = ctx;
     analyserRef.current = analyser;
+    analyserLRef.current = analyserL;
+    analyserRRef.current = analyserR;
     freqRef.current = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
+    freqLRef.current = new Uint8Array(new ArrayBuffer(analyserL.frequencyBinCount));
+    freqRRef.current = new Uint8Array(new ArrayBuffer(analyserR.frequencyBinCount));
   }, []);
 
   const broadcast = useCallback((msg: unknown) => {
@@ -63,6 +81,10 @@ export function useAudioEngine(getTargets: () => Window[]) {
     if (!analyser || !freq || !audio) return;
 
     analyser.getByteFrequencyData(freq);
+    const freqL = freqLRef.current;
+    const freqR = freqRRef.current;
+    if (analyserLRef.current && freqL) analyserLRef.current.getByteFrequencyData(freqL);
+    if (analyserRRef.current && freqR) analyserRRef.current.getByteFrequencyData(freqR);
     const per = Math.floor(freq.length / BANDS);
     const s = new Array<number>(BANDS);
     let sum = 0;
@@ -75,9 +97,8 @@ export function useAudioEngine(getTargets: () => Window[]) {
     }
     // Overall loudness, lightly emphasized so the orb visibly breathes.
     const amp = Math.min(1, (sum / BANDS) * 1.7);
-    // Send raw freq array so waveform iframe can do its own per-bar FFT mapping.
     const ctx = ctxRef.current;
-    broadcast({ type: "aud", s, amp, freq: Array.from(freq), sampleRate: ctx?.sampleRate ?? 48000, fftSize: analyser.fftSize });
+    broadcast({ type: "aud", s, amp, freq: Array.from(freq), freqL: freqL ? Array.from(freqL) : undefined, freqR: freqR ? Array.from(freqR) : undefined, sampleRate: ctx?.sampleRate ?? 48000, fftSize: analyser.fftSize });
     setCurrentTime(audio.currentTime);
   }, [broadcast]);
 

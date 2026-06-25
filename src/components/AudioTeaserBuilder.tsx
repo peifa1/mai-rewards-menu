@@ -181,11 +181,13 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     progress: number,
     freqBuf?: Uint8Array,
     sampleRate?: number,
-    dt?: number
+    dt?: number,
+    freqL?: Uint8Array,
+    freqR?: Uint8Array
   ) {
     const img = imgElRef.current;
     if (style === "waveform" && freqBuf && sampleRate) {
-      drawWaveformCard(ctx2d, cfg, img, freqBuf, sampleRate, dt);
+      drawWaveformCard(ctx2d, cfg, img, freqBuf, sampleRate, dt, freqL, freqR);
     } else if (style === "nowplaying") {
       drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDurationRef.current || undefined);
     } else {
@@ -237,11 +239,22 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext as typeof AudioContext;
     const audioCtx = new AudioCtx();
     recAudioCtxRef.current = audioCtx;
+    const micSrc = audioCtx.createMediaStreamSource(mic);
     const analyser = audioCtx.createAnalyser();
     analyser.fftSize = 4096;
     analyser.smoothingTimeConstant = 0.65;
-    audioCtx.createMediaStreamSource(mic).connect(analyser);
+    const splitter = audioCtx.createChannelSplitter(2);
+    const analyserL = audioCtx.createAnalyser();
+    analyserL.fftSize = 4096; analyserL.smoothingTimeConstant = 0.65;
+    const analyserR = audioCtx.createAnalyser();
+    analyserR.fftSize = 4096; analyserR.smoothingTimeConstant = 0.65;
+    micSrc.connect(analyser);
+    micSrc.connect(splitter);
+    splitter.connect(analyserL, 0);
+    splitter.connect(analyserR, 1);
     const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+    const freqLBuf = new Uint8Array(analyserL.frequencyBinCount);
+    const freqRBuf = new Uint8Array(analyserR.frequencyBinCount);
 
     const canvas = document.createElement("canvas");
     canvas.width = OUT_W; canvas.height = OUT_H;
@@ -275,11 +288,13 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       const dt = Math.min((now - lastT) / 1000, 0.1);
       lastT = now;
       analyser.getByteFrequencyData(freqBuf);
+      analyserL.getByteFrequencyData(freqLBuf);
+      analyserR.getByteFrequencyData(freqRBuf);
       const bands = computeBands(analyser, freqBuf, 18);
       const progress = ((Date.now() / 1000) % 6) / 6;
       ctx2d.save();
       ctx2d.scale(scaleX, scaleY);
-      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate, dt);
+      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate, dt, freqLBuf, freqRBuf);
       ctx2d.restore();
     }, 1000 / 60);
     recStopLoopRef.current = () => clearInterval(intervalId);
@@ -308,6 +323,11 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     const analyser = audioCtx.createAnalyser();
     analyser.fftSize = 4096;
     analyser.smoothingTimeConstant = 0.65;
+    const splitter = audioCtx.createChannelSplitter(2);
+    const analyserL = audioCtx.createAnalyser();
+    analyserL.fftSize = 4096; analyserL.smoothingTimeConstant = 0.65;
+    const analyserR = audioCtx.createAnalyser();
+    analyserR.fftSize = 4096; analyserR.smoothingTimeConstant = 0.65;
     const dest = audioCtx.createMediaStreamDestination();
     analyser.connect(dest);
 
@@ -321,6 +341,9 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     const source = audioCtx.createBufferSource();
     source.buffer = audioBuf;
     source.connect(analyser);
+    source.connect(splitter);
+    splitter.connect(analyserL, 0);
+    splitter.connect(analyserR, 1);
 
     const canvas = document.createElement("canvas");
     canvas.width = OUT_W; canvas.height = OUT_H;
@@ -354,6 +377,8 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     ctx2d.imageSmoothingQuality = "high";
     const scaleX = OUT_W / CANVAS_W, scaleY = OUT_H / CANVAS_H;
     const freqBuf = new Uint8Array(analyser.frequencyBinCount);
+    const freqLBuf = new Uint8Array(analyserL.frequencyBinCount);
+    const freqRBuf = new Uint8Array(analyserR.frequencyBinCount);
 
     function fmt(s: number) {
       const m = Math.floor(s / 60), sec = Math.floor(s % 60);
@@ -374,10 +399,12 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
         setRenderTimeLeft(`${fmt(elapsed)} / ${fmt(audioBuf.duration)}  (${fmt(left)} left)`);
       }
       analyser.getByteFrequencyData(freqBuf);
+      analyserL.getByteFrequencyData(freqLBuf);
+      analyserR.getByteFrequencyData(freqRBuf);
       const bands = computeBands(analyser, freqBuf, 18);
       ctx2d.save();
       ctx2d.scale(scaleX, scaleY);
-      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate, dt);
+      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate, dt, freqLBuf, freqRBuf);
       ctx2d.restore();
     }, 1000 / 60);
     recStopLoopRef.current = () => clearInterval(intervalId);

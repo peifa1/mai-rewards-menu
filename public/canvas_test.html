@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Canvas Render Test — Waveform</title>
+<style>
+  body { margin:0; background:#1a0a12; display:flex; gap:24px; padding:24px;
+         font-family:ui-sans-serif,sans-serif; color:#d49aaa; }
+  .col { display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .lbl { font-size:11px; letter-spacing:.2em; text-transform:uppercase; }
+  canvas { width:360px; height:450px; border:1px solid rgba(255,160,185,.3); border-radius:8px; }
+  iframe { width:360px; height:450px; border:1px solid rgba(255,160,185,.3); border-radius:8px; }
+</style>
+</head>
+<body>
+  <div class="col">
+    <div class="lbl">Canvas render — 1080×1350</div>
+    <canvas id="c" width="1080" height="1350"></canvas>
+  </div>
+  <div class="col">
+    <div class="lbl">Live preview (the template)</div>
+    <iframe id="ref" src="/audio_waveform.html"></iframe>
+  </div>
+
+<script>
+const S = 1080 / 390; // template px -> output px
+
+function coverDraw(ctx, img, x, y, w, h) {
+  const ir = img.width / img.height, tr = w / h;
+  let dw, dh;
+  if (ir > tr) { dh = h; dw = h * ir; } else { dw = w; dh = w / ir; }
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+async function main() {
+  // Pull the default cover image out of the template.
+  const html = await fetch('/audio_waveform.html').then(r => r.text());
+  const m = html.match(/var IMG = '([^']+)'/);
+  const img = new Image();
+  img.src = m[1];
+  await img.decode();
+
+  const ctx = document.getElementById('c').getContext('2d');
+  const W = 1080, H = 1350;
+
+  // ── Blurred zoomed background ──
+  ctx.save();
+  ctx.filter = `blur(${28 * S}px) brightness(0.45) saturate(1.3)`;
+  const over = 0.12; // ~scale(1.05)+inset bleed
+  coverDraw(ctx, img, -W * over, -H * over, W * (1 + 2 * over), H * (1 + 2 * over));
+  ctx.restore();
+
+  // ── Vignette ──
+  const rg = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.18, W/2, H/2, Math.max(W,H)*0.62);
+  rg.addColorStop(0, 'rgba(6,2,4,0)');
+  rg.addColorStop(1, 'rgba(6,2,4,0.55)');
+  ctx.fillStyle = rg; ctx.fillRect(0,0,W,H);
+  const lg = ctx.createLinearGradient(0,0,0,H);
+  lg.addColorStop(0,'rgba(6,2,4,0.3)'); lg.addColorStop(0.25,'rgba(6,2,4,0)');
+  lg.addColorStop(0.75,'rgba(6,2,4,0)'); lg.addColorStop(1,'rgba(6,2,4,0.3)');
+  ctx.fillStyle = lg; ctx.fillRect(0,0,W,H);
+
+  // ── Inner audio card (238×333 @ x76 y30 in 390-space) ──
+  const cx = 76*S, cy = 30*S, cw = 238*S, chh = 333*S, cr = 10*S;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 60*S/2; ctx.shadowOffsetY = 24;
+  ctx.beginPath(); ctx.roundRect(cx, cy, cw, chh, cr); ctx.fillStyle = '#000'; ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(cx, cy, cw, chh, cr); ctx.clip();
+  coverDraw(ctx, img, cx, cy, cw, chh);
+  // card veil
+  const veil = ctx.createLinearGradient(0, cy, 0, cy + chh);
+  veil.addColorStop(0.40, 'rgba(8,3,6,0.05)'); veil.addColorStop(1, 'rgba(8,3,6,0.78)');
+  ctx.fillStyle = veil; ctx.fillRect(cx, cy, cw, chh);
+
+  // ── Waveform bars (18, width3 gap3, bottom60) ──
+  const bw = 3*S, gap = 3*S, n = 18;
+  const totalW = n*bw + (n-1)*gap;
+  const startX = cx + (cw - totalW)/2;
+  const barsBottom = cy + chh - 60*S;
+  const heights = [6,14,9,22,12,28,18,33,24,30,20,34,16,26,11,20,8,13]; // representative frame
+  ctx.fillStyle = '#f8b8cc';
+  for (let i=0;i<n;i++){
+    const h = heights[i]*S;
+    const bx = startX + i*(bw+gap);
+    ctx.beginPath(); ctx.roundRect(bx, barsBottom - h, bw, h, 2*S); ctx.fill();
+  }
+
+  // ── Card labels ──
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff'; ctx.font = `${10*S}px ui-sans-serif, sans-serif`;
+  ctx.letterSpacing = `${0.34*10*S}px`; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('RP AUDIO', cx + cw/2, cy + chh - 28*S);
+  ctx.fillStyle = '#f8b8cc'; ctx.font = `${9*S}px ui-sans-serif, sans-serif`;
+  ctx.letterSpacing = `${0.28*9*S}px`;
+  ctx.fillText('— ASMR —', cx + cw/2, cy + chh - 13*S);
+  ctx.letterSpacing = '0px';
+  ctx.restore();
+
+  // ── Bottom strip ──
+  const stripH = 124.6*S;
+  const sg = ctx.createLinearGradient(0, H, 0, H - stripH);
+  sg.addColorStop(0, 'rgba(6,2,4,0.92)'); sg.addColorStop(0.55, 'rgba(6,2,4,0.92)');
+  sg.addColorStop(1, 'rgba(6,2,4,0)');
+  ctx.fillStyle = sg; ctx.fillRect(0, H - stripH, W, stripH);
+
+  const lx = 28*S;
+  let y = H - stripH + 32*S;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  // eyebrow
+  ctx.fillStyle = 'rgba(248,184,204,0.95)';
+  ctx.font = `${9*S}px ui-sans-serif, sans-serif`;
+  ctx.letterSpacing = `${0.55*9*S}px`;
+  ctx.fillText('NEW DROP', lx, y);
+  y += 9*S + 10*S;
+  // title
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `700 ${24*S}px Georgia, "Times New Roman", serif`;
+  ctx.letterSpacing = '0px';
+  ctx.fillText('Whisper & Rain', lx, y);
+  y += 24*S*1.15 + 7*S;
+  // meta
+  ctx.fillStyle = '#a98a92';
+  ctx.font = `${11*S}px ui-sans-serif, sans-serif`;
+  ctx.letterSpacing = `${0.1*11*S}px`;
+  ctx.fillText('1 min · ASMR Roleplay · Exclusive', lx, y);
+  ctx.letterSpacing = '0px';
+
+  window.__done = true;
+}
+main();
+</script>
+</body>
+</html>

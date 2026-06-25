@@ -22,7 +22,7 @@ let wfLevel = new Float32Array(20);
 // now also runs at 60fps + analyser smoothing matches the preview, so the
 // sandbox constants apply directly — no frame-rate compensation needed.
 const WF_GAIN   = 1;
-const WF_TILT   = 2;
+const WF_TILT   = 4;
 const WF_ATK    = 0.35;
 const WF_DEC    = 0.18;
 const WF_SMOOTH = 0.8;

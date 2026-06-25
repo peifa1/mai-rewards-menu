@@ -185,41 +185,40 @@ document.getElementById('labelMeta').textContent     =
     el.style.backgroundImage = 'url(' + IMG + ')';
   });
 
-  /* Audio reactivity — amplitude-following ring animation */
+  /* Audio reactivity — radial waveform around portrait */
   var orbCanvas   = document.getElementById('orbCanvas');
   var orbCtx      = orbCanvas.getContext('2d');
   var orbPortrait = document.querySelector('.orb-portrait');
 
-  // Ring geometry  (canvas 480×480, portrait radius 75px)
-  var RING_RMIN  = 80;   // start just outside portrait edge
-  var RING_RMAX  = 215;  // expand outward
-  var RING_EASE  = 2.5;  // ease-out power
-  var PERIOD_HI  = 3.2;  // seconds per cycle at silence
-  var PERIOD_LO  = 1.4;  // seconds per cycle at max amplitude
-  var OP_IDLE    = 0.06; // base ring opacity at silence
-  var OP_AMP     = 0.28; // additional opacity at max amplitude
-  var LINE_W     = 1.5;
-  var GLOW_BASE  = 36;
-  var GLOW_AMP   = 50;
+  var N_BARS    = 128;
+  var INNER_R   = 82;   // just outside portrait (75px radius + gap)
+  var MAX_BAR   = 75;   // max bar length in px
+  var LINE_W    = 2.2;
+  var GLOW_BASE = 36;
+  var GLOW_AMP  = 50;
 
   var ampSmooth  = 0;
-  var ringT      = [0, 1/3, 2/3]; // phase offsets — 3 evenly distributed rings
-  var lastMs     = 0;
+  var smoothBars = (function(){ var a=[]; for(var i=0;i<128;i++) a.push(0); return a; })();
   var orbRAF     = null;
 
-  function drawOrbRings() {
+  function drawRadialWave() {
     var cx = orbCanvas.width / 2, cy = orbCanvas.height / 2;
     orbCtx.clearRect(0, 0, orbCanvas.width, orbCanvas.height);
-    var a = ampSmooth;
-    for (var i = 0; i < 3; i++) {
-      var t       = ringT[i];
-      var eased   = 1 - Math.pow(1 - t, RING_EASE);
-      var radius  = RING_RMIN + eased * (RING_RMAX - RING_RMIN);
-      var opacity = (OP_IDLE + a * OP_AMP) * (1 - t);
+    orbCtx.lineCap = 'round';
+    for (var i = 0; i < N_BARS; i++) {
+      var v = smoothBars[i];
+      var barLen = v * MAX_BAR;
+      if (barLen < 0.5) continue;
+      var angle = (i / N_BARS) * Math.PI * 2 - Math.PI / 2;
+      var x1 = cx + INNER_R * Math.cos(angle);
+      var y1 = cy + INNER_R * Math.sin(angle);
+      var x2 = cx + (INNER_R + barLen) * Math.cos(angle);
+      var y2 = cy + (INNER_R + barLen) * Math.sin(angle);
       orbCtx.beginPath();
-      orbCtx.arc(cx, cy, radius, 0, Math.PI * 2);
-      orbCtx.strokeStyle = 'rgba(248,184,204,' + opacity.toFixed(3) + ')';
-      orbCtx.lineWidth   = LINE_W;
+      orbCtx.moveTo(x1, y1);
+      orbCtx.lineTo(x2, y2);
+      orbCtx.strokeStyle = 'rgba(248,184,204,' + (0.35 + v * 0.65).toFixed(2) + ')';
+      orbCtx.lineWidth = LINE_W;
       orbCtx.stroke();
     }
   }
@@ -233,34 +232,36 @@ document.getElementById('labelMeta').textContent     =
       'px rgba(248,184,204,' + (0.3 + a * 0.45).toFixed(2) + ')';
   }
 
-  function orbRenderLoop(ms) {
+  function orbRenderLoop() {
     orbRAF = requestAnimationFrame(orbRenderLoop);
-    var dt     = lastMs ? Math.min((ms - lastMs) / 1000, 0.05) : 0;
-    lastMs     = ms;
-    var period = PERIOD_HI - ampSmooth * (PERIOD_HI - PERIOD_LO);
-    var step   = dt / period;
-    for (var i = 0; i < 3; i++) ringT[i] = (ringT[i] + step) % 1;
-    drawOrbRings();
+    // Decay bars and amp when no fresh data is arriving
+    for (var i = 0; i < N_BARS; i++) smoothBars[i] *= 0.85;
+    ampSmooth *= 0.92;
+    drawRadialWave();
     updatePortraitGlow();
   }
 
+  function processBands(freqArr) {
+    var len = freqArr.length;
+    var sum = 0;
+    for (var i = 0; i < N_BARS; i++) {
+      var fi  = Math.floor(i / N_BARS * len);
+      var raw = (freqArr[fi] || 0) / 255;
+      sum += raw;
+      if (raw > smoothBars[i]) smoothBars[i] += (raw - smoothBars[i]) * 0.5;
+      else                      smoothBars[i] += (raw - smoothBars[i]) * 0.15;
+    }
+    var amp = Math.min(1, (sum / N_BARS) * 3);
+    if (amp > ampSmooth) ampSmooth += (amp - ampSmooth) * 0.4;
+    else                  ampSmooth += (amp - ampSmooth) * 0.06;
+  }
+
   function startOrbRender() {
-    if (!orbRAF) { lastMs = 0; orbRenderLoop(performance.now()); }
+    if (!orbRAF) orbRenderLoop();
   }
 
   function stopOrbRender() {
-    if (orbRAF) { cancelAnimationFrame(orbRAF); orbRAF = null; }
-    ampSmooth = 0;
-    if (orbPortrait) { orbPortrait.style.transform = ''; orbPortrait.style.boxShadow = ''; }
-  }
-
-  function processBands(freqArr) {
-    var len = freqArr.length, sum = 0;
-    for (var i = 0; i < len; i++) sum += freqArr[i] / 255;
-    var amp = Math.min(1, (sum / len) * 4);
-    // Fast attack, slow decay — responsive but smooth
-    if (amp > ampSmooth) ampSmooth += (amp - ampSmooth) * 0.4;
-    else                  ampSmooth += (amp - ampSmooth) * 0.05;
+    // Let bars decay naturally — don't cut RAF abruptly
   }
 
   window.addEventListener('message', function(e){
@@ -272,6 +273,8 @@ document.getElementById('labelMeta').textContent     =
       stopOrbRender();
     }
   });
+
+  startOrbRender(); // start idle render immediately
 
     /* Mic self-start — active when loaded directly as OBS Browser Source */
   (function(){

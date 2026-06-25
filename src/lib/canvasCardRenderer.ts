@@ -397,11 +397,17 @@ export function drawNowPlayingCard(
 
 // ── Sound Orb ─────────────────────────────────────────────────────────────
 
+const ORB_N_BARS  = 128;
+const ORB_INNER_R = 158; // just outside portrait edge (orbR=150)
+const ORB_MAX_BAR = 90;  // max bar length in px
+const orbBars     = new Float32Array(ORB_N_BARS); // per-bar smoothed levels
+
 export function drawSoundOrbCard(
   ctx: CanvasRenderingContext2D,
   cfg: AudioTeaserConfig,
   imgEl: HTMLImageElement | null,
-  amp: number   // 0–1
+  amp: number,        // 0–1
+  freqBuf?: Uint8Array
 ) {
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 20);
@@ -409,33 +415,44 @@ export function drawSoundOrbCard(
   const orbX = W / 2;
   const orbY = CANVAS_H / 2;
   const orbR = 150;
-  const t = Date.now() / 1000;
 
-  // Smooth the amplitude across frames so everything moves like water, not a
-  // strobe. amp only modulates intensity — never the ring expansion speed.
   orbAmpSmooth += (amp - orbAmpSmooth) * 0.08;
   const a = orbAmpSmooth;
 
-  // Amplitude-following rings — same formula as iframe preview.
-  // Period shortens as amplitude rises: slow idle rings → faster louder rings.
-  const period = 3.2 - a * 1.8; // 3.2s quiet → 1.4s loud
-  for (let i = 0; i < 3; i++) {
-    const phase  = (((t / period) + i / 3) % 1 + 1) % 1;
-    const eased  = 1 - Math.pow(1 - phase, 2.5);
-    const rMin   = orbR + 5;
-    const rMax   = orbR * 2.8;
-    const radius = rMin + eased * (rMax - rMin);
-    const opacity = (0.06 + a * 0.28) * (1 - phase);
-    ctx.save();
-    ctx.strokeStyle = `rgba(248,184,204,${opacity.toFixed(3)})`;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(orbX, orbY, radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+  // ── Radial waveform ────────────────────────────────────────────────────
+  if (freqBuf && freqBuf.length > 0) {
+    const len = freqBuf.length;
+    for (let i = 0; i < ORB_N_BARS; i++) {
+      const fi  = Math.floor(i / ORB_N_BARS * len);
+      const raw = freqBuf[fi] / 255;
+      orbBars[i] += (raw - orbBars[i]) * (raw > orbBars[i] ? 0.5 : 0.15);
+    }
+  } else {
+    for (let i = 0; i < ORB_N_BARS; i++) orbBars[i] *= 0.85;
   }
 
-  // Orb portrait — very soft, delicate breathing
+  ctx.save();
+  ctx.lineCap = "round";
+  for (let i = 0; i < ORB_N_BARS; i++) {
+    const v      = orbBars[i];
+    const barLen = v * ORB_MAX_BAR;
+    if (barLen < 0.5) continue;
+    const angle   = (i / ORB_N_BARS) * Math.PI * 2 - Math.PI / 2;
+    const x1 = orbX + ORB_INNER_R * Math.cos(angle);
+    const y1 = orbY + ORB_INNER_R * Math.sin(angle);
+    const x2 = orbX + (ORB_INNER_R + barLen) * Math.cos(angle);
+    const y2 = orbY + (ORB_INNER_R + barLen) * Math.sin(angle);
+    const opacity = 0.35 + v * 0.65;
+    ctx.strokeStyle = `rgba(248,184,204,${opacity.toFixed(2)})`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // ── Portrait with glow ─────────────────────────────────────────────────
   const scale = 1 + a * 0.06;
   const r = orbR * scale;
 

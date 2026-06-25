@@ -659,26 +659,32 @@ export function AudioTeaserBuilder() {
 
       {/* Mini tutorial — fixed on the left, does not affect the main layout */}
       <div style={{
-        position: "fixed", left: 16, top: 132, width: 196, zIndex: 40,
+        position: "fixed", left: 16, top: 132, width: 224, zIndex: 40,
         background: PANEL, border: `1px solid ${LINE_STR}`,
         borderTop: `2px solid rgba(255,150,180,0.35)`,
-        borderRadius: 12, padding: "14px 14px 13px",
+        borderRadius: 12, padding: "16px 16px 15px",
         boxShadow: "0 6px 28px rgba(0,0,0,0.45)",
       }}>
         <div style={{
-          fontSize: 9, color: ROSE, fontFamily: SANS, letterSpacing: "0.28em",
-          textTransform: "uppercase", marginBottom: 10,
+          fontSize: 10, color: ROSE, fontFamily: SANS, letterSpacing: "0.28em",
+          textTransform: "uppercase", marginBottom: 12,
         }}>How it works</div>
-        <ol style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-          <li style={{ fontSize: 10.5, color: INK, fontFamily: SANS, lineHeight: 1.45 }}>Upload Audio / Video</li>
-          <li style={{ fontSize: 10.5, color: INK, fontFamily: SANS, lineHeight: 1.45 }}>Upload an image to the card you want to render</li>
-          <li style={{ fontSize: 10.5, color: INK, fontFamily: SANS, lineHeight: 1.45 }}>The video downloads automatically once the render is done</li>
+        <ol style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+          <li style={{ fontSize: 12, color: INK, fontFamily: SANS, lineHeight: 1.5 }}>Upload Audio / Video</li>
+          <li style={{ fontSize: 12, color: INK, fontFamily: SANS, lineHeight: 1.5 }}>Upload an image to the card you want to render</li>
+          <li style={{ fontSize: 12, color: INK, fontFamily: SANS, lineHeight: 1.5 }}>The video downloads automatically once the render is done</li>
         </ol>
         <div style={{
-          marginTop: 11, paddingTop: 10, borderTop: `1px solid ${LINE_STR}`,
-          fontSize: 9.5, color: INK_DIM, fontFamily: SANS, lineHeight: 1.45, fontStyle: "italic",
+          marginTop: 12, paddingTop: 11, borderTop: `1px solid ${LINE_STR}`,
+          fontSize: 11, color: INK_DIM, fontFamily: SANS, lineHeight: 1.5, fontStyle: "italic",
         }}>
           Note: the render takes the same amount of time as the audio / video length.
+        </div>
+        <div style={{
+          marginTop: 8,
+          fontSize: 11, color: INK_DIM, fontFamily: SANS, lineHeight: 1.5, fontStyle: "italic",
+        }}>
+          Tip: empty a caption field to remove that text from the card.
         </div>
       </div>
 

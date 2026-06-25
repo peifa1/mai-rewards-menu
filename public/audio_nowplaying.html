@@ -298,6 +298,14 @@ document.getElementById('labelMeta').textContent  =
         if (npSeekFill) npSeekFill.style.width = pct + '%';
         if (npTimeStart) npTimeStart.textContent = fmtTime(d.currentTime);
         if (npTimeEnd) npTimeEnd.textContent = fmtTime(d.duration);
+        var genreEl = document.getElementById('npGenreLabel');
+        if (genreEl) {
+          var mins = Math.ceil(d.duration / 60);
+          var txt = genreEl.textContent || '';
+          var dotIdx = txt.indexOf('·');
+          var prefix = dotIdx >= 0 ? txt.substring(0, dotIdx + 1) : txt + ' ·';
+          genreEl.textContent = prefix + ' ' + mins + ' MIN';
+        }
       }
     }
     else if (d.type === 'audStop') { npIdle(); }

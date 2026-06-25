@@ -184,13 +184,14 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     sampleRate?: number,
     dt?: number,
     freqL?: Uint8Array,
-    freqR?: Uint8Array
+    freqR?: Uint8Array,
+    elapsedSec?: number
   ) {
     const img = imgElRef.current;
     if (style === "waveform" && freqBuf && sampleRate) {
       drawWaveformCard(ctx2d, cfg, img, freqBuf, sampleRate, dt, freqL, freqR);
     } else if (style === "nowplaying") {
-      drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDurationRef.current || undefined, freqBuf, sampleRate, dt, freqL, freqR);
+      drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDurationRef.current || undefined, freqBuf, sampleRate, dt, freqL, freqR, elapsedSec);
     } else {
       const amp = bands.reduce((a, b) => a + b, 0) / Math.max(1, bands.length);
       drawSoundOrbCard(ctx2d, cfg, img, amp);
@@ -284,11 +285,13 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     ctx2d.imageSmoothingEnabled = true;
     ctx2d.imageSmoothingQuality = "high";
     const scaleX = OUT_W / CANVAS_W, scaleY = OUT_H / CANVAS_H;
-    let lastT = performance.now();
+    const loopStart = performance.now();
+    let lastT = loopStart;
     const intervalId = setInterval(() => {
       const now = performance.now();
       const dt = Math.min((now - lastT) / 1000, 0.1);
       lastT = now;
+      const elapsedSec = (now - loopStart) / 1000;
       analyser.getByteFrequencyData(freqBuf);
       analyserL.getByteFrequencyData(freqLBuf);
       analyserR.getByteFrequencyData(freqRBuf);
@@ -296,7 +299,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       const progress = ((Date.now() / 1000) % 6) / 6;
       ctx2d.save();
       ctx2d.scale(scaleX, scaleY);
-      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate, dt, freqLBuf, freqRBuf);
+      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate, dt, freqLBuf, freqRBuf, elapsedSec);
       ctx2d.restore();
     }, 1000 / 60);
     recStopLoopRef.current = () => clearInterval(intervalId);
@@ -407,7 +410,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       const bands = computeBands(analyser, freqBuf, 18);
       ctx2d.save();
       ctx2d.scale(scaleX, scaleY);
-      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate, dt, freqLBuf, freqRBuf);
+      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate, dt, freqLBuf, freqRBuf, elapsed);
       ctx2d.restore();
     }, 1000 / 60);
     recStopLoopRef.current = () => clearInterval(intervalId);

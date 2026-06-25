@@ -33,16 +33,25 @@ const WF_SMOOTH = 0.7;
 const WF_FLOOR  = 0;
 const WF_MAX_H  = 30;
 
-// Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
-// and in offscreen canvas recording contexts (no network request needed).
-const _sakuraImg = (typeof window !== "undefined")
-  ? (() => { const i = new Image(); i.src = SAKURA_DATA_URL; return i; })()
-  : null;
+// Sakura PNG — lazy-loaded so it's created in the browser context even if this
+// module was first evaluated on the server (Next.js SSR sets window=undefined).
+let _sakuraImg: HTMLImageElement | null = null;
+
+function getSakuraImg(): HTMLImageElement | null {
+  if (typeof window === "undefined") return null;
+  if (!_sakuraImg) {
+    const i = new Image();
+    i.src = SAKURA_DATA_URL;
+    _sakuraImg = i;
+  }
+  return _sakuraImg;
+}
 
 export function preloadCanvasAssets(): Promise<void> {
-  const img = _sakuraImg;
+  const img = getSakuraImg();
   if (!img) return Promise.resolve();
   if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+  if (typeof img.decode === "function") return img.decode().catch(() => {});
   return new Promise(resolve => { img.onload = () => resolve(); img.onerror = () => resolve(); });
 }
 
@@ -219,16 +228,15 @@ export function drawWaveformCard(
 
 // Sakura PNG spinner — matches the HTML template's spinning img
 function drawSakura(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, rot: number) {
-  const img = _sakuraImg;
-  if (img?.complete && img.naturalWidth > 0) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rot);
-    ctx.shadowColor = "rgba(248,184,204,0.7)";
-    ctx.shadowBlur = 10;
-    ctx.drawImage(img, -size / 2, -size / 2, size, size);
-    ctx.restore();
-  }
+  const img = getSakuraImg();
+  if (!img) return;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.shadowColor = "rgba(248,184,204,0.7)";
+  ctx.shadowBlur = 10;
+  try { ctx.drawImage(img, -size / 2, -size / 2, size, size); } catch { /* not decoded yet */ }
+  ctx.restore();
 }
 
 // ── Now Playing ───────────────────────────────────────────────────────────
@@ -244,7 +252,8 @@ export function drawNowPlayingCard(
   sampleRate?: number,
   dt: number = 1 / 60,
   freqL?: Uint8Array,
-  freqR?: Uint8Array
+  freqR?: Uint8Array,
+  elapsedSec?: number
 ) {
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 56);
@@ -271,7 +280,7 @@ export function drawNowPlayingCard(
   ctx.restore();
 
   const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
-  const t = Date.now() / 1000;
+  const t = elapsedSec ?? (Date.now() / 1000);
 
   // "NOW PLAYING" — top-left
   ctx.save();

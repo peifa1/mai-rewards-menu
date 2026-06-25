@@ -27,7 +27,7 @@ const WF_ATK    = 0.35;
 const WF_DEC    = 0.18;
 const WF_SMOOTH = 0.8;
 const WF_FLOOR  = 0;
-const WF_MAX_H  = 50;
+const WF_MAX_H  = 37;
 
 // Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
 // and in offscreen canvas recording contexts (no network request needed).

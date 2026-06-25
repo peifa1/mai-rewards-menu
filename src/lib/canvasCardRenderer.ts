@@ -506,9 +506,9 @@ export function drawSoundOrbCard(
   const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
   ctx.save();
   ctx.fillStyle = cfg.accentColor || "#f8b8cc";
-  ctx.font = "20px ui-sans-serif, system-ui, sans-serif";
-  ls.letterSpacing = "6.8px";
+  ctx.font = "26px ui-sans-serif, system-ui, sans-serif";
+  ls.letterSpacing = "5.6px";
   ctx.textAlign = "center";
-  ctx.fillText(`· ${cfg.asmrLabel || "ASMR"} ·`, W / 2, orbY + 280);
+  ctx.fillText(`· ${cfg.asmrLabel || "ASMR"} ·`, W / 2, orbY + 290);
   ctx.restore();
 }

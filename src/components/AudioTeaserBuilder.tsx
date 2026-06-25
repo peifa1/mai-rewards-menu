@@ -413,16 +413,14 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
         )}
       </div>
 
-      {/* Render button + squiggle annotation */}
+      {/* Render button */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, width: colW }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {/* Render MP4 */}
-          <button
+        <button
             onClick={recState === "render" ? stopRec : () => void startRenderRecording()}
             disabled={!audioFile && recState !== "render"}
             title={!audioFile && recState !== "render" ? "Upload audio first" : undefined}
             style={{
-              flex: 1, padding: "9px 0", borderRadius: 8,
+              width: "100%", padding: "9px 0", borderRadius: 8,
               cursor: (!audioFile && recState === "idle") ? "default" : "pointer",
               border: recState === "render"
                 ? "1px solid rgba(255,90,90,0.7)"
@@ -435,24 +433,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
             }}
           >{recState === "render" ? "■ Stop" : "⬇ Render"}</button>
 
-          {/* Squiggle hint — points left toward the render button */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0 }}>
-            <div style={{
-              width: 28, height: 28,
-              backgroundColor: "#ffb8c8",
-              WebkitMaskImage: "url(/images/squiggle-arrow.png)",
-              maskImage: "url(/images/squiggle-arrow.png)",
-              WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-              WebkitMaskSize: "contain", maskSize: "contain",
-              WebkitMaskPosition: "center", maskPosition: "center",
-              transform: "scaleX(-1)",
-              opacity: 0.7,
-            }} />
-            <span style={{ fontSize: 8.5, color: INK_DIM, fontFamily: SANS, letterSpacing: "0.05em", lineHeight: 1.3, textAlign: "center", maxWidth: 72 }}>
-              takes as long as the audio
-            </span>
-          </div>
-        </div>
+  </div>
 
         {/* Render timer — shown prominently while rendering */}
         {recState === "render" && renderTimeLeft && (
@@ -672,10 +653,7 @@ export function AudioTeaserBuilder() {
 
       <Transport engine={engine} onAudioFile={setAudioFile} />
 
-      <div style={{
-        display: "flex", gap: 24, marginTop: 22,
-        justifyContent: "center", alignItems: "flex-start", flexWrap: "wrap",
-      }}>
+      <div style={{ display: "flex", gap: 24, marginTop: 22, justifyContent: "center", alignItems: "flex-start", flexWrap: "wrap" }}>
         {STYLES.map(s => (
           <TeaserCard
             key={s.key} style={s.key} kanji={s.kanji} label={s.label}
@@ -685,6 +663,30 @@ export function AudioTeaserBuilder() {
             waveformData={waveformData}
           />
         ))}
+
+        {/* Single squiggle hint — sits to the right of all cards */}
+        <div style={{
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          gap: 10, paddingTop: 80, opacity: 0.7, flexShrink: 0,
+        }}>
+          <div style={{
+            width: 36, height: 36,
+            backgroundColor: "#ffb8c8",
+            WebkitMaskImage: "url(/images/squiggle-arrow.png)",
+            maskImage: "url(/images/squiggle-arrow.png)",
+            WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+            WebkitMaskSize: "contain", maskSize: "contain",
+            WebkitMaskPosition: "center", maskPosition: "center",
+            transform: "scaleX(-1)",
+          }} />
+          <span style={{
+            fontSize: 11, color: "#a98a92", fontFamily: SANS,
+            letterSpacing: "0.06em", lineHeight: 1.5,
+            textAlign: "center", maxWidth: 90, writingMode: "horizontal-tb",
+          }}>
+            render takes as long as the audio
+          </span>
+        </div>
       </div>
 
     </div>

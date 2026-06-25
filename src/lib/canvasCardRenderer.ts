@@ -416,19 +416,21 @@ export function drawSoundOrbCard(
   orbAmpSmooth += (amp - orbAmpSmooth) * 0.08;
   const a = orbAmpSmooth;
 
-  // Ripple rings — ease-out expansion matching CSS `animation: pulse 3.2s ease-out`
-  // Quadratic ease-out: starts fast, decelerates — same feel as the CSS preview.
-  const period = 3.2;
+  // Amplitude-following rings — same formula as iframe preview.
+  // Period shortens as amplitude rises: slow idle rings → faster louder rings.
+  const period = 3.2 - a * 1.8; // 3.2s quiet → 1.4s loud
   for (let i = 0; i < 3; i++) {
-    const phase = (((t / period) + i / 3) % 1 + 1) % 1;
-    const eased = 1 - Math.pow(1 - phase, 2); // quadratic ease-out
-    const r = orbR + eased * (orbR * 1.2);
-    const opacity = (1 - phase) * a * 0.9;
+    const phase  = (((t / period) + i / 3) % 1 + 1) % 1;
+    const eased  = 1 - Math.pow(1 - phase, 2.5);
+    const rMin   = orbR + 5;
+    const rMax   = orbR * 2.8;
+    const radius = rMin + eased * (rMax - rMin);
+    const opacity = (0.06 + a * 0.28) * (1 - phase);
     ctx.save();
     ctx.strokeStyle = `rgba(248,184,204,${opacity.toFixed(3)})`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(orbX, orbY, r, 0, Math.PI * 2);
+    ctx.arc(orbX, orbY, radius, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }

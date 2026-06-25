@@ -185,112 +185,82 @@ document.getElementById('labelMeta').textContent     =
     el.style.backgroundImage = 'url(' + IMG + ')';
   });
 
-  /* Audio reactivity — ripple ring particle system */
+  /* Audio reactivity — amplitude-following ring animation */
   var orbCanvas   = document.getElementById('orbCanvas');
   var orbCtx      = orbCanvas.getContext('2d');
   var orbPortrait = document.querySelector('.orb-portrait');
 
-  // Tuned settings from sandbox
-  var ORB = {
-    thresh:    0.2,
-    cool:      0.1,
-    maxRings:  5,
-    numBands:  5,
-    lifetime:  3.2,
-    sizeMin:   135,
-    sizeMax:   480,
-    ease:      2.5,
-    opacity:   0.2,
-    lineW:     1.5,
-    scale:     0.13,
-    glowBase:  60,
-    glowRange: 50
-  };
+  // Ring geometry  (canvas 480×480, portrait radius 75px)
+  var RING_RMIN  = 80;   // start just outside portrait edge
+  var RING_RMAX  = 215;  // expand outward
+  var RING_EASE  = 2.5;  // ease-out power
+  var PERIOD_HI  = 3.2;  // seconds per cycle at silence
+  var PERIOD_LO  = 1.4;  // seconds per cycle at max amplitude
+  var OP_IDLE    = 0.06; // base ring opacity at silence
+  var OP_AMP     = 0.28; // additional opacity at max amplitude
+  var LINE_W     = 1.5;
+  var GLOW_BASE  = 36;
+  var GLOW_AMP   = 50;
 
-  var activeRings   = [];
-  var bandCooldowns = new Array(ORB.numBands).fill(0);
-  var bandPrev      = new Array(ORB.numBands).fill(0);
-  var ampSmooth     = 0;
-  var orbRAF        = null;
-
-  function spawnRing(energy) {
-    if (activeRings.length >= ORB.maxRings) {
-      activeRings.sort(function(a,b){ return a.birthT - b.birthT; });
-      activeRings.shift();
-    }
-    activeRings.push({
-      birthT:   performance.now(),
-      lifetime: ORB.lifetime * (0.75 + Math.random() * 0.5),
-      sizeMin:  ORB.sizeMin  * (0.85 + Math.random() * 0.3),
-      sizeMax:  ORB.sizeMax  * (0.6  + energy * 0.8),
-      peakOp:   ORB.opacity  * Math.min(1, energy * 2.5)
-    });
-  }
+  var ampSmooth  = 0;
+  var ringT      = [0, 1/3, 2/3]; // phase offsets — 3 evenly distributed rings
+  var lastMs     = 0;
+  var orbRAF     = null;
 
   function drawOrbRings() {
-    var now = performance.now();
-    var cx  = orbCanvas.width  / 2;
-    var cy  = orbCanvas.height / 2;
+    var cx = orbCanvas.width / 2, cy = orbCanvas.height / 2;
     orbCtx.clearRect(0, 0, orbCanvas.width, orbCanvas.height);
-    activeRings = activeRings.filter(function(r) {
-      var t = (now - r.birthT) / 1000 / r.lifetime;
-      if (t >= 1) return false;
-      var eased   = 1 - Math.pow(1 - t, ORB.ease);
-      var radius  = (r.sizeMin + eased * (r.sizeMax - r.sizeMin)) / 2;
-      var opacity = r.peakOp * Math.pow(1 - t, 1.6);
+    var a = ampSmooth;
+    for (var i = 0; i < 3; i++) {
+      var t       = ringT[i];
+      var eased   = 1 - Math.pow(1 - t, RING_EASE);
+      var radius  = RING_RMIN + eased * (RING_RMAX - RING_RMIN);
+      var opacity = (OP_IDLE + a * OP_AMP) * (1 - t);
       orbCtx.beginPath();
       orbCtx.arc(cx, cy, radius, 0, Math.PI * 2);
       orbCtx.strokeStyle = 'rgba(248,184,204,' + opacity.toFixed(3) + ')';
-      orbCtx.lineWidth   = ORB.lineW;
+      orbCtx.lineWidth   = LINE_W;
       orbCtx.stroke();
-      return true;
-    });
-  }
-
-  function processBands(freqArr) {
-    var n = ORB.numBands, len = freqArr.length;
-    var now = performance.now(), step = Math.floor(len / n);
-    var sum = 0;
-    for (var i = 0; i < len; i++) sum += freqArr[i] / 255;
-    var amp = Math.min(1, (sum / len) * 4);
-    if (amp > ampSmooth) ampSmooth += (amp - ampSmooth) * 0.3;
-    else                 ampSmooth += (amp - ampSmooth) * 0.06;
-    for (var b = 0; b < n; b++) {
-      var s = b * step, e2 = Math.min(s + step, len), acc = 0;
-      for (var k = s; k < e2; k++) acc += freqArr[k] / 255;
-      var energy = acc / (e2 - s);
-      var risen  = energy >= ORB.thresh;
-      var cooled = (now - bandCooldowns[b]) > ORB.cool * 1000;
-      if (risen && cooled) { spawnRing(energy); bandCooldowns[b] = now; }
-      bandPrev[b] = energy;
     }
   }
 
   function updatePortraitGlow() {
-    var a = ampSmooth;
     if (!orbPortrait) return;
-    orbPortrait.style.transform = 'scale(' + (1 + a * ORB.scale) + ')';
+    var a = ampSmooth;
+    orbPortrait.style.transform = 'scale(' + (1 + a * 0.08) + ')';
     orbPortrait.style.boxShadow = '0 0 ' +
-      Math.round(ORB.glowBase + a * ORB.glowRange) +
+      Math.round(GLOW_BASE + a * GLOW_AMP) +
       'px rgba(248,184,204,' + (0.3 + a * 0.45).toFixed(2) + ')';
   }
 
-  function orbRenderLoop() {
+  function orbRenderLoop(ms) {
     orbRAF = requestAnimationFrame(orbRenderLoop);
+    var dt     = lastMs ? Math.min((ms - lastMs) / 1000, 0.05) : 0;
+    lastMs     = ms;
+    var period = PERIOD_HI - ampSmooth * (PERIOD_HI - PERIOD_LO);
+    var step   = dt / period;
+    for (var i = 0; i < 3; i++) ringT[i] = (ringT[i] + step) % 1;
     drawOrbRings();
     updatePortraitGlow();
   }
 
-  function startOrbRender() { if (!orbRAF) orbRenderLoop(); }
+  function startOrbRender() {
+    if (!orbRAF) { lastMs = 0; orbRenderLoop(performance.now()); }
+  }
 
   function stopOrbRender() {
     if (orbRAF) { cancelAnimationFrame(orbRAF); orbRAF = null; }
-    (function fade(){
-      drawOrbRings();
-      if (activeRings.length > 0) requestAnimationFrame(fade);
-    })();
     ampSmooth = 0;
     if (orbPortrait) { orbPortrait.style.transform = ''; orbPortrait.style.boxShadow = ''; }
+  }
+
+  function processBands(freqArr) {
+    var len = freqArr.length, sum = 0;
+    for (var i = 0; i < len; i++) sum += freqArr[i] / 255;
+    var amp = Math.min(1, (sum / len) * 4);
+    // Fast attack, slow decay — responsive but smooth
+    if (amp > ampSmooth) ampSmooth += (amp - ampSmooth) * 0.4;
+    else                  ampSmooth += (amp - ampSmooth) * 0.05;
   }
 
   window.addEventListener('message', function(e){
@@ -303,8 +273,7 @@ document.getElementById('labelMeta').textContent     =
     }
   });
 
-
-  /* Mic self-start — active when loaded directly as OBS Browser Source */
+    /* Mic self-start — active when loaded directly as OBS Browser Source */
   (function(){
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) return;
     navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(function(stream){

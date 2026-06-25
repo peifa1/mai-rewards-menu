@@ -20,12 +20,12 @@ let wfLevel = new Float32Array(20);
 
 // User-tuned constants from sandbox
 const WF_GAIN   = 0.5;
-const WF_TILT   = 5.5;
-const WF_ATK    = 0.25;
-const WF_DEC    = 0.06;
+const WF_TILT   = 4;
+const WF_ATK    = 0.19;
+const WF_DEC    = 0.055;
 const WF_SMOOTH = 0.9;
 const WF_FLOOR  = 0;
-const WF_MAX_H  = 60;
+const WF_MAX_H  = 35;
 
 // Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
 // and in offscreen canvas recording contexts (no network request needed).

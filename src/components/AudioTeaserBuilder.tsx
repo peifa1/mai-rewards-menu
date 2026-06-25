@@ -178,12 +178,13 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   function drawFrame(
     ctx2d: CanvasRenderingContext2D,
     bands: number[],
-    progress: number
+    progress: number,
+    freqBuf?: Uint8Array,
+    sampleRate?: number
   ) {
     const img = imgElRef.current;
-    if (style === "waveform") {
-      const amp = bands.reduce((a, b) => a + b, 0) / Math.max(1, bands.length);
-      drawWaveformCard(ctx2d, cfg, img, waveformDataRef.current, amp);
+    if (style === "waveform" && freqBuf && sampleRate) {
+      drawWaveformCard(ctx2d, cfg, img, freqBuf, sampleRate);
     } else if (style === "nowplaying") {
       drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDurationRef.current || undefined);
     } else {
@@ -236,8 +237,8 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     const audioCtx = new AudioCtx();
     recAudioCtxRef.current = audioCtx;
     const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.82;
+    analyser.fftSize = 4096;
+    analyser.smoothingTimeConstant = 0.65;
     audioCtx.createMediaStreamSource(mic).connect(analyser);
     const freqBuf = new Uint8Array(analyser.frequencyBinCount);
 
@@ -268,11 +269,12 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     ctx2d.imageSmoothingQuality = "high";
     const scaleX = OUT_W / CANVAS_W, scaleY = OUT_H / CANVAS_H;
     const intervalId = setInterval(() => {
+      analyser.getByteFrequencyData(freqBuf);
       const bands = computeBands(analyser, freqBuf, 18);
       const progress = ((Date.now() / 1000) % 6) / 6;
       ctx2d.save();
       ctx2d.scale(scaleX, scaleY);
-      drawFrame(ctx2d, bands, progress);
+      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate);
       ctx2d.restore();
     }, 1000 / 30);
     recStopLoopRef.current = () => clearInterval(intervalId);
@@ -299,8 +301,8 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     }
 
     const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.82;
+    analyser.fftSize = 4096;
+    analyser.smoothingTimeConstant = 0.65;
     const dest = audioCtx.createMediaStreamDestination();
     analyser.connect(dest);
 
@@ -358,10 +360,11 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
         const left = Math.max(0, audioBuf.duration - elapsed);
         setRenderTimeLeft(`${fmt(elapsed)} / ${fmt(audioBuf.duration)}  (${fmt(left)} left)`);
       }
+      analyser.getByteFrequencyData(freqBuf);
       const bands = computeBands(analyser, freqBuf, 18);
       ctx2d.save();
       ctx2d.scale(scaleX, scaleY);
-      drawFrame(ctx2d, bands, progress);
+      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate);
       ctx2d.restore();
     }, 1000 / 30);
     recStopLoopRef.current = () => clearInterval(intervalId);

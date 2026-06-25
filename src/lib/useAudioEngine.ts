@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const BANDS = 32;
 
-export type AudioFramePayload = { type: "aud"; s: number[]; amp: number };
+export type AudioFramePayload = { type: "aud"; s: number[]; amp: number; freq?: number[]; sampleRate?: number; fftSize?: number };
 
 export function useAudioEngine(getTargets: () => Window[]) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -39,8 +39,8 @@ export function useAudioEngine(getTargets: () => Window[]) {
     const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new Ctx();
     const analyser = ctx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.82;
+    analyser.fftSize = 4096;
+    analyser.smoothingTimeConstant = 0.65;
     const src = ctx.createMediaElementSource(audio);
     src.connect(analyser);
     analyser.connect(ctx.destination);
@@ -75,7 +75,9 @@ export function useAudioEngine(getTargets: () => Window[]) {
     }
     // Overall loudness, lightly emphasized so the orb visibly breathes.
     const amp = Math.min(1, (sum / BANDS) * 1.7);
-    broadcast({ type: "aud", s, amp });
+    // Send raw freq array so waveform iframe can do its own per-bar FFT mapping.
+    const ctx = ctxRef.current;
+    broadcast({ type: "aud", s, amp, freq: Array.from(freq), sampleRate: ctx?.sampleRate ?? 48000, fftSize: analyser.fftSize });
     setCurrentTime(audio.currentTime);
   }, [broadcast]);
 

@@ -15,6 +15,18 @@ let orbAmpSmooth = 0;
 
 const WF_N = 40;
 
+// Waveform bar level state — per-bar attack/decay smoothing across frames
+const wfLevel = new Float32Array(WF_N);
+
+// Sandbox-tuned constants
+const WF_GAIN   = 3.0;
+const WF_TILT   = 9.0;   // dB-style boost applied linearly across bars (0=flat)
+const WF_ATK    = 0.60;  // rise speed per frame
+const WF_DEC    = 0.08;  // fall speed per frame
+const WF_SMOOTH = 0.40;  // neighbor blend
+const WF_FLOOR  = 0.05;  // minimum bar value
+const WF_MAX_H  = 44;    // max half-height in logical px (symmetric bars)
+
 // Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
 // and in offscreen canvas recording contexts (no network request needed).
 const _sakuraImg = (typeof window !== "undefined")
@@ -81,8 +93,8 @@ export function drawWaveformCard(
   ctx: CanvasRenderingContext2D,
   cfg: AudioTeaserConfig,
   imgEl: HTMLImageElement | null,
-  waveformData: number[],  // 40 normalized RMS values from pre-analysis (0–1)
-  amp: number              // current overall amplitude from live audio (0–1)
+  freqBuf: Uint8Array,     // raw FFT byte array from AnalyserNode
+  sampleRate: number       // AudioContext.sampleRate
 ) {
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 56);
@@ -115,12 +127,37 @@ export function drawWaveformCard(
   const bLeft = cX + (cW - totalBW) / 2;
   const bCenterY = cY + cH / 2 - 60;
 
+  // Per-bar log-spaced FFT with tilt + attack/decay (matches sandbox)
+  const binHz   = sampleRate / (freqBuf.length * 2);
+  const minHz   = 60, maxHz = 18000;
+  const target  = new Float32Array(WF_N);
+  for (let i = 0; i < WF_N; i++) {
+    const fLo = minHz * Math.pow(maxHz / minHz, i / WF_N);
+    const fHi = minHz * Math.pow(maxHz / minHz, (i + 1) / WF_N);
+    const bLo = Math.max(0, Math.floor(fLo / binHz));
+    const bHi = Math.min(freqBuf.length - 1, Math.ceil(fHi / binHz));
+    let sum2 = 0, cnt = Math.max(1, bHi - bLo + 1);
+    for (let k = bLo; k <= bHi; k++) { const v = freqBuf[k] / 255; sum2 += v * v; }
+    const rms = Math.sqrt(sum2 / cnt);
+    const pos = i / (WF_N - 1);
+    target[i] = Math.min(1, rms * (1 + WF_TILT * pos) * WF_GAIN);
+  }
+  // Neighbor smoothing
+  const tmp = Float32Array.from(target);
+  for (let i = 0; i < WF_N; i++) {
+    const l = tmp[Math.max(0, i - 1)], c = tmp[i], r = tmp[Math.min(WF_N - 1, i + 1)];
+    target[i] = c * (1 - WF_SMOOTH) + ((l + r) / 2) * WF_SMOOTH;
+  }
+  // Attack/decay per bar
+  for (let i = 0; i < WF_N; i++) {
+    const tg = Math.max(WF_FLOOR, target[i]);
+    wfLevel[i] += (tg - wfLevel[i]) * (tg > wfLevel[i] ? WF_ATK : WF_DEC);
+  }
+
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
   for (let i = 0; i < WF_N; i++) {
-    // Bar height = pre-analyzed shape × current amplitude
-    const base = waveformData[i] ?? 0;
-    const halfH = Math.max(3, Math.round(3 + base * amp * 50));
+    const halfH = Math.max(3, Math.round(3 + wfLevel[i] * WF_MAX_H));
     const bX = bLeft + i * (bW + bGap);
     rrp(ctx, bX, bCenterY - halfH, bW, halfH * 2, 2);
     ctx.fill();

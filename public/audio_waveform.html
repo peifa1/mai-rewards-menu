@@ -194,46 +194,79 @@ document.getElementById('labelMeta').textContent     =
   /* Build waveform bars */
   var wf = document.getElementById('wfBars');
   var bars = [];
-  for (var i = 0; i < 40; i++) {
+  var level = [];
+  var N = 40;
+  for (var i = 0; i < N; i++) {
     var b = document.createElement('i');
     var dl = (i * 0.03).toFixed(2);
     var dur = (0.7 + Math.random() * 1.0).toFixed(2);
     var rh = function(){ return Math.round(3 + Math.random() * 24) + 'px'; };
     b.style.cssText = '--dl:'+dl+'s;--dur:'+dur+'s;--h0:'+rh()+';--h1:'+rh()+
       ';--h2:'+rh()+';--h3:'+rh()+';--h4:'+rh()+';--h5:'+rh()+';';
-    wf.appendChild(b); bars.push(b);
+    wf.appendChild(b); bars.push(b); level.push(0);
   }
 
-  /* Pre-analyzed waveform shape — set once on file load, bars scale to it */
-  var waveform = [];
+  // Sandbox-tuned constants
+  var WF_GAIN   = 3.0;
+  var WF_TILT   = 9.0;
+  var WF_ATK    = 0.60;
+  var WF_DEC    = 0.08;
+  var WF_SMOOTH = 0.40;
+  var WF_FLOOR  = 0.05;
+  var WF_MAX_H  = 44;
 
-  function wfApply(amp){
-    var nb=bars.length;
-    bars.forEach(function(b,i){
-      var base = waveform[i] || 0;
-      var h = Math.max(3, Math.round(3 + base * amp * 50));
-      b.style.animation='none';
-      b.style.height=h+'px';
-    });
+  var lastFreqBuf = null;
+  var lastSampleRate = 48000;
+  var lastFftSize = 4096;
+  var isPlaying = false;
+
+  function wfApplyFFT(freqBuf, sampleRate, fftSize) {
+    var binHz = sampleRate / fftSize;
+    var minHz = 60, maxHz = 18000;
+    var target = new Array(N);
+    for (var i = 0; i < N; i++) {
+      var fLo = minHz * Math.pow(maxHz / minHz, i / N);
+      var fHi = minHz * Math.pow(maxHz / minHz, (i + 1) / N);
+      var bLo = Math.max(0, Math.floor(fLo / binHz));
+      var bHi = Math.min(freqBuf.length - 1, Math.ceil(fHi / binHz));
+      var sum2 = 0, cnt = Math.max(1, bHi - bLo + 1);
+      for (var k = bLo; k <= bHi; k++) { var v = freqBuf[k] / 255; sum2 += v * v; }
+      var rms = Math.sqrt(sum2 / cnt);
+      var pos = i / (N - 1);
+      target[i] = Math.min(1, rms * (1 + WF_TILT * pos) * WF_GAIN);
+    }
+    // Neighbor smoothing
+    var tmp = target.slice();
+    for (var i2 = 0; i2 < N; i2++) {
+      var l = tmp[Math.max(0, i2-1)], c = tmp[i2], r2 = tmp[Math.min(N-1, i2+1)];
+      target[i2] = c * (1 - WF_SMOOTH) + ((l + r2) / 2) * WF_SMOOTH;
+    }
+    // Attack/decay + render
+    for (var i3 = 0; i3 < N; i3++) {
+      var tg = Math.max(WF_FLOOR, target[i3]);
+      var spd = tg > level[i3] ? WF_ATK : WF_DEC;
+      level[i3] += (tg - level[i3]) * spd;
+      var h = Math.max(3, Math.round(3 + level[i3] * WF_MAX_H));
+      bars[i3].style.animation = 'none';
+      bars[i3].style.height = h + 'px';
+    }
   }
+
   function wfIdle(){ bars.forEach(function(b){ b.style.height=''; b.style.animation=''; }); }
+
   window.addEventListener('message', function(e){
     var d = e.data || {};
-    if (d.type === 'waveform' && d.data) {
-      waveform = d.data;
-      // Update idle bar heights to reflect the audio's actual shape
-      bars.forEach(function(b,i){
-        var h = Math.round(3 + (waveform[i]||0) * 24);
-        b.style.setProperty('--h0', h+'px');
-        b.style.setProperty('--h1', Math.round(h*0.6)+'px');
-        b.style.setProperty('--h2', Math.round(h*0.9)+'px');
-        b.style.setProperty('--h3', Math.round(h*0.75)+'px');
-        b.style.setProperty('--h4', Math.round(h*0.5)+'px');
-        b.style.setProperty('--h5', Math.round(h*0.8)+'px');
-      });
+    if (d.type === 'aud') {
+      if (d.freq && d.sampleRate) {
+        lastFreqBuf = new Uint8Array(d.freq);
+        lastSampleRate = d.sampleRate;
+        lastFftSize = d.fftSize || 4096;
+        isPlaying = true;
+        wfApplyFFT(lastFreqBuf, lastSampleRate, lastFftSize);
+      }
     }
-    else if (d.type === 'aud' && d.amp !== undefined) { wfApply(d.amp); }
-    else if (d.type === 'audStop') { wfIdle(); }
+    else if (d.type === 'audStop') { isPlaying = false; wfIdle(); }
+    // legacy waveform message — ignored now (FFT replaces it)
   });
 
   /* Mic self-start — active when loaded directly as OBS Browser Source */

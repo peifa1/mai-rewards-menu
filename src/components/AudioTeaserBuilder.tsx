@@ -433,8 +433,6 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
             }}
           >{recState === "render" ? "■ Stop" : "⬇ Render"}</button>
 
-  </div>
-
         {/* Render timer — shown prominently while rendering */}
         {recState === "render" && renderTimeLeft && (
           <div style={{

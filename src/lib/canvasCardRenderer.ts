@@ -21,8 +21,8 @@ let wfLevel = new Float32Array(20);
 // User-tuned constants (tuned at 60fps in sandbox). The canvas render loop
 // now also runs at 60fps + analyser smoothing matches the preview, so the
 // sandbox constants apply directly — no frame-rate compensation needed.
-const WF_GAIN   = 0.8;
-const WF_TILT   = 4;
+const WF_GAIN   = 0.5;
+const WF_TILT   = 6;
 const WF_ATK    = 0.5;
 const WF_DEC    = 0.24;
 const WF_SMOOTH = 0.7;

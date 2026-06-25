@@ -39,6 +39,13 @@ const _sakuraImg = (typeof window !== "undefined")
   ? (() => { const i = new Image(); i.src = SAKURA_DATA_URL; return i; })()
   : null;
 
+export function preloadCanvasAssets(): Promise<void> {
+  const img = _sakuraImg;
+  if (!img) return Promise.resolve();
+  if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+  return new Promise(resolve => { img.onload = () => resolve(); img.onerror = () => resolve(); });
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function rrp(

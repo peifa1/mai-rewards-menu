@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const BANDS = 32;
 
-export type AudioFramePayload = { type: "aud"; s: number[]; amp: number; freq?: number[]; freqL?: number[]; freqR?: number[]; sampleRate?: number; fftSize?: number };
+export type AudioFramePayload = { type: "aud"; s: number[]; amp: number; freq?: number[]; freqL?: number[]; freqR?: number[]; sampleRate?: number; fftSize?: number; currentTime?: number; duration?: number };
 
 export function useAudioEngine(getTargets: () => Window[]) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -98,8 +98,10 @@ export function useAudioEngine(getTargets: () => Window[]) {
     // Overall loudness, lightly emphasized so the orb visibly breathes.
     const amp = Math.min(1, (sum / BANDS) * 1.7);
     const ctx = ctxRef.current;
-    broadcast({ type: "aud", s, amp, freq: Array.from(freq), freqL: freqL ? Array.from(freqL) : undefined, freqR: freqR ? Array.from(freqR) : undefined, sampleRate: ctx?.sampleRate ?? 48000, fftSize: analyser.fftSize });
-    setCurrentTime(audio.currentTime);
+    const ct = audio.currentTime;
+    const dur = isFinite(audio.duration) ? audio.duration : undefined;
+    broadcast({ type: "aud", s, amp, freq: Array.from(freq), freqL: freqL ? Array.from(freqL) : undefined, freqR: freqR ? Array.from(freqR) : undefined, sampleRate: ctx?.sampleRate ?? 48000, fftSize: analyser.fftSize, currentTime: ct, duration: dur });
+    setCurrentTime(ct);
   }, [broadcast]);
 
   const startLoop = useCallback(() => {

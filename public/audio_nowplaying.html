@@ -122,10 +122,6 @@ html,body{
   position:absolute;bottom:30px;left:16px;right:16px;
   height:3px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden;
 }
-.np-card .np-seek-bar::after{
-  content:"";position:absolute;top:0;bottom:0;left:0;right:60%;
-  background:var(--rose);animation:seek 6s linear infinite;
-}
 .np-card .np-time{
   position:absolute;bottom:15px;left:16px;right:16px;
   display:flex;justify-content:space-between;
@@ -155,7 +151,7 @@ html,body{
         <!-- EDITABLE: genre label under title -->
         <small class="np-genre-label" id="npGenreLabel">ASMR Â· 24 MIN</small>
       </div>
-      <div class="np-seek-bar"></div>
+      <div class="np-seek-bar"><div id="npSeekFill" style="position:absolute;top:0;bottom:0;left:0;width:0%;background:var(--rose);"></div></div>
       <div class="np-time">
         <!-- EDITABLE: current time / total time -->
         <span id="npTimeStart">03:12</span>
@@ -286,6 +282,10 @@ document.getElementById('labelMeta').textContent  =
   }
 
   function npIdle(){ miniBars.forEach(function(mb){ mb.style.height=''; mb.style.animation=''; }); }
+  var npSeekFill = document.getElementById('npSeekFill');
+  var npTimeStart = document.getElementById('npTimeStart');
+  var npTimeEnd = document.getElementById('npTimeEnd');
+  function fmtTime(s) { var m=Math.floor(s/60),sec=Math.floor(s%60); return m+':'+(sec<10?'0':'')+sec; }
   window.addEventListener('message', function(e){
     var d = e.data || {};
     if (d.type === 'aud' && d.freq && d.sampleRate) {
@@ -293,6 +293,12 @@ document.getElementById('labelMeta').textContent  =
       var freqL = d.freqL ? new Uint8Array(d.freqL) : null;
       var freqR = d.freqR ? new Uint8Array(d.freqR) : null;
       npApplyFFT(freqBuf, d.sampleRate, d.fftSize || 4096, freqL, freqR);
+      if (d.duration && d.duration > 0 && d.currentTime != null) {
+        var pct = Math.min(100, (d.currentTime / d.duration) * 100);
+        if (npSeekFill) npSeekFill.style.width = pct + '%';
+        if (npTimeStart) npTimeStart.textContent = fmtTime(d.currentTime);
+        if (npTimeEnd) npTimeEnd.textContent = fmtTime(d.duration);
+      }
     }
     else if (d.type === 'audStop') { npIdle(); }
   });

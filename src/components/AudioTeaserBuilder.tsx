@@ -13,6 +13,7 @@ import {
   drawWaveformCard,
   drawNowPlayingCard,
   drawSoundOrbCard,
+  preloadCanvasAssets,
 } from "@/lib/canvasCardRenderer";
 
 // ── Palette ───────────────────────────────────────────────────────────────
@@ -278,6 +279,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     mr.start();
     setRecState("live");
 
+    await preloadCanvasAssets();
     const ctx2d = canvas.getContext("2d")!;
     ctx2d.imageSmoothingEnabled = true;
     ctx2d.imageSmoothingQuality = "high";
@@ -368,6 +370,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     mr.start();
     setRecState("render");
 
+    await preloadCanvasAssets();
     const startTime = audioCtx.currentTime;
     source.start();
     source.onended = () => stopRec();

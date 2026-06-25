@@ -8,21 +8,23 @@ export type AudioTeaserConfig = {
   badge: string;
   minutes: string;
   asmrLabel: string;
+  orbSubLabel: string; // soundorb only — small line under the ASMR label
   cardLabel: string;   // waveform only — "RP AUDIO"
   timeStart: string;   // nowplaying only — "03:12"
   image: string;       // data URL, "" = keep template default
   accentColor: string; // waveform bars + rose-colored text (global)
-  titleColor: string;  // card titles like "RP AUDIO", "Whisper & Rain" (global)
+  titleColor: string;  // card titles like "RP AUDIO", "Good Morning" (global)
 };
 
 export const DEFAULT_AUDIO_TEASER_CONFIG: AudioTeaserConfig = {
   style: "waveform",
-  title: "Whisper & Rain",
+  title: "Good Morning",
   eyebrow: "New Drop",
   genre: "ASMR Roleplay",
   badge: "Exclusive",
   minutes: "24",
   asmrLabel: "ASMR",
+  orbSubLabel: "Roleplay Audio",
   cardLabel: "RP AUDIO",
   timeStart: "03:12",
   image: "",
@@ -31,20 +33,27 @@ export const DEFAULT_AUDIO_TEASER_CONFIG: AudioTeaserConfig = {
 };
 
 export function normalizeAudioTeaserConfig(cfg: AudioTeaserConfig): AudioTeaserConfig {
+  // Text fields: keep the value verbatim (empty string stays empty — a user
+  // who clears a label means it to be blank). Only fall back to the default
+  // when the field is absent entirely (undefined / not a string).
+  const txt = (v: unknown, fallback: string) =>
+    typeof v === "string" ? v : fallback;
+  // Color fields: must always be a valid color, so fall back on blank too.
   const s = (v: unknown, fallback: string) =>
     typeof v === "string" && v.trim() ? v : fallback;
   const d = DEFAULT_AUDIO_TEASER_CONFIG;
   return {
     style: (["waveform", "nowplaying", "soundorb"] as TeaserStyle[]).includes(cfg?.style)
       ? cfg.style : d.style,
-    title:     s(cfg?.title,     d.title),
-    eyebrow:   s(cfg?.eyebrow,   d.eyebrow),
-    genre:     s(cfg?.genre,     d.genre),
-    badge:     s(cfg?.badge,     d.badge),
-    minutes:   s(cfg?.minutes,   d.minutes),
-    asmrLabel: s(cfg?.asmrLabel, d.asmrLabel),
-    cardLabel: s(cfg?.cardLabel, d.cardLabel),
-    timeStart: s(cfg?.timeStart, d.timeStart),
+    title:       txt(cfg?.title,       d.title),
+    eyebrow:     txt(cfg?.eyebrow,     d.eyebrow),
+    genre:       txt(cfg?.genre,       d.genre),
+    badge:       txt(cfg?.badge,       d.badge),
+    minutes:     txt(cfg?.minutes,     d.minutes),
+    asmrLabel:   txt(cfg?.asmrLabel,   d.asmrLabel),
+    orbSubLabel: txt(cfg?.orbSubLabel, d.orbSubLabel),
+    cardLabel:   txt(cfg?.cardLabel,   d.cardLabel),
+    timeStart:   txt(cfg?.timeStart,   d.timeStart),
     image:       typeof cfg?.image === "string" ? cfg.image : "",
     accentColor: s(cfg?.accentColor, d.accentColor),
     titleColor:  s(cfg?.titleColor, d.titleColor),
@@ -79,6 +88,7 @@ function buildConfigBlock(cfg: AudioTeaserConfig): string {
   return `var CONFIG = {
   title:       ${q(cfg.title)},
   asmrLabel:   ${q(cfg.asmrLabel)},
+  orbSubLabel: ${q(cfg.orbSubLabel)},
   minutes:     ${q(cfg.minutes)},
   genre:       ${q(cfg.genre)},
   badge:       ${q(cfg.badge)},
@@ -98,11 +108,14 @@ export function buildAudioTeaserHtml(template: string, rawCfg: AudioTeaserConfig
     out = out.replace(/var IMG = '[^']*';/, `var IMG = '${cfg.image}';`);
   }
 
-  // Inject global color overrides
+  // Inject global color overrides.
+  // Accent → --rose (waveform bars, sub-labels). Title → card titles + the
+  // Sound Orb ASMR label. The orb sub-label keeps the accent color via --rose.
   const colorStyle = `<style>
 :root{--rose:${cfg.accentColor};}
 #cardLabel,.card-label{color:${cfg.titleColor}!important;}
 #npTitle{color:${cfg.titleColor}!important;}
+.orb-caption-main,.orb-caption-main b{color:${cfg.titleColor}!important;}
 </style>`;
   out = out.replace('</head>', colorStyle + '</head>');
 

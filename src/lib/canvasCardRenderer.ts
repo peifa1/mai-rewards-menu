@@ -220,16 +220,19 @@ export function drawWaveformCard(
   ctx.font = "20px ui-sans-serif, system-ui, sans-serif";
   ls.letterSpacing = "6.8px";
   ctx.textAlign = "center";
-  ctx.fillText(cfg.cardLabel || "RP AUDIO", cX + cW / 2, cY + cH - 56);
+  ctx.fillText(cfg.cardLabel ?? "", cX + cW / 2, cY + cH - 56);
   ctx.restore();
 
-  ctx.save();
-  ctx.fillStyle = cfg.accentColor || "#f8b8cc";
-  ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
-  ls.letterSpacing = "5px";
-  ctx.textAlign = "center";
-  ctx.fillText(`— ${cfg.asmrLabel || "ASMR"} —`, cX + cW / 2, cY + cH - 26);
-  ctx.restore();
+  const wfAsmr = cfg.asmrLabel ?? "";
+  if (wfAsmr) {
+    ctx.save();
+    ctx.fillStyle = cfg.accentColor || "#f8b8cc";
+    ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
+    ls.letterSpacing = "5px";
+    ctx.textAlign = "center";
+    ctx.fillText(`— ${wfAsmr} —`, cX + cW / 2, cY + cH - 26);
+    ctx.restore();
+  }
 }
 
 // Sakura PNG spinner — matches the HTML template's spinning img
@@ -307,7 +310,7 @@ export function drawNowPlayingCard(
   ctx.font = `30px Georgia, "Times New Roman", serif`;
   ls.letterSpacing = "0px";
   ctx.textAlign = "left";
-  const title = cfg.title || "Whisper & Rain";
+  const title = cfg.title ?? "";
   ctx.fillText(title, cX + 32, titleY);
   const titleW = ctx.measureText(title).width;
   ctx.restore();
@@ -370,7 +373,7 @@ export function drawNowPlayingCard(
   ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
   ls.letterSpacing = "4px";
   ctx.textAlign = "left";
-  ctx.fillText(`${cfg.asmrLabel || "ASMR"} · ${mins}`, cX + 32, titleY + 30);
+  ctx.fillText(cfg.asmrLabel ? `${cfg.asmrLabel} · ${mins}` : mins, cX + 32, titleY + 30);
   ctx.restore();
 
   // Seek bar
@@ -502,13 +505,26 @@ export function drawSoundOrbCard(
   }
   ctx.restore();
 
-  // Caption
+  // Caption — ASMR label (title color, 1.8× larger) + smaller sub-label (accent)
   const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
-  ctx.save();
-  ctx.fillStyle = cfg.accentColor || "#f8b8cc";
-  ctx.font = "26px ui-sans-serif, system-ui, sans-serif";
-  ls.letterSpacing = "5.6px";
-  ctx.textAlign = "center";
-  ctx.fillText(`· ${cfg.asmrLabel || "ASMR"} ·`, W / 2, orbY + 290);
-  ctx.restore();
+  const asmr = cfg.asmrLabel ?? "";
+  if (asmr) {
+    ctx.save();
+    ctx.fillStyle = cfg.titleColor || "#ffffff";
+    ctx.font = "46px ui-sans-serif, system-ui, sans-serif";
+    ls.letterSpacing = "11px";
+    ctx.textAlign = "center";
+    ctx.fillText(`· ${asmr} ·`, W / 2, orbY + 300);
+    ctx.restore();
+  }
+  const sub = cfg.orbSubLabel ?? "";
+  if (sub) {
+    ctx.save();
+    ctx.fillStyle = cfg.accentColor || "#f8b8cc";
+    ctx.font = "24px ui-sans-serif, system-ui, sans-serif";
+    ls.letterSpacing = "5px";
+    ctx.textAlign = "center";
+    ctx.fillText(sub, W / 2, orbY + 338);
+    ctx.restore();
+  }
 }

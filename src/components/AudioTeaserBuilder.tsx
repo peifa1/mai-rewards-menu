@@ -220,7 +220,8 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   }
 
   const startRenderRecording = useCallback(async () => {
-    if (!audioFile) return;
+    if (!audioFile) { alert("Upload an audio/video file first."); return; }
+    if (!cfg.image) { alert("Upload a cover image to this card before rendering."); return; }
     const mimeType = getMimeType();
 
     const arrayBuf = await audioFile.arrayBuffer();
@@ -373,6 +374,10 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   const scale = colW / CARD_W;
   const displayH = Math.round(CARD_H * scale);
 
+  // Render requires BOTH an audio file and a cover image on this card.
+  const canRender = !!audioFile && !!cfg.image;
+  const renderHint = !audioFile ? "Upload audio first" : !cfg.image ? "Upload an image to this card first" : undefined;
+
   return (
     <div style={{ flex: "0 0 290px", display: "flex", flexDirection: "column", gap: 10 }}>
 
@@ -420,21 +425,26 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       <div style={{ display: "flex", flexDirection: "column", gap: 6, width: colW }}>
         <button
             onClick={recState === "render" ? stopRec : () => void startRenderRecording()}
-            disabled={!audioFile && recState !== "render"}
-            title={!audioFile && recState !== "render" ? "Upload audio first" : undefined}
+            disabled={!canRender && recState !== "render"}
+            title={recState !== "render" ? renderHint : undefined}
             style={{
               width: "100%", padding: "9px 0", borderRadius: 8,
-              cursor: (!audioFile && recState === "idle") ? "default" : "pointer",
+              cursor: (!canRender && recState === "idle") ? "default" : "pointer",
               border: recState === "render"
                 ? "1px solid rgba(255,90,90,0.7)"
-                : audioFile ? "1px solid rgba(100,210,210,0.4)" : "1px solid rgba(255,255,255,0.1)",
-              background: recState === "render" ? "rgba(255,60,60,0.14)" : audioFile ? "rgba(80,200,200,0.07)" : "transparent",
-              color: recState === "render" ? "#ff9090" : audioFile && recState === "idle" ? "#88dddd" : INK_DIM,
+                : canRender ? "1px solid rgba(100,210,210,0.4)" : "1px solid rgba(255,255,255,0.1)",
+              background: recState === "render" ? "rgba(255,60,60,0.14)" : canRender ? "rgba(80,200,200,0.07)" : "transparent",
+              color: recState === "render" ? "#ff9090" : canRender && recState === "idle" ? "#88dddd" : INK_DIM,
               fontSize: 10, fontFamily: SANS, letterSpacing: "0.18em",
               textTransform: "uppercase",
               transition: "border 0.2s, background 0.2s",
             }}
           >{recState === "render" ? "■ Stop" : "⬇ Render"}</button>
+        {!canRender && recState !== "render" && (
+          <div style={{ fontSize: 8.5, color: INK_DIM, fontFamily: SANS, letterSpacing: "0.08em", textAlign: "center", opacity: 0.8 }}>
+            {renderHint}
+          </div>
+        )}
 
         {/* Render timer — shown prominently while rendering */}
         {recState === "render" && renderTimeLeft && (
@@ -495,13 +505,14 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
         )}
         {style === "nowplaying" && (
           <Section title="Card Text" accent>
-            <Field label="Title" value={cfg.title} onChange={v => set("title", v)} placeholder="Whisper & Rain" />
+            <Field label="Title" value={cfg.title} onChange={v => set("title", v)} placeholder="Good Morning" />
             <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
           </Section>
         )}
         {style === "soundorb" && (
           <Section title="Orb Caption" accent>
             <Field label="ASMR Label" value={cfg.asmrLabel} onChange={v => set("asmrLabel", v)} placeholder="ASMR" />
+            <Field label="Sub Label" value={cfg.orbSubLabel} onChange={v => set("orbSubLabel", v)} placeholder="Roleplay Audio" />
           </Section>
         )}
 
@@ -645,6 +656,31 @@ export function AudioTeaserBuilder() {
   return (
     <div style={{ padding: "24px 32px 60px" }}>
       <style>{spinStyle}</style>
+
+      {/* Mini tutorial — fixed on the left, does not affect the main layout */}
+      <div style={{
+        position: "fixed", left: 16, top: 132, width: 196, zIndex: 40,
+        background: PANEL, border: `1px solid ${LINE_STR}`,
+        borderTop: `2px solid rgba(255,150,180,0.35)`,
+        borderRadius: 12, padding: "14px 14px 13px",
+        boxShadow: "0 6px 28px rgba(0,0,0,0.45)",
+      }}>
+        <div style={{
+          fontSize: 9, color: ROSE, fontFamily: SANS, letterSpacing: "0.28em",
+          textTransform: "uppercase", marginBottom: 10,
+        }}>How it works</div>
+        <ol style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+          <li style={{ fontSize: 10.5, color: INK, fontFamily: SANS, lineHeight: 1.45 }}>Upload Audio / Video</li>
+          <li style={{ fontSize: 10.5, color: INK, fontFamily: SANS, lineHeight: 1.45 }}>Upload an image to the card you want to render</li>
+          <li style={{ fontSize: 10.5, color: INK, fontFamily: SANS, lineHeight: 1.45 }}>The video downloads automatically once the render is done</li>
+        </ol>
+        <div style={{
+          marginTop: 11, paddingTop: 10, borderTop: `1px solid ${LINE_STR}`,
+          fontSize: 9.5, color: INK_DIM, fontFamily: SANS, lineHeight: 1.45, fontStyle: "italic",
+        }}>
+          Note: the render takes the same amount of time as the audio / video length.
+        </div>
+      </div>
 
       {/* Hidden shared audio element */}
       <audio

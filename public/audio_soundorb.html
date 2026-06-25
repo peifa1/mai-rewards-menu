@@ -101,11 +101,13 @@ html,body{
 }
 .orb-card .orb-portrait img{width:100%;height:100%;object-fit:cover;}
 .orb-card .orb-caption{
-  position:absolute;bottom:-28px;left:0;right:0;text-align:center;
+  position:absolute;top:calc(100% + 14px);left:0;right:0;text-align:center;
   font-family:ui-sans-serif,sans-serif;
-  font-size:13px;letter-spacing:.28em;color:var(--rose);z-index:3;
+  z-index:3;
 }
-.orb-card .orb-caption b{color:#fff;}
+.orb-card .orb-caption-main{font-size:23px;letter-spacing:.28em;color:var(--rose);}
+.orb-card .orb-caption-main b{color:inherit;}
+.orb-card .orb-subcaption{font-size:12px;letter-spacing:.22em;color:var(--rose);margin-top:7px;}
 </style>
 </head>
 <body>
@@ -121,7 +123,8 @@ html,body{
       </div>
       <!-- EDITABLE: caption beneath the orb (the · ASMR · line) -->
       <div class="orb-caption" id="orbCaption">
-        <b>·</b> <span id="orbAsmrLabel">ASMR</span> <b>·</b>
+        <div class="orb-caption-main"><b>·</b> <span id="orbAsmrLabel">ASMR</span> <b>·</b></div>
+        <div class="orb-subcaption" id="orbSubLabel">Roleplay Audio</div>
       </div>
     </div>
   </div>
@@ -129,7 +132,7 @@ html,body{
   <!-- EDITABLE: bottom strip -->
   <div class="showcase-label">
     <div class="label-eyebrow" id="labelEyebrow">New Drop</div>
-    <div class="label-title" id="labelTitle">Whisper &amp; Rain</div>
+    <div class="label-title" id="labelTitle">Good Morning</div>
     <div class="label-meta" id="labelMeta">24 min · ASMR Roleplay · Exclusive</div>
   </div>
 </div>
@@ -139,8 +142,9 @@ html,body{
    CONFIGURABLE VALUES — edit these to customise
    ════════════════════════════════════════════ */
 var CONFIG = {
-  title:       "Whisper & Rain",  // bottom strip title
-  asmrLabel:   "ASMR",           // text in the orb caption  · ASMR ·
+  title:       "Good Morning",  // bottom strip title
+  asmrLabel:   "ASMR",
+  orbSubLabel: "Roleplay Audio",           // text in the orb caption  · ASMR ·
   minutes:     "24",             // meta duration
   genre:       "ASMR Roleplay",  // meta genre
   badge:       "Exclusive",      // meta badge
@@ -155,14 +159,14 @@ var CONFIG = {
     try {
       var saved = JSON.parse(localStorage.getItem(obsKey) || 'null');
       if (saved) {
-        ['title','eyebrow','genre','badge','minutes','asmrLabel'].forEach(function(k){
+        ['title','eyebrow','genre','badge','minutes','asmrLabel','orbSubLabel'].forEach(function(k){
           if (saved[k] !== undefined) CONFIG[k] = saved[k];
         });
         if (saved.image) IMG = saved.image;
       }
     } catch(e) {}
   } else {
-    ['title','eyebrow','genre','badge','minutes','asmrLabel'].forEach(function(k){
+    ['title','eyebrow','genre','badge','minutes','asmrLabel','orbSubLabel'].forEach(function(k){
       if(p.has(k)) CONFIG[k] = p.get(k);
     });
     var imgUrl = p.get('imageUrl');
@@ -172,6 +176,7 @@ var CONFIG = {
 
 /* Apply config */
 document.getElementById('orbAsmrLabel').textContent  = CONFIG.asmrLabel;
+document.getElementById('orbSubLabel').textContent   = CONFIG.orbSubLabel || '';
 document.getElementById('labelEyebrow').textContent  = CONFIG.eyebrow;
 document.getElementById('labelTitle').innerHTML      = CONFIG.title;
 document.getElementById('labelMeta').textContent     =

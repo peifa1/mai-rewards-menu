@@ -397,7 +397,7 @@ export function drawNowPlayingCard(
 
 // ── Sound Orb ─────────────────────────────────────────────────────────────
 
-const ORB_N_BARS  = 128;
+const ORB_N_BARS  = 80;
 const ORB_INNER_R = 158; // just outside portrait edge (orbR=150)
 const ORB_MAX_BAR = 90;  // max bar length in px
 const orbBars     = new Float32Array(ORB_N_BARS); // per-bar smoothed levels
@@ -422,9 +422,10 @@ export function drawSoundOrbCard(
   // ── Radial waveform ────────────────────────────────────────────────────
   if (freqBuf && freqBuf.length > 0) {
     const len = freqBuf.length;
+    const logMin = Math.log(2), logMax = Math.log(len * 0.6);
     for (let i = 0; i < ORB_N_BARS; i++) {
-      const fi  = Math.floor(i / ORB_N_BARS * len);
-      const raw = freqBuf[fi] / 255;
+      const fi  = Math.min(Math.round(Math.exp(logMin + (logMax - logMin) * i / ORB_N_BARS)), len - 1);
+      const raw = Math.pow(freqBuf[fi] / 255, 0.6); // power curve boosts quiet signals
       orbBars[i] += (raw - orbBars[i]) * (raw > orbBars[i] ? 0.5 : 0.15);
     }
   } else {
@@ -444,7 +445,7 @@ export function drawSoundOrbCard(
     const y2 = orbY + (ORB_INNER_R + barLen) * Math.sin(angle);
     const opacity = 0.35 + v * 0.65;
     ctx.strokeStyle = `rgba(248,184,204,${opacity.toFixed(2)})`;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);

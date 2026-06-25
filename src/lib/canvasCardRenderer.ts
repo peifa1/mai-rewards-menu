@@ -13,19 +13,19 @@ export const OUT_H = 1352;
 // Persistent smoothing state for the Sound Orb (one recording at a time).
 let orbAmpSmooth = 0;
 
-const WF_N = 40;
+const WF_N = 20;
 
 // Waveform bar level state — per-bar attack/decay smoothing across frames
-const wfLevel = new Float32Array(WF_N);
+let wfLevel = new Float32Array(20);
 
-// Sandbox-tuned constants
-const WF_GAIN   = 3.0;
-const WF_TILT   = 9.0;   // dB-style boost applied linearly across bars (0=flat)
-const WF_ATK    = 0.60;  // rise speed per frame
-const WF_DEC    = 0.08;  // fall speed per frame
-const WF_SMOOTH = 0.40;  // neighbor blend
-const WF_FLOOR  = 0.05;  // minimum bar value
-const WF_MAX_H  = 44;    // max half-height in logical px (symmetric bars)
+// User-tuned constants from sandbox
+const WF_GAIN   = 0.5;
+const WF_TILT   = 5.5;
+const WF_ATK    = 0.25;
+const WF_DEC    = 0.06;
+const WF_SMOOTH = 0.9;
+const WF_FLOOR  = 0;
+const WF_MAX_H  = 60;
 
 // Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
 // and in offscreen canvas recording contexts (no network request needed).

@@ -195,7 +195,7 @@ document.getElementById('labelMeta').textContent     =
   var wf = document.getElementById('wfBars');
   var bars = [];
   var level = [];
-  var N = 40;
+  var N = 20;
   for (var i = 0; i < N; i++) {
     var b = document.createElement('i');
     var dl = (i * 0.03).toFixed(2);
@@ -206,14 +206,14 @@ document.getElementById('labelMeta').textContent     =
     wf.appendChild(b); bars.push(b); level.push(0);
   }
 
-  // Sandbox-tuned constants
-  var WF_GAIN   = 3.0;
-  var WF_TILT   = 9.0;
-  var WF_ATK    = 0.60;
-  var WF_DEC    = 0.08;
-  var WF_SMOOTH = 0.40;
-  var WF_FLOOR  = 0.05;
-  var WF_MAX_H  = 44;
+  // User-tuned constants
+  var WF_GAIN   = 0.5;
+  var WF_TILT   = 5.5;
+  var WF_ATK    = 0.25;
+  var WF_DEC    = 0.06;
+  var WF_SMOOTH = 0.9;
+  var WF_FLOOR  = 0;
+  var WF_MAX_H  = 60;
 
   var lastFreqBuf = null;
   var lastSampleRate = 48000;

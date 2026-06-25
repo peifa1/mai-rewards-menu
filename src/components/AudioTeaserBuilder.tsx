@@ -244,7 +244,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
 
     const canvas = document.createElement("canvas");
     canvas.width = OUT_W; canvas.height = OUT_H;
-    const videoStream = canvas.captureStream(30);
+    const videoStream = canvas.captureStream(60);
     const combined = new MediaStream([...videoStream.getVideoTracks(), ...mic.getAudioTracks()]);
 
     const mr = new MediaRecorder(combined, {
@@ -276,7 +276,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       ctx2d.scale(scaleX, scaleY);
       drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate);
       ctx2d.restore();
-    }, 1000 / 30);
+    }, 1000 / 60);
     recStopLoopRef.current = () => clearInterval(intervalId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cfg, style]);
@@ -319,7 +319,9 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
 
     const canvas = document.createElement("canvas");
     canvas.width = OUT_W; canvas.height = OUT_H;
-    const videoStream = canvas.captureStream(30);
+    // 60fps so the waveform attack/decay AND analyser smoothing match the
+    // live preview (which is requestAnimationFrame-driven at ~60fps).
+    const videoStream = canvas.captureStream(60);
     const combined = new MediaStream([...videoStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
 
     const mr = new MediaRecorder(combined, {
@@ -356,8 +358,11 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     const intervalId = setInterval(() => {
       const elapsed = audioCtx.currentTime - startTime;
       const progress = Math.min(1, elapsed / audioBuf.duration);
-      if (frameCount++ % 30 === 0) {
+      if (frameCount++ % 60 === 0) {
         const left = Math.max(0, audioBuf.duration - elapsed);
+        // Log achieved fps so we can confirm the render actually hits 60.
+        const achievedFps = elapsed > 0 ? (frameCount / elapsed).toFixed(1) : "—";
+        console.log(`[waveform render] frame ${frameCount}, ${elapsed.toFixed(1)}s elapsed, ~${achievedFps} fps`);
         setRenderTimeLeft(`${fmt(elapsed)} / ${fmt(audioBuf.duration)}  (${fmt(left)} left)`);
       }
       analyser.getByteFrequencyData(freqBuf);
@@ -366,7 +371,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       ctx2d.scale(scaleX, scaleY);
       drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate);
       ctx2d.restore();
-    }, 1000 / 30);
+    }, 1000 / 60);
     recStopLoopRef.current = () => clearInterval(intervalId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioFile, cfg, style]);

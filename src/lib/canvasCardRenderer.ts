@@ -18,13 +18,13 @@ const WF_N = 20;
 // Waveform bar level state — per-bar attack/decay smoothing across frames
 let wfLevel = new Float32Array(20);
 
-// User-tuned constants (tuned at 60fps in sandbox).
-// Canvas renderer runs at 30fps, so per-frame smoothing must be adjusted:
-// value_30fps = 1 - (1 - value_60fps)^2
+// User-tuned constants (tuned at 60fps in sandbox). The canvas render loop
+// now also runs at 60fps + analyser smoothing matches the preview, so the
+// sandbox constants apply directly — no frame-rate compensation needed.
 const WF_GAIN   = 0.5;
 const WF_TILT   = 4;
-const WF_ATK    = 1 - (1 - 0.19) ** 2;   // ≈ 0.344
-const WF_DEC    = 1 - (1 - 0.055) ** 2;  // ≈ 0.107
+const WF_ATK    = 0.19;
+const WF_DEC    = 0.055;
 const WF_SMOOTH = 0.9;
 const WF_FLOOR  = 0;
 const WF_MAX_H  = 35;

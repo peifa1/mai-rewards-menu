@@ -10,6 +10,12 @@ export const CANVAS_H = 976;
 export const OUT_W = 1080;
 export const OUT_H = 1352;
 
+// hex color + alpha → "rgba(r,g,b,a)"
+function ha(hex: string, alpha: number): string {
+  const n = parseInt((hex || "#f8b8cc").replace("#", ""), 16);
+  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+
 // Persistent smoothing state for the Sound Orb (one recording at a time).
 let orbAmpSmooth = 0;
 
@@ -198,7 +204,7 @@ export function drawWaveformCard(
   }
 
   ctx.save();
-  ctx.fillStyle = "#f8b8cc";
+  ctx.fillStyle = cfg.accentColor || "#f8b8cc";
   for (let i = 0; i < WF_N; i++) {
     const halfH = Math.max(3, Math.round(3 + wfLevel[i] * WF_MAX_H));
     const bX = bLeft + i * (bW + bGap);
@@ -210,7 +216,7 @@ export function drawWaveformCard(
   // In-card text (matches the HTML template)
   const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
   ctx.save();
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = cfg.titleColor || "#ffffff";
   ctx.font = "20px ui-sans-serif, system-ui, sans-serif";
   ls.letterSpacing = "6.8px";
   ctx.textAlign = "center";
@@ -218,7 +224,7 @@ export function drawWaveformCard(
   ctx.restore();
 
   ctx.save();
-  ctx.fillStyle = "#f8b8cc";
+  ctx.fillStyle = cfg.accentColor || "#f8b8cc";
   ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
   ls.letterSpacing = "5px";
   ctx.textAlign = "center";
@@ -284,7 +290,7 @@ export function drawNowPlayingCard(
 
   // "NOW PLAYING" — top-left
   ctx.save();
-  ctx.fillStyle = "#f8b8cc";
+  ctx.fillStyle = cfg.accentColor || "#f8b8cc";
   ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
   ls.letterSpacing = "6px";
   ctx.textAlign = "left";
@@ -297,7 +303,7 @@ export function drawNowPlayingCard(
   // Title — bottom-left, with mini waveform bars beside it
   const titleY = cY + cH - 96;
   ctx.save();
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = cfg.titleColor || "#ffffff";
   ctx.font = `30px Georgia, "Times New Roman", serif`;
   ls.letterSpacing = "0px";
   ctx.textAlign = "left";
@@ -308,7 +314,7 @@ export function drawNowPlayingCard(
 
   // Mini waveform bars — same live FFT + stereo logic as waveform card, small scale
   ctx.save();
-  ctx.fillStyle = "#f8b8cc";
+  ctx.fillStyle = cfg.accentColor || "#f8b8cc";
   if (freqBuf && sampleRate) {
     const binHz  = sampleRate / (freqBuf.length * 2);
     const minHz  = 60, maxHz = 18000;
@@ -360,7 +366,7 @@ export function drawNowPlayingCard(
     : `${cfg.minutes || "24"} Min`;
   const mins = durationLabel;
   ctx.save();
-  ctx.fillStyle = "#f8b8cc";
+  ctx.fillStyle = cfg.accentColor || "#f8b8cc";
   ctx.font = "18px ui-sans-serif, system-ui, sans-serif";
   ls.letterSpacing = "4px";
   ctx.textAlign = "left";
@@ -373,7 +379,7 @@ export function drawNowPlayingCard(
   ctx.fillStyle = "rgba(255,255,255,0.18)";
   rrp(ctx, sL, sY, sR - sL, sH, 3);
   ctx.fill();
-  ctx.fillStyle = "#f8b8cc";
+  ctx.fillStyle = cfg.accentColor || "#f8b8cc";
   rrp(ctx, sL, sY, Math.max(sH, (sR - sL) * progress), sH, 3);
   ctx.fill();
   ctx.restore();
@@ -455,7 +461,7 @@ export function drawSoundOrbCard(
     const x2 = orbX + (ORB_INNER_R + barLen) * Math.cos(angle);
     const y2 = orbY + (ORB_INNER_R + barLen) * Math.sin(angle);
     const opacity = 0.35 + v * 0.65;
-    ctx.strokeStyle = `rgba(248,184,204,${opacity.toFixed(2)})`;
+    ctx.strokeStyle = ha(cfg.accentColor || "#f8b8cc", opacity);
     ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
@@ -471,7 +477,7 @@ export function drawSoundOrbCard(
   // Pass 1: draw filled circle with shadow so the glow renders outside the circle.
   // The image drawn in pass 2 will overwrite the fill inside, leaving only the outer glow.
   ctx.save();
-  ctx.shadowColor = `rgba(248,184,204,${(0.3 + a * 0.45).toFixed(2)})`;
+  ctx.shadowColor = ha(cfg.accentColor || "#f8b8cc", 0.3 + a * 0.45);
   ctx.shadowBlur = Math.round(60 + a * 50);
   ctx.fillStyle = "#1a0410";
   ctx.beginPath();
@@ -499,7 +505,7 @@ export function drawSoundOrbCard(
   // Caption
   const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
   ctx.save();
-  ctx.fillStyle = "#f8b8cc";
+  ctx.fillStyle = cfg.accentColor || "#f8b8cc";
   ctx.font = "20px ui-sans-serif, system-ui, sans-serif";
   ls.letterSpacing = "6.8px";
   ctx.textAlign = "center";

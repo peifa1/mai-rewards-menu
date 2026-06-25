@@ -108,13 +108,15 @@ function Section({ title, accent, children }: {
 }
 
 // ── Single card column ────────────────────────────────────────────────────
-function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, audioDuration, waveformData }: {
+function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, audioDuration, waveformData, accentColor, titleColor }: {
   style: TeaserStyle; kanji: string; label: string;
   onWindow: (style: TeaserStyle, win: Window | null) => void;
   audioMinutes: string | null;
   audioFile: File | null;
   audioDuration: number;
   waveformData: number[];
+  accentColor: string;
+  titleColor: string;
 }) {
   const [cfg, setCfg] = useState<AudioTeaserConfig>(() => loadStored(style));
   const [previewSrc, setPreviewSrc] = useState("");
@@ -186,13 +188,14 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     animSec?: number
   ) {
     const img = imgElRef.current;
+    const cfgWithColors = { ...cfg, accentColor, titleColor };
     if (style === "waveform" && freqBuf && sampleRate) {
-      drawWaveformCard(ctx2d, cfg, img, freqBuf, sampleRate, dt, freqL, freqR);
+      drawWaveformCard(ctx2d, cfgWithColors, img, freqBuf, sampleRate, dt, freqL, freqR);
     } else if (style === "nowplaying") {
-      drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDurationRef.current || undefined, freqBuf, sampleRate, dt, freqL, freqR, animSec);
+      drawNowPlayingCard(ctx2d, cfgWithColors, img, bands, progress, audioDurationRef.current || undefined, freqBuf, sampleRate, dt, freqL, freqR, animSec);
     } else {
       const amp = bands.reduce((a, b) => a + b, 0) / Math.max(1, bands.length);
-      drawSoundOrbCard(ctx2d, cfg, img, amp, freqBuf);
+      drawSoundOrbCard(ctx2d, cfgWithColors, img, amp, freqBuf);
     }
   }
 
@@ -338,13 +341,13 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
   const buildPreview = useCallback(async (c: AudioTeaserConfig) => {
     try {
       const tpl = await loadAudioTeaserTemplate(c.style);
-      const html = buildAudioTeaserHtml(tpl, c);
+      const html = buildAudioTeaserHtml(tpl, { ...c, accentColor, titleColor });
       const blob = new Blob([html], { type: "text/html" });
       if (blobRef.current) URL.revokeObjectURL(blobRef.current);
       blobRef.current = URL.createObjectURL(blob);
       setPreviewSrc(blobRef.current);
     } catch (e) { console.error(e); }
-  }, []);
+  }, [accentColor, titleColor]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -600,6 +603,8 @@ export function AudioTeaserBuilder() {
   const engine = useAudioEngine(getTargets);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [waveformData, setWaveformData] = useState<number[]>([]);
+  const [accentColor, setAccentColor] = useState("#f8b8cc");
+  const [titleColor, setTitleColor] = useState("#ffffff");
 
   // Pre-analyze uploaded audio → 40 normalized RMS amplitude values.
   // This is what drives the waveform bar heights: shape comes from the file,
@@ -651,6 +656,23 @@ export function AudioTeaserBuilder() {
 
       <Transport engine={engine} onAudioFile={setAudioFile} />
 
+      {/* Global color pickers */}
+      <div style={{
+        display: "flex", gap: 24, justifyContent: "center", alignItems: "center",
+        marginTop: 10, marginBottom: 4,
+      }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+          <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)}
+            style={{ width: 32, height: 32, border: "none", background: "none", cursor: "pointer", padding: 0 }} />
+          <span style={{ fontSize: 9, color: INK_DIM, fontFamily: SANS, letterSpacing: "0.24em", textTransform: "uppercase" }}>Accent</span>
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+          <input type="color" value={titleColor} onChange={e => setTitleColor(e.target.value)}
+            style={{ width: 32, height: 32, border: "none", background: "none", cursor: "pointer", padding: 0 }} />
+          <span style={{ fontSize: 9, color: INK_DIM, fontFamily: SANS, letterSpacing: "0.24em", textTransform: "uppercase" }}>Titles</span>
+        </label>
+      </div>
+
       <div style={{ display: "flex", gap: 24, marginTop: 22, justifyContent: "center", alignItems: "flex-start", flexWrap: "wrap" }}>
         {STYLES.map(s => (
           <TeaserCard
@@ -659,32 +681,10 @@ export function AudioTeaserBuilder() {
             audioFile={audioFile}
             audioDuration={engine.duration}
             waveformData={waveformData}
+            accentColor={accentColor}
+            titleColor={titleColor}
           />
         ))}
-
-        {/* Single squiggle hint — sits to the right of all cards */}
-        <div style={{
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          gap: 10, paddingTop: 80, opacity: 0.7, flexShrink: 0,
-        }}>
-          <div style={{
-            width: 36, height: 36,
-            backgroundColor: "#ffb8c8",
-            WebkitMaskImage: "url(/images/squiggle-arrow.png)",
-            maskImage: "url(/images/squiggle-arrow.png)",
-            WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-            WebkitMaskSize: "contain", maskSize: "contain",
-            WebkitMaskPosition: "center", maskPosition: "center",
-            transform: "scaleX(-1)",
-          }} />
-          <span style={{
-            fontSize: 11, color: "#a98a92", fontFamily: SANS,
-            letterSpacing: "0.06em", lineHeight: 1.5,
-            textAlign: "center", maxWidth: 90, writingMode: "horizontal-tb",
-          }}>
-            render takes as long as the audio
-          </span>
-        </div>
       </div>
 
     </div>

@@ -11,6 +11,8 @@ export type AudioTeaserConfig = {
   cardLabel: string;   // waveform only — "RP AUDIO"
   timeStart: string;   // nowplaying only — "03:12"
   image: string;       // data URL, "" = keep template default
+  accentColor: string; // waveform bars + rose-colored text (global)
+  titleColor: string;  // card titles like "RP AUDIO", "Whisper & Rain" (global)
 };
 
 export const DEFAULT_AUDIO_TEASER_CONFIG: AudioTeaserConfig = {
@@ -24,6 +26,8 @@ export const DEFAULT_AUDIO_TEASER_CONFIG: AudioTeaserConfig = {
   cardLabel: "RP AUDIO",
   timeStart: "03:12",
   image: "",
+  accentColor: "#f8b8cc",
+  titleColor: "#ffffff",
 };
 
 export function normalizeAudioTeaserConfig(cfg: AudioTeaserConfig): AudioTeaserConfig {
@@ -41,7 +45,9 @@ export function normalizeAudioTeaserConfig(cfg: AudioTeaserConfig): AudioTeaserC
     asmrLabel: s(cfg?.asmrLabel, d.asmrLabel),
     cardLabel: s(cfg?.cardLabel, d.cardLabel),
     timeStart: s(cfg?.timeStart, d.timeStart),
-    image: typeof cfg?.image === "string" ? cfg.image : "",
+    image:       typeof cfg?.image === "string" ? cfg.image : "",
+    accentColor: s(cfg?.accentColor, d.accentColor),
+    titleColor:  s(cfg?.titleColor, d.titleColor),
   };
 }
 
@@ -91,6 +97,14 @@ export function buildAudioTeaserHtml(template: string, rawCfg: AudioTeaserConfig
   if (cfg.image) {
     out = out.replace(/var IMG = '[^']*';/, `var IMG = '${cfg.image}';`);
   }
+
+  // Inject global color overrides
+  const colorStyle = `<style>
+:root{--rose:${cfg.accentColor};}
+#cardLabel,.card-label{color:${cfg.titleColor}!important;}
+#npTitle{color:${cfg.titleColor}!important;}
+</style>`;
+  out = out.replace('</head>', colorStyle + '</head>');
 
   return out;
 }

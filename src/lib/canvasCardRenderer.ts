@@ -437,14 +437,22 @@ export function drawSoundOrbCard(
   const scale = 1 + a * 0.06;
   const r = orbR * scale;
 
+  // Pass 1: draw filled circle with shadow so the glow renders outside the circle.
+  // The image drawn in pass 2 will overwrite the fill inside, leaving only the outer glow.
   ctx.save();
   ctx.shadowColor = `rgba(248,184,204,${(0.3 + a * 0.45).toFixed(2)})`;
-  ctx.shadowBlur = Math.round(28 + a * 50);
+  ctx.shadowBlur = Math.round(60 + a * 50);
+  ctx.fillStyle = "#1a0410";
   ctx.beginPath();
   ctx.arc(orbX, orbY, r, 0, Math.PI * 2);
-  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // Pass 2: clip to circle and draw the portrait image (no shadow inside).
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(orbX, orbY, r, 0, Math.PI * 2);
   ctx.clip();
-  ctx.shadowBlur = 0;
 
   if (imgEl?.complete && imgEl.naturalWidth > 0) {
     ctx.drawImage(imgEl, orbX - r, orbY - r, r * 2, r * 2);

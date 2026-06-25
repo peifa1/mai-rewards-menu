@@ -259,7 +259,7 @@ document.getElementById('labelMeta').textContent     =
       var s = b * step, e2 = Math.min(s + step, len), acc = 0;
       for (var k = s; k < e2; k++) acc += freqArr[k] / 255;
       var energy = acc / (e2 - s);
-      var risen  = energy >= ORB.thresh && bandPrev[b] < ORB.thresh;
+      var risen  = energy >= ORB.thresh;
       var cooled = (now - bandCooldowns[b]) > ORB.cool * 1000;
       if (risen && cooled) { spawnRing(energy); bandCooldowns[b] = now; }
       bandPrev[b] = energy;

@@ -415,49 +415,56 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
 
       {/* Render button + squiggle annotation */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, width: colW }}>
-        {/* Squiggle arrow pointing down toward render button */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 4 }}>
-          <div style={{
-            width: 32, height: 32, flexShrink: 0,
-            backgroundColor: "#ffb8c8",
-            WebkitMaskImage: "url(/images/squiggle-arrow.png)",
-            maskImage: "url(/images/squiggle-arrow.png)",
-            WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-            WebkitMaskSize: "contain", maskSize: "contain",
-            WebkitMaskPosition: "center", maskPosition: "center",
-            transform: "rotate(90deg)",
-            opacity: 0.75,
-          }} />
-          <span style={{ fontSize: 9, color: INK_DIM, fontFamily: SANS, letterSpacing: "0.12em", lineHeight: 1.4 }}>
-            Render time = audio length
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* Render MP4 */}
+          <button
+            onClick={recState === "render" ? stopRec : () => void startRenderRecording()}
+            disabled={!audioFile && recState !== "render"}
+            title={!audioFile && recState !== "render" ? "Upload audio first" : undefined}
+            style={{
+              flex: 1, padding: "9px 0", borderRadius: 8,
+              cursor: (!audioFile && recState === "idle") ? "default" : "pointer",
+              border: recState === "render"
+                ? "1px solid rgba(255,90,90,0.7)"
+                : audioFile ? "1px solid rgba(100,210,210,0.4)" : "1px solid rgba(255,255,255,0.1)",
+              background: recState === "render" ? "rgba(255,60,60,0.14)" : audioFile ? "rgba(80,200,200,0.07)" : "transparent",
+              color: recState === "render" ? "#ff9090" : audioFile && recState === "idle" ? "#88dddd" : INK_DIM,
+              fontSize: 10, fontFamily: SANS, letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              transition: "border 0.2s, background 0.2s",
+            }}
+          >{recState === "render" ? "■ Stop" : "⬇ Render"}</button>
+
+          {/* Squiggle hint — points left toward the render button */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flexShrink: 0 }}>
+            <div style={{
+              width: 28, height: 28,
+              backgroundColor: "#ffb8c8",
+              WebkitMaskImage: "url(/images/squiggle-arrow.png)",
+              maskImage: "url(/images/squiggle-arrow.png)",
+              WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+              WebkitMaskSize: "contain", maskSize: "contain",
+              WebkitMaskPosition: "center", maskPosition: "center",
+              transform: "scaleX(-1)",
+              opacity: 0.7,
+            }} />
+            <span style={{ fontSize: 8.5, color: INK_DIM, fontFamily: SANS, letterSpacing: "0.05em", lineHeight: 1.3, textAlign: "center", maxWidth: 72 }}>
+              takes as long as the audio
+            </span>
+          </div>
         </div>
 
-        {/* Render MP4 */}
-        <button
-          onClick={recState === "render" ? stopRec : () => void startRenderRecording()}
-          disabled={!audioFile && recState !== "render"}
-          title={!audioFile && recState !== "render" ? "Upload audio first" : undefined}
-          style={{
-            width: "100%", padding: "9px 0", borderRadius: 8,
-            cursor: (!audioFile && recState === "idle") ? "default" : "pointer",
-            border: recState === "render"
-              ? "1px solid rgba(255,90,90,0.7)"
-              : audioFile ? "1px solid rgba(100,210,210,0.4)" : "1px solid rgba(255,255,255,0.1)",
-            background: recState === "render" ? "rgba(255,60,60,0.14)" : audioFile ? "rgba(80,200,200,0.07)" : "transparent",
-            color: recState === "render" ? "#ff9090" : audioFile && recState === "idle" ? "#88dddd" : INK_DIM,
-            fontSize: 10, fontFamily: SANS, letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            transition: "border 0.2s, background 0.2s",
-          }}
-        >
-          {recState === "render"
-            ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, lineHeight: 1.3 }}>
-                <span>■ Stop</span>
-                {renderTimeLeft && <span style={{ fontSize: 7.5, opacity: 0.75, letterSpacing: "0.04em", textTransform: "none" }}>{renderTimeLeft}</span>}
-              </div>
-            : "⬇ Render"}
-        </button>
+        {/* Render timer — shown prominently while rendering */}
+        {recState === "render" && renderTimeLeft && (
+          <div style={{
+            textAlign: "center", fontFamily: SANS,
+            color: "#ff9090", letterSpacing: "0.12em",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+          }}>
+            <span style={{ fontSize: 22, fontWeight: 600, lineHeight: 1 }}>{renderTimeLeft}</span>
+            <span style={{ fontSize: 8.5, opacity: 0.6, letterSpacing: "0.22em", textTransform: "uppercase" }}>remaining</span>
+          </div>
+        )}
       </div>
 
       {/* Editor panel */}
@@ -575,7 +582,6 @@ function Transport({
             : "transparent",
           color: hasAudio ? "#ffb8cc" : INK_DIM,
           cursor: hasAudio ? "pointer" : "default",
-          fontSize: playing ? 13 : 16,
           display: "flex", alignItems: "center", justifyContent: "center",
           boxShadow: hasAudio
             ? playing
@@ -584,7 +590,12 @@ function Transport({
             : "none",
           transition: "box-shadow 0.3s, background 0.3s, border 0.3s",
         }}
-      >{playing ? "❚❚" : "▶"}</button>
+      >
+        {playing
+          ? <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="2" width="3.5" height="10" rx="1.2"/><rect x="8.5" y="2" width="3.5" height="10" rx="1.2"/></svg>
+          : <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><polygon points="3,1 13,7 3,13"/></svg>
+        }
+      </button>
 
       {/* Status text */}
       <div style={{

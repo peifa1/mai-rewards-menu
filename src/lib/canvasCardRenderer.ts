@@ -21,13 +21,13 @@ let wfLevel = new Float32Array(20);
 // User-tuned constants (tuned at 60fps in sandbox). The canvas render loop
 // now also runs at 60fps + analyser smoothing matches the preview, so the
 // sandbox constants apply directly — no frame-rate compensation needed.
-const WF_GAIN   = 0.5;
-const WF_TILT   = 4;
-const WF_ATK    = 0.19;
-const WF_DEC    = 0.055;
-const WF_SMOOTH = 0.9;
+const WF_GAIN   = 1;
+const WF_TILT   = 2;
+const WF_ATK    = 0.35;
+const WF_DEC    = 0.18;
+const WF_SMOOTH = 0.8;
 const WF_FLOOR  = 0;
-const WF_MAX_H  = 35;
+const WF_MAX_H  = 50;
 
 // Sakura PNG — loaded from inline data URL so it works in blob-iframe previews
 // and in offscreen canvas recording contexts (no network request needed).
@@ -128,7 +128,8 @@ export function drawWaveformCard(
   const bW = 6, bGap = 4;
   const totalBW = WF_N * bW + (WF_N - 1) * bGap;
   const bLeft = cX + (cW - totalBW) / 2;
-  const bCenterY = cY + cH / 2 - 60;
+  // Match HTML: bars at bottom:52px, height:56px → center = cH - (52+28)*2 from card top
+  const bCenterY = cY + cH - 160;
 
   // Per-bar log-spaced FFT with tilt + attack/decay (matches sandbox)
   const binHz   = sampleRate / (freqBuf.length * 2);

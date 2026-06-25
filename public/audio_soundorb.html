@@ -190,23 +190,40 @@ document.getElementById('labelMeta').textContent     =
   var orbCtx      = orbCanvas.getContext('2d');
   var orbPortrait = document.querySelector('.orb-portrait');
 
+  // Geometry
   var N_BARS    = 80;
-  var INNER_R   = 82;   // just outside portrait (75px radius + gap)
-  var MAX_BAR   = 75;   // max bar length in px
+  var INNER_R   = 82;
+  var MAX_BAR   = 75;
   var LINE_W    = 3.5;
   var GLOW_BASE = 36;
   var GLOW_AMP  = 50;
 
+  // Smoothing — same constants as the Waveform card
+  var ORB_GAIN  = 0.55;  // overall gain (no power curve)
+  var ORB_ATK   = 0.5;   // per-frame attack  (matches WF_ATK)
+  var ORB_DEC   = 0.24;  // per-frame decay   (matches WF_DEC)
+  var ORB_NBSM  = 0.7;   // neighbor-smoothing weight (matches WF_SMOOTH)
+
   var ampSmooth  = 0;
   var smoothBars = (function(){ var a=[]; for(var i=0;i<80;i++) a.push(0); return a; })();
   var orbRAF     = null;
+  var audioActive = false;
 
   function drawRadialWave() {
     var cx = orbCanvas.width / 2, cy = orbCanvas.height / 2;
     orbCtx.clearRect(0, 0, orbCanvas.width, orbCanvas.height);
     orbCtx.lineCap = 'round';
+
+    // Neighbor smoothing on a display copy (circular — wraps around)
+    var disp = [];
     for (var i = 0; i < N_BARS; i++) {
-      var v = smoothBars[i];
+      var l = smoothBars[(i - 1 + N_BARS) % N_BARS];
+      var r = smoothBars[(i + 1) % N_BARS];
+      disp.push(smoothBars[i] * (1 - ORB_NBSM) + (l + r) / 2 * ORB_NBSM);
+    }
+
+    for (var i = 0; i < N_BARS; i++) {
+      var v = disp[i];
       var barLen = v * MAX_BAR;
       if (barLen < 0.5) continue;
       var angle = (i / N_BARS) * Math.PI * 2 - Math.PI / 2;
@@ -234,28 +251,29 @@ document.getElementById('labelMeta').textContent     =
 
   function orbRenderLoop() {
     orbRAF = requestAnimationFrame(orbRenderLoop);
-    // Decay bars and amp when no fresh data is arriving
-    for (var i = 0; i < N_BARS; i++) smoothBars[i] *= 0.85;
-    ampSmooth *= 0.92;
+    // When no audio is arriving, let bars decay naturally
+    if (!audioActive) {
+      for (var i = 0; i < N_BARS; i++) smoothBars[i] *= (1 - ORB_DEC);
+      ampSmooth *= (1 - ORB_DEC);
+    }
+    audioActive = false; // reset; set to true again in processBands each frame
     drawRadialWave();
     updatePortraitGlow();
   }
 
   function processBands(freqArr) {
+    audioActive = true;
     var len = freqArr.length;
+    var logMin = Math.log(2), logMax = Math.log(len * 0.6);
     var sum = 0;
     for (var i = 0; i < N_BARS; i++) {
-      // Log-scale mapping: concentrates bars on voice/low-mid frequencies
-      var logMin = Math.log(2), logMax = Math.log(len * 0.6);
       var fi  = Math.min(Math.round(Math.exp(logMin + (logMax - logMin) * i / N_BARS)), len - 1);
-      var raw = Math.pow((freqArr[fi] || 0) / 255, 0.6); // power curve boosts quiet signals
+      var raw = Math.min(1, (freqArr[fi] || 0) / 255 * ORB_GAIN);
       sum += raw;
-      if (raw > smoothBars[i]) smoothBars[i] += (raw - smoothBars[i]) * 0.5;
-      else                      smoothBars[i] += (raw - smoothBars[i]) * 0.15;
+      smoothBars[i] += (raw - smoothBars[i]) * (raw > smoothBars[i] ? ORB_ATK : ORB_DEC);
     }
-    var amp = Math.min(1, (sum / N_BARS) * 3);
-    if (amp > ampSmooth) ampSmooth += (amp - ampSmooth) * 0.4;
-    else                  ampSmooth += (amp - ampSmooth) * 0.06;
+    var amp = Math.min(1, (sum / N_BARS) * 4);
+    ampSmooth += (amp - ampSmooth) * (amp > ampSmooth ? ORB_ATK : ORB_DEC);
   }
 
   function startOrbRender() {
@@ -263,7 +281,8 @@ document.getElementById('labelMeta').textContent     =
   }
 
   function stopOrbRender() {
-    // Let bars decay naturally — don't cut RAF abruptly
+    audioActive = false;
+    // Bars decay naturally via orbRenderLoop — no hard stop
   }
 
   window.addEventListener('message', function(e){
@@ -276,7 +295,7 @@ document.getElementById('labelMeta').textContent     =
     }
   });
 
-  startOrbRender(); // start idle render immediately
+  startOrbRender();
 
     /* Mic self-start — active when loaded directly as OBS Browser Source */
   (function(){

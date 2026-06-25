@@ -420,22 +420,33 @@ export function drawSoundOrbCard(
   const a = orbAmpSmooth;
 
   // ── Radial waveform ────────────────────────────────────────────────────
+  // Same constants as iframe preview and Waveform card
+  const ORB_GAIN = 0.55, ORB_ATK = 0.5, ORB_DEC = 0.24, ORB_NBSM = 0.7;
+
   if (freqBuf && freqBuf.length > 0) {
     const len = freqBuf.length;
     const logMin = Math.log(2), logMax = Math.log(len * 0.6);
     for (let i = 0; i < ORB_N_BARS; i++) {
       const fi  = Math.min(Math.round(Math.exp(logMin + (logMax - logMin) * i / ORB_N_BARS)), len - 1);
-      const raw = Math.pow(freqBuf[fi] / 255, 0.6); // power curve boosts quiet signals
-      orbBars[i] += (raw - orbBars[i]) * (raw > orbBars[i] ? 0.5 : 0.15);
+      const raw = Math.min(1, freqBuf[fi] / 255 * ORB_GAIN);
+      orbBars[i] += (raw - orbBars[i]) * (raw > orbBars[i] ? ORB_ATK : ORB_DEC);
     }
   } else {
-    for (let i = 0; i < ORB_N_BARS; i++) orbBars[i] *= 0.85;
+    for (let i = 0; i < ORB_N_BARS; i++) orbBars[i] *= (1 - ORB_DEC);
+  }
+
+  // Neighbor smoothing (circular)
+  const dispBars = new Float32Array(ORB_N_BARS);
+  for (let i = 0; i < ORB_N_BARS; i++) {
+    const l = orbBars[(i - 1 + ORB_N_BARS) % ORB_N_BARS];
+    const r = orbBars[(i + 1) % ORB_N_BARS];
+    dispBars[i] = orbBars[i] * (1 - ORB_NBSM) + (l + r) / 2 * ORB_NBSM;
   }
 
   ctx.save();
   ctx.lineCap = "round";
   for (let i = 0; i < ORB_N_BARS; i++) {
-    const v      = orbBars[i];
+    const v      = dispBars[i];
     const barLen = v * ORB_MAX_BAR;
     if (barLen < 0.5) continue;
     const angle   = (i / ORB_N_BARS) * Math.PI * 2 - Math.PI / 2;

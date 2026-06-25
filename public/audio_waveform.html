@@ -219,8 +219,18 @@ document.getElementById('labelMeta').textContent     =
   var lastSampleRate = 48000;
   var lastFftSize = 4096;
   var isPlaying = false;
+  var wfLastFrameT = 0; // for time-delta smoothing
 
   function wfApplyFFT(freqBuf, sampleRate, fftSize) {
+    // Time-delta so attack/decay matches renderer regardless of monitor Hz.
+    // Formula: alpha_dt = 1 - (1 - alpha_60fps)^(dt*60)
+    var now = performance.now();
+    var dt = wfLastFrameT > 0 ? Math.min((now - wfLastFrameT) / 1000, 0.1) : 1/60;
+    wfLastFrameT = now;
+    var dtN = dt * 60; // normalized: 1.0 = one 60fps frame
+    var atk = 1 - Math.pow(1 - WF_ATK, dtN);
+    var dec = 1 - Math.pow(1 - WF_DEC, dtN);
+
     var binHz = sampleRate / fftSize;
     var minHz = 60, maxHz = 18000;
     var target = new Array(N);
@@ -241,10 +251,10 @@ document.getElementById('labelMeta').textContent     =
       var l = tmp[Math.max(0, i2-1)], c = tmp[i2], r2 = tmp[Math.min(N-1, i2+1)];
       target[i2] = c * (1 - WF_SMOOTH) + ((l + r2) / 2) * WF_SMOOTH;
     }
-    // Attack/decay + render
+    // Attack/decay + render (time-delta normalized)
     for (var i3 = 0; i3 < N; i3++) {
       var tg = Math.max(WF_FLOOR, target[i3]);
-      var spd = tg > level[i3] ? WF_ATK : WF_DEC;
+      var spd = tg > level[i3] ? atk : dec;
       level[i3] += (tg - level[i3]) * spd;
       var h = Math.max(3, Math.round(3 + level[i3] * WF_MAX_H));
       bars[i3].style.animation = 'none';

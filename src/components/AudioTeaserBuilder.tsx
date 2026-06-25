@@ -180,11 +180,12 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     bands: number[],
     progress: number,
     freqBuf?: Uint8Array,
-    sampleRate?: number
+    sampleRate?: number,
+    dt?: number
   ) {
     const img = imgElRef.current;
     if (style === "waveform" && freqBuf && sampleRate) {
-      drawWaveformCard(ctx2d, cfg, img, freqBuf, sampleRate);
+      drawWaveformCard(ctx2d, cfg, img, freqBuf, sampleRate, dt);
     } else if (style === "nowplaying") {
       drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDurationRef.current || undefined);
     } else {
@@ -268,13 +269,17 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     ctx2d.imageSmoothingEnabled = true;
     ctx2d.imageSmoothingQuality = "high";
     const scaleX = OUT_W / CANVAS_W, scaleY = OUT_H / CANVAS_H;
+    let lastT = performance.now();
     const intervalId = setInterval(() => {
+      const now = performance.now();
+      const dt = Math.min((now - lastT) / 1000, 0.1);
+      lastT = now;
       analyser.getByteFrequencyData(freqBuf);
       const bands = computeBands(analyser, freqBuf, 18);
       const progress = ((Date.now() / 1000) % 6) / 6;
       ctx2d.save();
       ctx2d.scale(scaleX, scaleY);
-      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate);
+      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate, dt);
       ctx2d.restore();
     }, 1000 / 60);
     recStopLoopRef.current = () => clearInterval(intervalId);
@@ -355,12 +360,15 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       return `${m}:${String(sec).padStart(2, "0")}`;
     }
     let frameCount = 0;
+    let lastT = performance.now();
     const intervalId = setInterval(() => {
+      const now = performance.now();
+      const dt = Math.min((now - lastT) / 1000, 0.1);
+      lastT = now;
       const elapsed = audioCtx.currentTime - startTime;
       const progress = Math.min(1, elapsed / audioBuf.duration);
       if (frameCount++ % 60 === 0) {
         const left = Math.max(0, audioBuf.duration - elapsed);
-        // Log achieved fps so we can confirm the render actually hits 60.
         const achievedFps = elapsed > 0 ? (frameCount / elapsed).toFixed(1) : "—";
         console.log(`[waveform render] frame ${frameCount}, ${elapsed.toFixed(1)}s elapsed, ~${achievedFps} fps`);
         setRenderTimeLeft(`${fmt(elapsed)} / ${fmt(audioBuf.duration)}  (${fmt(left)} left)`);
@@ -369,7 +377,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
       const bands = computeBands(analyser, freqBuf, 18);
       ctx2d.save();
       ctx2d.scale(scaleX, scaleY);
-      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate);
+      drawFrame(ctx2d, bands, progress, freqBuf, audioCtx.sampleRate, dt);
       ctx2d.restore();
     }, 1000 / 60);
     recStopLoopRef.current = () => clearInterval(intervalId);

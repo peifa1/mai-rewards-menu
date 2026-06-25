@@ -96,7 +96,8 @@ export function drawWaveformCard(
   cfg: AudioTeaserConfig,
   imgEl: HTMLImageElement | null,
   freqBuf: Uint8Array,     // raw FFT byte array from AnalyserNode
-  sampleRate: number       // AudioContext.sampleRate
+  sampleRate: number,      // AudioContext.sampleRate
+  dt: number = 1 / 60     // seconds since last frame — for frame-rate-independent smoothing
 ) {
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 56);
@@ -150,10 +151,14 @@ export function drawWaveformCard(
     const l = tmp[Math.max(0, i - 1)], c = tmp[i], r = tmp[Math.min(WF_N - 1, i + 1)];
     target[i] = c * (1 - WF_SMOOTH) + ((l + r) / 2) * WF_SMOOTH;
   }
-  // Attack/decay per bar
+  // Attack/decay per bar — time-delta normalized to 60fps so behavior matches
+  // preview at any refresh rate (60Hz, 120Hz, etc.)
+  const dtN = Math.min(dt * 60, 4); // clamp to avoid huge jumps on tab resume
+  const atk = 1 - Math.pow(1 - WF_ATK, dtN);
+  const dec = 1 - Math.pow(1 - WF_DEC, dtN);
   for (let i = 0; i < WF_N; i++) {
     const tg = Math.max(WF_FLOOR, target[i]);
-    wfLevel[i] += (tg - wfLevel[i]) * (tg > wfLevel[i] ? WF_ATK : WF_DEC);
+    wfLevel[i] += (tg - wfLevel[i]) * (tg > wfLevel[i] ? atk : dec);
   }
 
   ctx.save();

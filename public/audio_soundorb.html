@@ -302,20 +302,7 @@ document.getElementById('labelMeta').textContent     =
       stopOrbRender();
     }
   });
-  }
 
-  window.addEventListener('message', function(e){
-    var d = e.data || {};
-    if (d.type === 'aud') { orbApply(d.amp || 0); }
-    else if (d.type === 'audStop') {
-      if (orbPortrait) { orbPortrait.style.transform = ''; orbPortrait.style.boxShadow = ''; }
-      if (orbCard) orbCard.removeAttribute('data-orb-active');
-      orbRings.forEach(function(r){
-        r.style.animation = ''; r.style.width = ''; r.style.height = ''; r.style.opacity = '';
-      });
-      ampSmooth = 0; orbPulseT = 0; orbLastT = 0;
-    }
-  });
 
   /* Mic self-start — active when loaded directly as OBS Browser Source */
   (function(){
@@ -333,8 +320,6 @@ document.getElementById('labelMeta').textContent     =
         processBands(Array.from(freq));
       })();
       startOrbRender();
-    }).catch(function(){});
-  })();
     }).catch(function(){});
   })();
 

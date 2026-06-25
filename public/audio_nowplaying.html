@@ -299,12 +299,10 @@ document.getElementById('labelMeta').textContent  =
         if (npTimeStart) npTimeStart.textContent = fmtTime(d.currentTime);
         if (npTimeEnd) npTimeEnd.textContent = fmtTime(d.duration);
         var genreEl = document.getElementById('npGenreLabel');
-        if (genreEl) {
+        if (genreEl && !genreEl._durSet) {
           var mins = Math.ceil(d.duration / 60);
-          var txt = genreEl.textContent || '';
-          var dotIdx = txt.indexOf('·');
-          var prefix = dotIdx >= 0 ? txt.substring(0, dotIdx + 1) : txt + ' ·';
-          genreEl.textContent = prefix + ' ' + mins + ' MIN';
+          genreEl.textContent = (CONFIG.asmrLabel || 'ASMR') + ' · ' + mins + ' MIN';
+          genreEl._durSet = true;
         }
       }
     }

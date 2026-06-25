@@ -233,27 +233,67 @@ document.getElementById('labelMeta').textContent  =
   /* Build mini waveform bars */
   var mwf = document.getElementById('miniWf');
   var miniBars = [];
-  for (var j = 0; j < 9; j++) {
+  var miniLevel = [];
+  var NP_N = 9;
+  for (var j = 0; j < NP_N; j++) {
     var mb = document.createElement('i');
     var mdur = (0.6 + Math.random() * 0.9).toFixed(2);
     var mh   = Math.round(4 + Math.random() * 8) + 'px';
     mb.style.cssText = '--dl:'+(j*0.07).toFixed(2)+'s;--dur:'+mdur+'s;--mh:'+mh+';';
-    mwf.appendChild(mb); miniBars.push(mb);
+    mwf.appendChild(mb); miniBars.push(mb); miniLevel.push(0);
   }
 
-  /* Audio reactivity â€” driven by parent postMessage OR mic self-start below */
-  function npApply(s){
-    var n=s.length;
-    miniBars.forEach(function(mb,i){
-      var v=s[Math.floor(i/miniBars.length*n)]||0;
-      mb.style.animation='none';
-      mb.style.height=Math.max(2,Math.round(2+v*11))+'px';
-    });
+  // Same constants as waveform card
+  var NP_GAIN=0.5, NP_TILT=6, NP_ATK=0.5, NP_DEC=0.24, NP_MAX_H=11;
+  var npLastFrameT = 0;
+
+  function npApplyFFT(freqBuf, sampleRate, fftSize, freqL, freqR) {
+    var now = performance.now();
+    var dt = npLastFrameT > 0 ? Math.min((now - npLastFrameT) / 1000, 0.1) : 1/60;
+    npLastFrameT = now;
+    var dtN = dt * 60;
+    var atk = 1 - Math.pow(1 - NP_ATK, dtN);
+    var dec = 1 - Math.pow(1 - NP_DEC, dtN);
+    var stereo = !!(freqL && freqR);
+    var binHz = sampleRate / fftSize;
+    var minHz = 60, maxHz = 18000;
+    for (var i = 0; i < NP_N; i++) {
+      var fLo = minHz * Math.pow(maxHz / minHz, i / NP_N);
+      var fHi = minHz * Math.pow(maxHz / minHz, (i + 1) / NP_N);
+      var bLo = Math.max(0, Math.floor(fLo / binHz));
+      var bHi = Math.min(freqBuf.length - 1, Math.ceil(fHi / binHz));
+      var cnt = Math.max(1, bHi - bLo + 1);
+      var pos = i / (NP_N - 1);
+      var rms;
+      if (stereo) {
+        var sumL = 0, sumR = 0;
+        for (var k = bLo; k <= bHi; k++) {
+          var vL = freqL[k] / 255; sumL += vL * vL;
+          var vR = freqR[k] / 255; sumR += vR * vR;
+        }
+        rms = Math.sqrt(sumL / cnt) * (1 - pos) + Math.sqrt(sumR / cnt) * pos;
+      } else {
+        var sum2 = 0;
+        for (var k2 = bLo; k2 <= bHi; k2++) { var v2 = freqBuf[k2] / 255; sum2 += v2 * v2; }
+        rms = Math.sqrt(sum2 / cnt);
+      }
+      var tg = Math.min(1, rms * (1 + NP_TILT * pos) * NP_GAIN);
+      miniLevel[i] += (tg - miniLevel[i]) * (tg > miniLevel[i] ? atk : dec);
+      var h = Math.max(2, Math.round(2 + miniLevel[i] * NP_MAX_H));
+      miniBars[i].style.animation = 'none';
+      miniBars[i].style.height = h + 'px';
+    }
   }
+
   function npIdle(){ miniBars.forEach(function(mb){ mb.style.height=''; mb.style.animation=''; }); }
   window.addEventListener('message', function(e){
     var d = e.data || {};
-    if (d.type === 'aud' && d.s) { npApply(d.s); }
+    if (d.type === 'aud' && d.freq && d.sampleRate) {
+      var freqBuf = new Uint8Array(d.freq);
+      var freqL = d.freqL ? new Uint8Array(d.freqL) : null;
+      var freqR = d.freqR ? new Uint8Array(d.freqR) : null;
+      npApplyFFT(freqBuf, d.sampleRate, d.fftSize || 4096, freqL, freqR);
+    }
     else if (d.type === 'audStop') { npIdle(); }
   });
 

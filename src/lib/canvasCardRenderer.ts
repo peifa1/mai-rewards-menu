@@ -18,6 +18,10 @@ const WF_N = 20;
 // Waveform bar level state — per-bar attack/decay smoothing across frames
 let wfLevel = new Float32Array(20);
 
+// Now Playing mini bar level state
+const NP_N = 9;
+let npLevel = new Float32Array(NP_N);
+
 // User-tuned constants (tuned at 60fps in sandbox). The canvas render loop
 // now also runs at 60fps + analyser smoothing matches the preview, so the
 // sandbox constants apply directly — no frame-rate compensation needed.
@@ -227,8 +231,13 @@ export function drawNowPlayingCard(
   cfg: AudioTeaserConfig,
   imgEl: HTMLImageElement | null,
   bands: number[],
-  progress: number,   // 0–1 for seek bar position
-  durationSec?: number  // actual audio duration for time labels
+  progress: number,
+  durationSec?: number,
+  freqBuf?: Uint8Array,
+  sampleRate?: number,
+  dt: number = 1 / 60,
+  freqL?: Uint8Array,
+  freqR?: Uint8Array
 ) {
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 56);
@@ -281,14 +290,48 @@ export function drawNowPlayingCard(
   const titleW = ctx.measureText(title).width;
   ctx.restore();
 
-  // Mini waveform bars beside the title (9 bars, matching HTML template)
+  // Mini waveform bars — same live FFT + stereo logic as waveform card, small scale
   ctx.save();
   ctx.fillStyle = "#f8b8cc";
-  const N_MINI = 9;
-  for (let i = 0; i < N_MINI; i++) {
-    const v = bands[Math.floor((i / N_MINI) * bands.length)] ?? 0;
-    const h = Math.max(2, v * 26);
-    ctx.fillRect(cX + 32 + titleW + 12 + i * 6, titleY - h, 3, h);
+  if (freqBuf && sampleRate) {
+    const binHz  = sampleRate / (freqBuf.length * 2);
+    const minHz  = 60, maxHz = 18000;
+    const stereo = !!(freqL && freqR);
+    const dtN    = Math.min(dt * 60, 4);
+    const atk    = 1 - Math.pow(1 - WF_ATK, dtN);
+    const dec    = 1 - Math.pow(1 - WF_DEC, dtN);
+    for (let i = 0; i < NP_N; i++) {
+      const fLo = minHz * Math.pow(maxHz / minHz, i / NP_N);
+      const fHi = minHz * Math.pow(maxHz / minHz, (i + 1) / NP_N);
+      const bLo = Math.max(0, Math.floor(fLo / binHz));
+      const bHi = Math.min(freqBuf.length - 1, Math.ceil(fHi / binHz));
+      const cnt  = Math.max(1, bHi - bLo + 1);
+      const pos  = i / (NP_N - 1);
+      let rms: number;
+      if (stereo) {
+        let sumL = 0, sumR = 0;
+        for (let k = bLo; k <= bHi; k++) {
+          const vL = freqL![k] / 255; sumL += vL * vL;
+          const vR = freqR![k] / 255; sumR += vR * vR;
+        }
+        rms = Math.sqrt(sumL / cnt) * (1 - pos) + Math.sqrt(sumR / cnt) * pos;
+      } else {
+        let sum2 = 0;
+        for (let k = bLo; k <= bHi; k++) { const v = freqBuf[k] / 255; sum2 += v * v; }
+        rms = Math.sqrt(sum2 / cnt);
+      }
+      const tg = Math.min(1, rms * (1 + WF_TILT * pos) * WF_GAIN);
+      npLevel[i] += (tg - npLevel[i]) * (tg > npLevel[i] ? atk : dec);
+      const h = Math.max(2, Math.round(2 + npLevel[i] * 24));
+      ctx.fillRect(cX + 32 + titleW + 12 + i * 6, titleY - h + 4, 3, h);
+    }
+  } else {
+    // Fallback to bands when no FFT data
+    for (let i = 0; i < NP_N; i++) {
+      const v = bands[Math.floor((i / NP_N) * bands.length)] ?? 0;
+      const h = Math.max(2, v * 26);
+      ctx.fillRect(cX + 32 + titleW + 12 + i * 6, titleY - h, 3, h);
+    }
   }
   ctx.restore();
 

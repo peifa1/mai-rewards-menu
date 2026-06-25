@@ -189,7 +189,7 @@ function TeaserCard({ style, kanji, label, onWindow, audioMinutes, audioFile, au
     if (style === "waveform" && freqBuf && sampleRate) {
       drawWaveformCard(ctx2d, cfg, img, freqBuf, sampleRate, dt, freqL, freqR);
     } else if (style === "nowplaying") {
-      drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDurationRef.current || undefined);
+      drawNowPlayingCard(ctx2d, cfg, img, bands, progress, audioDurationRef.current || undefined, freqBuf, sampleRate, dt, freqL, freqR);
     } else {
       const amp = bands.reduce((a, b) => a + b, 0) / Math.max(1, bands.length);
       drawSoundOrbCard(ctx2d, cfg, img, amp);

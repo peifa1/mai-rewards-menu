@@ -253,7 +253,7 @@ export function drawNowPlayingCard(
   dt: number = 1 / 60,
   freqL?: Uint8Array,
   freqR?: Uint8Array,
-  elapsedSec?: number
+  animSec?: number
 ) {
   const W = CANVAS_W;
   drawBg(ctx, imgEl, 56);
@@ -280,7 +280,7 @@ export function drawNowPlayingCard(
   ctx.restore();
 
   const ls = ctx as CanvasRenderingContext2D & { letterSpacing: string };
-  const t = elapsedSec ?? (Date.now() / 1000);
+  const t = animSec ?? (Date.now() / 1000);
 
   // "NOW PLAYING" — top-left
   ctx.save();

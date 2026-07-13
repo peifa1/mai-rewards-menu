@@ -385,7 +385,7 @@ try {
     .replace(/await sleep\(1500\)/g, `await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.breakMs)||1500)`)
     .replace(
       /while\s*\(\s*true\s*\)\s*\{/,
-      "for (let __once=0; __once<1; __once++) { await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.startDelayMs)||3000); document.body.style.opacity='1';"
+      "let __iter=0; while(true) { if(__iter++===0){ await sleep((window.__OVERLAY_CONFIG__&&window.__OVERLAY_CONFIG__.startDelayMs)||3000); document.body.style.opacity='1'; }"
     )
     // Keep petals hidden in enter() when showPetals is off.
     .replace(

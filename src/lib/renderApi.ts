@@ -24,7 +24,7 @@ export type DispatchInput = {
 };
 
 export const dispatchRenderJob = createServerFn({ method: "POST" })
-  .validator((d: unknown) => d as DispatchInput)
+  .inputValidator((d: unknown) => d as DispatchInput)
   .handler(async ({ data }) => {
     try {
       const PAT   = process.env.GITHUB_PAT;

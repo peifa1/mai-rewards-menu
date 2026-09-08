@@ -5,6 +5,7 @@ import { toPng } from "html-to-image";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 import { TwitchOverlayBuilder } from "@/components/TwitchOverlayBuilder";
 import { GamersuppsBuilder } from "@/components/GamersuppsBuilder";
+import { SocialWidgetBuilder } from "@/components/SocialWidgetBuilder";
 import { AudioTeaserBuilder } from "@/components/AudioTeaserBuilder";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 
@@ -267,10 +268,12 @@ function Index() {
   );
 }
 
+type TwitchSub = "patreon" | "gamersupps" | "social";
+
 function TwitchOverlays() {
-  const [sub, setSub] = useState<"patreon" | "gamersupps">(() => {
+  const [sub, setSub] = useState<TwitchSub>(() => {
     if (typeof window === "undefined") return "patreon";
-    return (localStorage.getItem("twitch-sub-tab") as "patreon" | "gamersupps") || "patreon";
+    return (localStorage.getItem("twitch-sub-tab") as TwitchSub) || "patreon";
   });
   useEffect(() => {
     try { localStorage.setItem("twitch-sub-tab", sub); } catch {}
@@ -286,6 +289,7 @@ function TwitchOverlays() {
           {([
             { id: "patreon", label: "Patreon", kanji: "支援" },
             { id: "gamersupps", label: "Gamersupps", kanji: "飲" },
+            { id: "social", label: "Social", kanji: "縁" },
           ] as const).map(({ id, label, kanji }) => (
             <button
               key={id}
@@ -302,7 +306,7 @@ function TwitchOverlays() {
           ))}
         </div>
       </div>
-      {sub === "patreon" ? <TwitchOverlayBuilder /> : <GamersuppsBuilder />}
+      {sub === "patreon" ? <TwitchOverlayBuilder /> : sub === "gamersupps" ? <GamersuppsBuilder /> : <SocialWidgetBuilder />}
     </div>
   );
 }

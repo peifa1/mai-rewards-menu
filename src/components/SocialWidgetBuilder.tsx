@@ -351,14 +351,20 @@ export function SocialWidgetBuilder() {
         <div>
           <SectionTitle kanji="形">Card & position</SectionTitle>
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <NumberField label="Width (px)" value={cfg.cardWidth} step={10} min={200} onChange={(v) => set("cardWidth", v)} />
-            <NumberField label="Height (px)" value={cfg.cardHeight} step={5} min={80} onChange={(v) => set("cardHeight", v)} />
+            <NumberField label="Width (px)" value={cfg.cardWidth} step={10} min={160} onChange={(v) => set("cardWidth", v)} />
+            <NumberField label="Height (px)" value={cfg.cardHeight} step={5} min={40} onChange={(v) => set("cardHeight", v)} />
             <NumberField label="Corner radius" value={cfg.radius} step={2} min={0} onChange={(v) => set("radius", v)} />
-            <NumberField label="Logo size (px)" hint="Same for every platform" value={cfg.iconSize} step={2} min={20} onChange={(v) => set("iconSize", v)} />
+            <NumberField label="Logo block width" value={cfg.leftWidth} step={5} min={30} onChange={(v) => set("leftWidth", v)} />
+            <NumberField label="Arrow notch" hint="Depth of the cut in the logo block" value={cfg.notchDepth} step={1} min={0} onChange={(v) => set("notchDepth", v)} />
+            <NumberField label="Logo size (px)" hint="Same for every platform" value={cfg.iconSize} step={2} min={10} onChange={(v) => set("iconSize", v)} />
             <NumberField label="From left (px)" value={cfg.offsetX} step={10} min={-500} onChange={(v) => set("offsetX", v)} />
             <NumberField label="From bottom (px)" value={cfg.offsetY} step={10} min={-500} onChange={(v) => set("offsetY", v)} />
-            <NumberField label="Small text size" value={cfg.labelSize} step={1} min={8} onChange={(v) => set("labelSize", v)} />
-            <NumberField label="Username size" value={cfg.usernameSize} step={1} min={10} onChange={(v) => set("usernameSize", v)} />
+            <NumberField label="Small text size" value={cfg.labelSize} step={1} min={6} onChange={(v) => set("labelSize", v)} />
+            <NumberField label="Username size" value={cfg.usernameSize} step={1} min={8} onChange={(v) => set("usernameSize", v)} />
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.2em]" style={{ color: INK_SOFT }}>Glow & shadow</span>
+            <Toggle on={cfg.glow} onClick={() => set("glow", !cfg.glow)} label={cfg.glow ? "On" : "Off"} />
           </div>
         </div>
 
@@ -368,8 +374,8 @@ export function SocialWidgetBuilder() {
           <div className="grid grid-cols-2 gap-3 text-xs">
             <NumberField label="Size (px)" value={cfg.sakuraSize} step={4} min={0} onChange={(v) => set("sakuraSize", v)} />
             <NumberField label="Spin (sec / turn)" value={cfg.sakuraSpinSeconds} step={1} min={1} onChange={(v) => set("sakuraSpinSeconds", v)} />
-            <NumberField label="X on card (px)" value={cfg.sakuraOffsetX} step={5} min={-600} onChange={(v) => set("sakuraOffsetX", v)} />
-            <NumberField label="Y overlap (px)" hint="Negative hangs below the card" value={cfg.sakuraOffsetY} step={2} min={-300} onChange={(v) => set("sakuraOffsetY", v)} />
+            <NumberField label="From right (px)" value={cfg.sakuraOffsetX} step={2} min={-400} onChange={(v) => set("sakuraOffsetX", v)} />
+            <NumberField label="Y nudge (px)" hint="Up/down from the centre" value={cfg.sakuraOffsetY} step={2} min={-300} onChange={(v) => set("sakuraOffsetY", v)} />
           </div>
           <div className="mt-3">
             <SliderField label="Opacity" value={cfg.sakuraOpacity} min={0} max={1} step={0.05} onChange={(v) => set("sakuraOpacity", v)} />

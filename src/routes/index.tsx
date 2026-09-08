@@ -5,6 +5,7 @@ import { toPng } from "html-to-image";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 import { TwitchOverlayBuilder } from "@/components/TwitchOverlayBuilder";
 import { GamersuppsBuilder } from "@/components/GamersuppsBuilder";
+import { SocialWidgetBuilder } from "@/components/SocialWidgetBuilder";
 import { AudioTeaserBuilder } from "@/components/AudioTeaserBuilder";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 

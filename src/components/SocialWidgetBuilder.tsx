@@ -374,8 +374,8 @@ export function SocialWidgetBuilder() {
           <div className="grid grid-cols-2 gap-3 text-xs">
             <NumberField label="Size (px)" value={cfg.sakuraSize} step={4} min={0} onChange={(v) => set("sakuraSize", v)} />
             <NumberField label="Spin (sec / turn)" value={cfg.sakuraSpinSeconds} step={1} min={1} onChange={(v) => set("sakuraSpinSeconds", v)} />
-            <NumberField label="X on card (px)" value={cfg.sakuraOffsetX} step={5} min={-600} onChange={(v) => set("sakuraOffsetX", v)} />
-            <NumberField label="Y overlap (px)" hint="Negative hangs below the card" value={cfg.sakuraOffsetY} step={2} min={-300} onChange={(v) => set("sakuraOffsetY", v)} />
+            <NumberField label="From right (px)" value={cfg.sakuraOffsetX} step={2} min={-400} onChange={(v) => set("sakuraOffsetX", v)} />
+            <NumberField label="Y nudge (px)" hint="Up/down from the centre" value={cfg.sakuraOffsetY} step={2} min={-300} onChange={(v) => set("sakuraOffsetY", v)} />
           </div>
           <div className="mt-3">
             <SliderField label="Opacity" value={cfg.sakuraOpacity} min={0} max={1} step={0.05} onChange={(v) => set("sakuraOpacity", v)} />

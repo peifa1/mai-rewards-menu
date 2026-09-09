@@ -213,7 +213,11 @@ export function buildSocialWidgetHtml(rawCfg: Partial<SocialWidgetConfig>): stri
   html, body { width:1920px; height:1080px; overflow:hidden; background:transparent; }
   body { font-family:'DM Sans', ui-sans-serif, system-ui, sans-serif; }
 
-  #stage { position:absolute; left:${c.offsetX}px; bottom:${c.offsetY}px; }
+  #stage {
+    position:absolute; left:${c.offsetX}px; bottom:${c.offsetY}px;
+    transition: opacity ${c.fadeMs}ms ease, transform ${c.fadeMs}ms ease;
+  }
+  #stage.out { opacity:0; transform:translateX(-8px); }
 
   #card {
     position:relative;
@@ -281,8 +285,6 @@ export function buildSocialWidgetHtml(rawCfg: Partial<SocialWidgetConfig>): stri
   }
   @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
 
-  #fader { transition: opacity ${c.fadeMs}ms ease, transform ${c.fadeMs}ms ease; }
-  #fader.out { opacity:0; transform:translateX(-8px); }
 </style>
 </head>
 <body>
@@ -305,7 +307,9 @@ export function buildSocialWidgetHtml(rawCfg: Partial<SocialWidgetConfig>): stri
   var ROTATE = ${c.rotateMs};
   var FADE = ${c.fadeMs};
 
-  var fader = document.getElementById('fader');
+  // Fade the outer stage so the card outline, shadow, and Sakura transition
+  // together with the platform content. The Sakura's spin remains independent.
+  var fader = document.getElementById('stage');
   var right = document.getElementById('right');
   var left = document.getElementById('left');
   var icon = document.getElementById('icon');

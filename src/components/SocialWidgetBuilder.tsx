@@ -249,6 +249,8 @@ export function SocialWidgetBuilder() {
           Tip: this widget is always on screen — it never pops in or out. It just cross-fades to the
           next platform every few minutes while the sakura keeps spinning.
         </p>
+
+        <SocialObsGuide />
       </div>
 
       {/* EDITOR */}
@@ -419,6 +421,104 @@ export function SocialWidgetBuilder() {
           Reset to defaults
         </button>
       </div>
+    </div>
+  );
+}
+
+const SOCIAL_OBS_STEPS: { title: string; detail?: string }[] = [
+  { title: "Press “DOWNLOAD HTML”", detail: "The button up top, by the preview." },
+  { title: "Save the file", detail: "A .html file lands on your computer." },
+  { title: "Open OBS" },
+  { title: "Add a Browser source", detail: "In your scene’s Sources panel, click + → Browser." },
+  { title: "Tick “Local File”", detail: "Then browse to the .html file you saved." },
+  { title: "Set the size", detail: "Width 1920 · Height 1080." },
+  { title: "Position it", detail: "Drag & scale it in your scene however you like ♡" },
+];
+
+function SocialObsGuide() {
+  const [open, setOpen] = useState(true);
+  return (
+    <div
+      className="rounded-2xl border overflow-hidden"
+      style={{
+        borderColor: LINE_STRONG,
+        background: "linear-gradient(160deg, rgba(52,11,24,0.72), rgba(18,4,9,0.6))",
+        color: INK,
+        boxShadow: "0 12px 34px rgba(0,0,0,0.32)",
+      }}
+    >
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-5 py-4 text-left"
+        style={{
+          borderBottom: open ? `1px solid ${LINE}` : "none",
+          background: "linear-gradient(90deg, rgba(200,19,42,0.16), transparent)",
+        }}
+      >
+        <span className="flex items-center gap-3.5">
+          <span
+            aria-hidden
+            className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-lg"
+            style={{ background: "rgba(200,19,42,0.18)", border: `1px solid ${LINE_STRONG}`, color: KANJI }}
+          >
+            ⛩
+          </span>
+          <span className="flex flex-col">
+            <span className="flex items-center gap-2">
+              <span className="text-sm font-semibold tracking-[0.22em] uppercase" style={{ color: BRIGHT }}>
+                OBS Setup Guide
+              </span>
+              <span className="font-hakkou text-sm opacity-75" style={{ color: KANJI }}>案内</span>
+            </span>
+            <span className="text-[11px] tracking-wide opacity-65" style={{ color: INK_SOFT }}>
+              Get your overlay into a stream in 7 quick steps
+            </span>
+          </span>
+        </span>
+        <span
+          className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-base opacity-80"
+          style={{ border: `1px solid ${LINE}` }}
+        >
+          {open ? "−" : "+"}
+        </span>
+      </button>
+      {open && (
+        <div className="px-5 py-5">
+          <ol className="relative flex flex-col">
+            {SOCIAL_OBS_STEPS.map((step, i) => {
+              const last = i === SOCIAL_OBS_STEPS.length - 1;
+              return (
+                <li key={i} className="relative flex gap-4 pb-5 last:pb-0">
+                  {!last && (
+                    <span
+                      aria-hidden
+                      className="absolute top-7 bottom-0 left-[13px] w-px"
+                      style={{ background: "linear-gradient(180deg, rgba(255,180,200,0.35), rgba(255,180,200,0.08))" }}
+                    />
+                  )}
+                  <span
+                    className="relative z-10 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold"
+                    style={{
+                      background: SEAL,
+                      color: BRIGHT,
+                      border: "1px solid rgba(255,200,215,0.45)",
+                      boxShadow: "0 2px 10px rgba(200,19,42,0.4)",
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="flex flex-col gap-0.5 pt-0.5">
+                    <span className="text-sm font-medium" style={{ color: BRIGHT }}>{step.title}</span>
+                    {step.detail && (
+                      <span className="text-xs leading-snug opacity-70" style={{ color: INK }}>{step.detail}</span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
     </div>
   );
 }

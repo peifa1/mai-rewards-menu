@@ -7,6 +7,7 @@
 
 import { PATREON_ICON, X_ICON, YOUTUBE_ICON } from "./socialIcons";
 import { SAKURA_DATA_URL } from "./sakuraDataUrl";
+import { TIKTOK_ICON } from "./tiktokIcon";
 
 export type SocialItem = {
   id: string;
@@ -93,6 +94,21 @@ export const DEFAULT_SOCIAL_ITEMS: SocialItem[] = [
     usernameColor: "#600828",
     enabled: true,
   },
+  {
+    id: "tiktok",
+    name: "TikTok",
+    icon: TIKTOK_ICON,
+    label: "",
+    username: "@iomayaa",
+    iconPanelColor: "#161016",
+    iconPanelOpacity: 1,
+    iconColor: "#ffffff",
+    cardColor: "#f0a8c8",
+    cardOpacity: 1,
+    labelColor: "#8a4457",
+    usernameColor: "#600828",
+    enabled: true,
+  },
 ];
 
 export const DEFAULT_SOCIAL_CONFIG: SocialWidgetConfig = {
@@ -126,7 +142,11 @@ const str = (v: unknown, fallback: string) => (typeof v === "string" ? v : fallb
 
 export function normalizeSocialConfig(raw: Partial<SocialWidgetConfig>): SocialWidgetConfig {
   const d = DEFAULT_SOCIAL_CONFIG;
-  const items = Array.isArray(raw.items) && raw.items.length ? raw.items : d.items;
+  const savedItems = Array.isArray(raw.items) && raw.items.length ? raw.items : d.items;
+  const items = [
+    ...savedItems,
+    ...d.items.filter((defaultItem) => !savedItems.some((item) => item?.id === defaultItem.id)),
+  ];
   return {
     items: items.map((it, i) => {
       const base = DEFAULT_SOCIAL_ITEMS[i % DEFAULT_SOCIAL_ITEMS.length];

@@ -1,47 +1,25 @@
-# Wire up the images you uploaded to public/images
+# Add the Panel Rotator Widget
 
 ## Goal
-Make the page render with the files now sitting in `public/images/`, without renaming any files.
+Add a fourth **Widget** tab inside **Twitch Overlays** while keeping Patreon, GamerSupps, and Social unchanged. The new tab will turn the uploaded panel-rotator design into an editable, downloadable OBS widget.
 
-## What I'll change
+## What I’ll build
+- Preserve the uploaded visual design and its five-slide rotation: Patreon, Socials, Throne, Commissions, and GamerSupps.
+- Show the widget in the same live 1920×1080 preview workspace used by the other overlays, with replay and custom preview-background controls.
+- Add an editor for:
+  - slide order and visibility
+  - rotation and transition timing
+  - text glow and Sakura visibility/spin
+  - all displayed headings, handles, URLs, notes, discount, and code text
+  - the supplied Patreon background, Throne background/logo, commission background/mascot, and GamerSupps artwork
+- Reuse the project’s existing normalized social icons and Sakura artwork where appropriate.
+- Seed the new widget with the images supplied in this message, including the Throne logo, commission mascot/background, and GamerSupps bottle.
+- Save editor choices in the browser so the setup survives refreshes.
+- Download one self-contained HTML file ready for an OBS Browser Source.
+- Add the same styled OBS Setup Guide used by the existing overlay tabs.
 
-**Only `src/routes/index.tsx`** — replace the 8 `.asset.json` imports and their usages with URL-encoded paths to your `public/images/` files.
-
-```ts
-// Remove these 8 imports (lines 7-14):
-import artYokan from "@/assets/art-yokan.jpg.asset.json";
-import artSensu from "@/assets/art-sensu.jpg.asset.json";
-import artTomo  from "@/assets/art-tomo.jpg.asset.json";
-import artOkami from "@/assets/art-okami.jpg.asset.json";
-import artDanna from "@/assets/art-danna.jpg.asset.json";
-import chibi    from "@/assets/chibi.png.asset.json";
-import petal    from "@/assets/petal.png.asset.json";
-import thankYou from "@/assets/thankyou.png.asset.json";
-
-// Replace with constants (URL-encoded for spaces):
-const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
-const thankYou = { url: "/images/thank%20%20you!!_text.png" };
-const petal    = { url: "/images/petal.png" };
-
-// Art placeholders — rotate the 4 you uploaded across the 5 slots:
-const artYokan = { url: "/images/ahri.jpg" };
-const artTomo  = { url: "/images/cosplay.jpg" };
-const artOkami = { url: "/images/ahri.jpg" };
-const artSensu = { url: "/images/ahri-nsfw.jpg" };  // NSFW slot
-const artDanna = { url: "/images/cosplay-nsfw.jpg" }; // NSFW slot
-```
-
-All the downstream `.url` accesses (`chibi.url`, `petal.url`, `artYokan.url`, etc.) keep working unchanged.
-
-## Cleanup (optional, same change)
-
-Delete the 8 now-unused `.asset.json` files under `src/assets/`. The art-*, chibi, petal, thankyou pointers won't be referenced anymore. Safe — they remain on the CDN if you ever need them back, and revertable from chat history.
-
-## Doesn't touch
-Backend, env vars, Vercel config, any other code or styling. Just pointing `<img src>` at the files you already shipped to `public/`.
-
-## After this lands
-- Push from Lovable → GitHub auto-syncs → Vercel rebuilds.
-- `diablita.xyz` should show all images. If any single image still 404s, it's a filename typo I can fix in seconds by reading the Vercel deploy.
-
-Ready when you switch to build mode.
+## Technical details
+- Store the uploaded template as source material and add a focused builder that injects configuration into a clean OBS-only version; the downloaded file will not contain the template’s design-sheet previews or editing button.
+- Keep image uploads embedded as data URLs so downloaded HTML remains portable.
+- Add `WidgetBuilder` as a separate component and extend only the existing Twitch sub-tab switch.
+- Keep the route metadata complete and verify the new tab, preview rotation, persistence, and download in the live app.

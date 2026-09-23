@@ -6,6 +6,7 @@ import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } fr
 import { TwitchOverlayBuilder } from "@/components/TwitchOverlayBuilder";
 import { GamersuppsBuilder } from "@/components/GamersuppsBuilder";
 import { SocialWidgetBuilder } from "@/components/SocialWidgetBuilder";
+import { WidgetBuilder } from "@/components/WidgetBuilder";
 import { AudioTeaserBuilder } from "@/components/AudioTeaserBuilder";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 
@@ -268,7 +269,7 @@ function Index() {
   );
 }
 
-type TwitchSub = "patreon" | "gamersupps" | "social";
+type TwitchSub = "patreon" | "gamersupps" | "social" | "widget";
 
 function TwitchOverlays() {
   const [sub, setSub] = useState<TwitchSub>(() => {
@@ -290,6 +291,7 @@ function TwitchOverlays() {
             { id: "patreon", label: "Patreon", kanji: "支援" },
             { id: "gamersupps", label: "Gamersupps", kanji: "飲" },
             { id: "social", label: "Social", kanji: "縁" },
+            { id: "widget", label: "Widget", kanji: "札" },
           ] as const).map(({ id, label, kanji }) => (
             <button
               key={id}
@@ -306,7 +308,7 @@ function TwitchOverlays() {
           ))}
         </div>
       </div>
-      {sub === "patreon" ? <TwitchOverlayBuilder /> : sub === "gamersupps" ? <GamersuppsBuilder /> : <SocialWidgetBuilder />}
+      {sub === "patreon" ? <TwitchOverlayBuilder /> : sub === "gamersupps" ? <GamersuppsBuilder /> : sub === "social" ? <SocialWidgetBuilder /> : <WidgetBuilder />}
     </div>
   );
 }

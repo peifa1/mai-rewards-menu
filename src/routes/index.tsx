@@ -6,6 +6,7 @@ import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } fr
 import { TwitchOverlayBuilder } from "@/components/TwitchOverlayBuilder";
 import { GamersuppsBuilder } from "@/components/GamersuppsBuilder";
 import { SocialWidgetBuilder } from "@/components/SocialWidgetBuilder";
+import { WidgetBuilder } from "@/components/WidgetBuilder";
 import { AudioTeaserBuilder } from "@/components/AudioTeaserBuilder";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 

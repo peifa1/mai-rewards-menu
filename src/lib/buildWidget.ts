@@ -147,7 +147,7 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
   <div class="content">
     <div class="social-col left"><div class="social-icon-bg"><img src="${img("x")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.xHandle)}</span></div>
     <div class="social-col mid"><div class="social-icon-bg"><img src="${img("yt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ytHandle)}</span></div>
-    <div class="social-col right"><div class="social-icon-bg"><img src="${img("tt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ttHandle)}</span></div>
+    <div class="social-col right"><div class="social-icon-bg"><img class="tiktok-white" src="${img("tt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ttHandle)}</span></div>
   </div>
 </div>`;
     if (id === "throne")
@@ -232,6 +232,7 @@ body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-si
 .social-col.right{animation:floatC 4.4s ease-in-out infinite;animation-delay:.2s}
 .social-icon-bg{width:74px;height:74px;background:rgba(180,24,70,0.28);border:1.5px solid rgba(248,184,204,0.22);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(180,24,70,0.28)}
 .social-icon-bg img{width:44px;height:44px;object-fit:contain}
+.tiktok-white{filter:brightness(0) invert(1)}
 .social-handle{font-size:16px;font-weight:800;color:#fff;white-space:nowrap}
 .slide-throne .scrim{position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,1,4,0.92) 0%,rgba(6,1,4,0.72) 42%,rgba(6,1,4,0.22) 70%,rgba(6,1,4,0) 100%)}
 .slide-throne .content{position:absolute;inset:0;display:flex;align-items:center;padding:0 24px;gap:18px}

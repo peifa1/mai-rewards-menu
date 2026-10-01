@@ -142,6 +142,9 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
   const slides = active.length ? active : (["patreon"] as WidgetSlideId[]);
   const interval = opts.fastPreview ? Math.min(cfg.intervalMs, 1600) : cfg.intervalMs;
   const g = cfg.glow ? " glow" : "";
+  const socialIconBg = withAlpha(cfg.socials.iconBgColor, cfg.socials.iconBgOpacity);
+  const flexX = cfg.alignX === "left" ? "flex-start" : cfg.alignX === "right" ? "flex-end" : "center";
+  const flexY = cfg.alignY === "top" ? "flex-start" : cfg.alignY === "bottom" ? "flex-end" : "center";
 
   const slideHtml = (id: WidgetSlideId, i: number) => {
     const cls = `rs panel slide-${id}${i === 0 ? "" : " out"}`;
@@ -216,7 +219,7 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;background:transparent;overflow:hidden;font-family:'Outfit',sans-serif;color:#fff}
-body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-size:cover;background-position:center;` : ""}display:flex;align-items:center;justify-content:center}
+body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-size:cover;background-position:center;` : ""}display:flex;align-items:${flexY};justify-content:${flexX};padding:${cfg.alignX === "right" ? "0 24px 0 0" : "0"} ${cfg.alignY === "bottom" ? "0 0 24px 0" : "0"}}
 .pw{position:relative;display:inline-block;flex-shrink:0}
 .corner-sakura{position:absolute;top:-22px;left:-22px;width:${cfg.sakura.size}px;height:${cfg.sakura.size}px;z-index:30;
   animation:spinSakura ${cfg.sakura.spinSec}s linear infinite;filter:drop-shadow(0 0 12px rgba(248,184,204,0.85));

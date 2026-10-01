@@ -48,7 +48,7 @@ export type WidgetConfig = {
   sakura: { show: boolean; size: number; spinSec: number; opacity: number };
   // per-slide text
   patreon: { eyebrow: string; name: string; url: string; note: string };
-  socials: { xHandle: string; ytHandle: string; ttHandle: string; iconBgColor: string; iconBgOpacity: number };
+  socials: { xHandle: string; ytHandle: string; ttHandle: string; xIconBgColor: string; ytIconBgColor: string; ttIconBgColor: string; iconBgOpacity: number };
   throne: { eyebrow: string; url: string };
   comms: { title: string; url: string; note: string };
   gsupps: { brand: string; save: string; codeLabel: string; code: string };
@@ -68,7 +68,7 @@ export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
   enabled: { patreon: true, socials: true, throne: true, comms: true, gsupps: true },
   sakura: { show: true, size: 58, spinSec: 12, opacity: 1 },
   patreon: { eyebrow: "support me on", name: "Patreon", url: "patreon.com/iomaya", note: "exclusive\ncontent ♡" },
-  socials: { xHandle: "@iomayamai", ytHandle: "@iomayaVT", ttHandle: "@iomaya", iconBgColor: "#b41846", iconBgOpacity: 0.28 },
+  socials: { xHandle: "@iomayamai", ytHandle: "@iomayaVT", ttHandle: "@iomaya", xIconBgColor: "#1a1a1a", ytIconBgColor: "#b41846", ttIconBgColor: "#1a1a1a", iconBgOpacity: 0.28 },
   throne: { eyebrow: "my wishlist", url: "throne.com/iomaya" },
   comms: { title: "Commissions", url: "iomaya.com", note: "let's create\nsomething cute~ ♡" },
   gsupps: { brand: "Gamer Supps", save: "Save 10%", codeLabel: "use code", code: "KRAKEN" },
@@ -101,12 +101,23 @@ export function normalizeWidgetConfig(raw: Partial<WidgetConfig> | null | undefi
       opacity: num(c.sakura?.opacity, d.sakura.opacity, 0, 1),
     },
     patreon: { ...d.patreon, ...(c.patreon ?? {}) },
-    socials: { ...d.socials, ...(c.socials ?? {}) },
+    socials: normalizeSocials(c.socials, d.socials),
     throne: { ...d.throne, ...(c.throne ?? {}) },
     comms: { ...d.comms, ...(c.comms ?? {}) },
     gsupps: { ...d.gsupps, ...(c.gsupps ?? {}) },
     images: { ...(c.images ?? {}) },
   };
+}
+
+// Migrates the old single shared iconBgColor into the three per-icon colors.
+function normalizeSocials(c: any, d: WidgetConfig["socials"]): WidgetConfig["socials"] {
+  const merged = { ...d, ...(c ?? {}) } as any;
+  const legacy = typeof c?.iconBgColor === "string" ? c.iconBgColor : undefined;
+  for (const key of ["xIconBgColor", "ytIconBgColor", "ttIconBgColor"] as const) {
+    if (typeof c?.[key] !== "string" && legacy) merged[key] = legacy;
+  }
+  delete merged.iconBgColor;
+  return merged;
 }
 
 function num(v: unknown, fallback: number, min: number, max: number) {
@@ -142,7 +153,9 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
   const slides = active.length ? active : (["patreon"] as WidgetSlideId[]);
   const interval = opts.fastPreview ? Math.min(cfg.intervalMs, 1600) : cfg.intervalMs;
   const g = cfg.glow ? " glow" : "";
-  const socialIconBg = withAlpha(cfg.socials.iconBgColor, cfg.socials.iconBgOpacity);
+  const socialBgX = withAlpha(cfg.socials.xIconBgColor, cfg.socials.iconBgOpacity);
+  const socialBgYt = withAlpha(cfg.socials.ytIconBgColor, cfg.socials.iconBgOpacity);
+  const socialBgTt = withAlpha(cfg.socials.ttIconBgColor, cfg.socials.iconBgOpacity);
   const flexX = cfg.alignX === "left" ? "flex-start" : cfg.alignX === "right" ? "flex-end" : "center";
   const flexY = cfg.alignY === "top" ? "flex-start" : cfg.alignY === "bottom" ? "flex-end" : "center";
 
@@ -165,9 +178,9 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
     if (id === "socials")
       return `<div class="${cls}" style="background:transparent;box-shadow:none;overflow:visible">
   <div class="content">
-    <div class="social-col left"><div class="social-icon-bg"><img src="${img("x")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.xHandle)}</span></div>
-    <div class="social-col mid"><div class="social-icon-bg"><img src="${img("yt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ytHandle)}</span></div>
-    <div class="social-col right"><div class="social-icon-bg"><img class="tiktok-white" src="${img("tt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ttHandle)}</span></div>
+    <div class="social-col left"><div class="social-icon-bg x"><img src="${img("x")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.xHandle)}</span></div>
+    <div class="social-col mid"><div class="social-icon-bg yt"><img src="${img("yt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ytHandle)}</span></div>
+    <div class="social-col right"><div class="social-icon-bg tt"><img class="tiktok-white" src="${img("tt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ttHandle)}</span></div>
   </div>
 </div>`;
     if (id === "throne")
@@ -250,7 +263,10 @@ body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-si
 .social-col.left{animation:floatA 4.1s ease-in-out infinite}
 .social-col.mid{animation:floatB 3.6s ease-in-out infinite;animation-delay:.5s}
 .social-col.right{animation:floatC 4.4s ease-in-out infinite;animation-delay:.2s}
-.social-icon-bg{width:74px;height:74px;background:${socialIconBg};border:1.5px solid rgba(248,184,204,0.22);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(180,24,70,0.28)}
+.social-icon-bg{width:74px;height:74px;border:1.5px solid rgba(248,184,204,0.22);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(180,24,70,0.28)}
+.social-icon-bg.x{background:${socialBgX}}
+.social-icon-bg.yt{background:${socialBgYt}}
+.social-icon-bg.tt{background:${socialBgTt}}
 .social-icon-bg img{width:44px;height:44px;object-fit:contain}
 .tiktok-white{filter:brightness(0) invert(1)}
 .social-handle{font-size:16px;font-weight:800;color:#fff;white-space:nowrap}

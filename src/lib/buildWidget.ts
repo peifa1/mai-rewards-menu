@@ -178,9 +178,9 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
     if (id === "socials")
       return `<div class="${cls}" style="background:transparent;box-shadow:none;overflow:visible">
   <div class="content">
-    <div class="social-col left"><div class="social-icon-bg"><img src="${img("x")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.xHandle)}</span></div>
-    <div class="social-col mid"><div class="social-icon-bg"><img src="${img("yt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ytHandle)}</span></div>
-    <div class="social-col right"><div class="social-icon-bg"><img class="tiktok-white" src="${img("tt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ttHandle)}</span></div>
+    <div class="social-col left"><div class="social-icon-bg x"><img src="${img("x")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.xHandle)}</span></div>
+    <div class="social-col mid"><div class="social-icon-bg yt"><img src="${img("yt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ytHandle)}</span></div>
+    <div class="social-col right"><div class="social-icon-bg tt"><img class="tiktok-white" src="${img("tt")}" alt=""></div><span class="social-handle${g}">${esc(cfg.socials.ttHandle)}</span></div>
   </div>
 </div>`;
     if (id === "throne")
@@ -263,7 +263,10 @@ body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-si
 .social-col.left{animation:floatA 4.1s ease-in-out infinite}
 .social-col.mid{animation:floatB 3.6s ease-in-out infinite;animation-delay:.5s}
 .social-col.right{animation:floatC 4.4s ease-in-out infinite;animation-delay:.2s}
-.social-icon-bg{width:74px;height:74px;background:${socialIconBg};border:1.5px solid rgba(248,184,204,0.22);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(180,24,70,0.28)}
+.social-icon-bg{width:74px;height:74px;border:1.5px solid rgba(248,184,204,0.22);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(180,24,70,0.28)}
+.social-icon-bg.x{background:${socialBgX}}
+.social-icon-bg.yt{background:${socialBgYt}}
+.social-icon-bg.tt{background:${socialBgTt}}
 .social-icon-bg img{width:44px;height:44px;object-fit:contain}
 .tiktok-white{filter:brightness(0) invert(1)}
 .social-handle{font-size:16px;font-weight:800;color:#fff;white-space:nowrap}

@@ -382,6 +382,21 @@ export function WidgetBuilder() {
                         <TextField label="X handle" value={cfg.socials.xHandle} onChange={(v) => setSlideText("socials", "xHandle", v)} />
                         <TextField label="YouTube handle" value={cfg.socials.ytHandle} onChange={(v) => setSlideText("socials", "ytHandle", v)} />
                         <TextField label="TikTok handle" value={cfg.socials.ttHandle} onChange={(v) => setSlideText("socials", "ttHandle", v)} />
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <ColorField
+                            label="Icon background"
+                            value={cfg.socials.iconBgColor}
+                            onChange={(v) => setSlideText("socials", "iconBgColor", v)}
+                          />
+                          <SliderField
+                            label="Icon bg opacity"
+                            value={cfg.socials.iconBgOpacity}
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            onChange={(v) => setSlideText("socials", "iconBgOpacity", String(v))}
+                          />
+                        </div>
                         <div className="grid grid-cols-1 gap-2.5">
                           <ImageSlot label="X icon" k="x" cfg={cfg} assets={assets} onPick={setImage} />
                           <ImageSlot label="YouTube icon" k="yt" cfg={cfg} assets={assets} onPick={setImage} />

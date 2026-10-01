@@ -41,12 +41,14 @@ export type WidgetConfig = {
   intervalMs: number;
   transition: "fade" | "slide" | "scale" | "wipe" | "flip";
   glow: boolean;
+  alignX: "left" | "center" | "right";
+  alignY: "top" | "middle" | "bottom";
   order: WidgetSlideId[];
   enabled: Record<WidgetSlideId, boolean>;
   sakura: { show: boolean; size: number; spinSec: number; opacity: number };
   // per-slide text
   patreon: { eyebrow: string; name: string; url: string; note: string };
-  socials: { xHandle: string; ytHandle: string; ttHandle: string };
+  socials: { xHandle: string; ytHandle: string; ttHandle: string; iconBgColor: string; iconBgOpacity: number };
   throne: { eyebrow: string; url: string };
   comms: { title: string; url: string; note: string };
   gsupps: { brand: string; save: string; codeLabel: string; code: string };
@@ -57,14 +59,16 @@ export type WidgetConfig = {
 export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
   width: 480,
   height: 130,
-  intervalMs: 4000,
+  intervalMs: 7000,
   transition: "wipe",
   glow: false,
+  alignX: "right",
+  alignY: "bottom",
   order: ["patreon", "socials", "throne", "comms", "gsupps"],
   enabled: { patreon: true, socials: true, throne: true, comms: true, gsupps: true },
   sakura: { show: true, size: 58, spinSec: 12, opacity: 1 },
   patreon: { eyebrow: "support me on", name: "Patreon", url: "patreon.com/iomaya", note: "exclusive\ncontent ♡" },
-  socials: { xHandle: "@iomayamai", ytHandle: "@iomayaVT", ttHandle: "@iomaya" },
+  socials: { xHandle: "@iomayamai", ytHandle: "@iomayaVT", ttHandle: "@iomaya", iconBgColor: "#b41846", iconBgOpacity: 0.28 },
   throne: { eyebrow: "my wishlist", url: "throne.com/iomaya" },
   comms: { title: "Commissions", url: "iomaya.com", note: "let's create\nsomething cute~ ♡" },
   gsupps: { brand: "Gamer Supps", save: "Save 10%", codeLabel: "use code", code: "KRAKEN" },
@@ -81,11 +85,13 @@ export function normalizeWidgetConfig(raw: Partial<WidgetConfig> | null | undefi
   return {
     width: num(c.width, d.width, 120, 1920),
     height: num(c.height, d.height, 60, 1080),
-    intervalMs: num(c.intervalMs, d.intervalMs, 800, 120000),
+    intervalMs: num(c.intervalMs === 4000 ? undefined : c.intervalMs, d.intervalMs, 800, 120000),
     transition: (["fade", "slide", "scale", "wipe", "flip"] as const).includes(c.transition as never)
       ? (c.transition as WidgetConfig["transition"])
       : d.transition,
     glow: typeof c.glow === "boolean" ? c.glow : d.glow,
+    alignX: (["left", "center", "right"] as const).includes(c.alignX as never) ? (c.alignX as WidgetConfig["alignX"]) : d.alignX,
+    alignY: (["top", "middle", "bottom"] as const).includes(c.alignY as never) ? (c.alignY as WidgetConfig["alignY"]) : d.alignY,
     order,
     enabled: { ...d.enabled, ...(c.enabled ?? {}) },
     sakura: {
@@ -108,6 +114,17 @@ function num(v: unknown, fallback: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
+// Accepts #rgb / #rrggbb (any alpha in the input is ignored) and re-applies the given opacity.
+function withAlpha(color: string, alpha: number): string {
+  let hex = String(color ?? "").trim();
+  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) hex = "#b41846";
+  if (hex.length === 4) hex = "#" + hex.slice(1).split("").map((ch) => ch + ch).join("");
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 const esc = (s: string) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const multiline = (s: string) => esc(s).replace(/\n/g, "<br>");
@@ -125,6 +142,9 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
   const slides = active.length ? active : (["patreon"] as WidgetSlideId[]);
   const interval = opts.fastPreview ? Math.min(cfg.intervalMs, 1600) : cfg.intervalMs;
   const g = cfg.glow ? " glow" : "";
+  const socialIconBg = withAlpha(cfg.socials.iconBgColor, cfg.socials.iconBgOpacity);
+  const flexX = cfg.alignX === "left" ? "flex-start" : cfg.alignX === "right" ? "flex-end" : "center";
+  const flexY = cfg.alignY === "top" ? "flex-start" : cfg.alignY === "bottom" ? "flex-end" : "center";
 
   const slideHtml = (id: WidgetSlideId, i: number) => {
     const cls = `rs panel slide-${id}${i === 0 ? "" : " out"}`;
@@ -199,7 +219,7 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;background:transparent;overflow:hidden;font-family:'Outfit',sans-serif;color:#fff}
-body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-size:cover;background-position:center;` : ""}display:flex;align-items:center;justify-content:center}
+body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-size:cover;background-position:center;` : ""}display:flex;align-items:${flexY};justify-content:${flexX};padding:24px 24px 24px 24px}
 .pw{position:relative;display:inline-block;flex-shrink:0}
 .corner-sakura{position:absolute;top:-22px;left:-22px;width:${cfg.sakura.size}px;height:${cfg.sakura.size}px;z-index:30;
   animation:spinSakura ${cfg.sakura.spinSec}s linear infinite;filter:drop-shadow(0 0 12px rgba(248,184,204,0.85));
@@ -230,7 +250,7 @@ body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-si
 .social-col.left{animation:floatA 4.1s ease-in-out infinite}
 .social-col.mid{animation:floatB 3.6s ease-in-out infinite;animation-delay:.5s}
 .social-col.right{animation:floatC 4.4s ease-in-out infinite;animation-delay:.2s}
-.social-icon-bg{width:74px;height:74px;background:rgba(180,24,70,0.28);border:1.5px solid rgba(248,184,204,0.22);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(180,24,70,0.28)}
+.social-icon-bg{width:74px;height:74px;background:${socialIconBg};border:1.5px solid rgba(248,184,204,0.22);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(180,24,70,0.28)}
 .social-icon-bg img{width:44px;height:44px;object-fit:contain}
 .tiktok-white{filter:brightness(0) invert(1)}
 .social-handle{font-size:16px;font-weight:800;color:#fff;white-space:nowrap}

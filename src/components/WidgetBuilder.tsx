@@ -382,6 +382,21 @@ export function WidgetBuilder() {
                         <TextField label="X handle" value={cfg.socials.xHandle} onChange={(v) => setSlideText("socials", "xHandle", v)} />
                         <TextField label="YouTube handle" value={cfg.socials.ytHandle} onChange={(v) => setSlideText("socials", "ytHandle", v)} />
                         <TextField label="TikTok handle" value={cfg.socials.ttHandle} onChange={(v) => setSlideText("socials", "ttHandle", v)} />
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <ColorField
+                            label="Icon background"
+                            value={cfg.socials.iconBgColor}
+                            onChange={(v) => setSlideText("socials", "iconBgColor", v)}
+                          />
+                          <SliderField
+                            label="Icon bg opacity"
+                            value={cfg.socials.iconBgOpacity}
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            onChange={(v) => setSlideText("socials", "iconBgOpacity", String(v))}
+                          />
+                        </div>
                         <div className="grid grid-cols-1 gap-2.5">
                           <ImageSlot label="X icon" k="x" cfg={cfg} assets={assets} onPick={setImage} />
                           <ImageSlot label="YouTube icon" k="yt" cfg={cfg} assets={assets} onPick={setImage} />
@@ -471,6 +486,40 @@ export function WidgetBuilder() {
             <NumberField label="Spin (seconds/turn)" value={cfg.sakura.spinSec} min={1} max={120} step={1} onChange={(v) => set("sakura", { ...cfg.sakura, spinSec: v })} />
             <SliderField label="Opacity" value={cfg.sakura.opacity} min={0} max={1} step={0.05} onChange={(v) => set("sakura", { ...cfg.sakura, opacity: v })} />
             <ImageSlot label="Sakura image" k="sakura" cfg={cfg} assets={assets} onPick={setImage} />
+          </div>
+        </div>
+
+        {/* Position */}
+        <div>
+          <SectionTitle kanji="位">Position</SectionTitle>
+          <div className="flex flex-col gap-2">
+            {([
+              { label: "Horizontal", key: "alignX" as const, options: ["left", "center", "right"] },
+              { label: "Vertical", key: "alignY" as const, options: ["top", "middle", "bottom"] },
+            ]).map(({ label, key, options }) => (
+              <div key={key} className="flex items-center gap-2">
+                <span className="w-20 text-xs uppercase tracking-[0.2em]" style={{ color: INK_SOFT }}>{label}</span>
+                <div className="flex gap-1.5">
+                  {options.map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => set(key, opt as WidgetConfig[typeof key])}
+                      className="px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.15em] transition hover:bg-white/5"
+                      style={{
+                        background: cfg[key] === opt ? SEAL_WASH : "transparent",
+                        border: `1px solid ${cfg[key] === opt ? LINE_STRONG : LINE}`,
+                        color: cfg[key] === opt ? BRIGHT : INK_SOFT,
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <p className="text-[10px] leading-snug opacity-60" style={{ color: INK_SOFT }}>
+              Where the panel sits when the OBS browser source is larger than the panel (e.g. full 1920×1080).
+            </p>
           </div>
         </div>
 
@@ -628,6 +677,26 @@ function TextField({ label, value, onChange }: { label: string; value: string; o
         className="px-2 py-1.5 rounded-lg outline-none text-sm"
         style={{ background: FIELD, border: `1px solid ${LINE_STRONG}`, color: "#fff" }}
       />
+    </label>
+  );
+}
+
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="flex flex-col gap-1 text-[10px]">
+      <span className="uppercase tracking-[0.18em]" style={{ color: INK_SOFT }}>{label}</span>
+      <span
+        className="flex items-center gap-2 px-1.5 py-1 rounded-lg"
+        style={{ background: FIELD, border: `1px solid ${LINE_STRONG}` }}
+      >
+        <input
+          type="color"
+          value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : "#b41846"}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
+        />
+        <span className="font-mono text-[10px] opacity-80" style={{ color: "#fff" }}>{value}</span>
+      </span>
     </label>
   );
 }

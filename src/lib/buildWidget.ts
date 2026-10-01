@@ -48,7 +48,7 @@ export type WidgetConfig = {
   sakura: { show: boolean; size: number; spinSec: number; opacity: number };
   // per-slide text
   patreon: { eyebrow: string; name: string; url: string; note: string };
-  socials: { xHandle: string; ytHandle: string; ttHandle: string; iconBgColor: string; iconBgOpacity: number };
+  socials: { xHandle: string; ytHandle: string; ttHandle: string; xIconBgColor: string; ytIconBgColor: string; ttIconBgColor: string; iconBgOpacity: number };
   throne: { eyebrow: string; url: string };
   comms: { title: string; url: string; note: string };
   gsupps: { brand: string; save: string; codeLabel: string; code: string };
@@ -68,7 +68,7 @@ export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
   enabled: { patreon: true, socials: true, throne: true, comms: true, gsupps: true },
   sakura: { show: true, size: 58, spinSec: 12, opacity: 1 },
   patreon: { eyebrow: "support me on", name: "Patreon", url: "patreon.com/iomaya", note: "exclusive\ncontent ♡" },
-  socials: { xHandle: "@iomayamai", ytHandle: "@iomayaVT", ttHandle: "@iomaya", iconBgColor: "#b41846", iconBgOpacity: 0.28 },
+  socials: { xHandle: "@iomayamai", ytHandle: "@iomayaVT", ttHandle: "@iomaya", xIconBgColor: "#1a1a1a", ytIconBgColor: "#b41846", ttIconBgColor: "#1a1a1a", iconBgOpacity: 0.28 },
   throne: { eyebrow: "my wishlist", url: "throne.com/iomaya" },
   comms: { title: "Commissions", url: "iomaya.com", note: "let's create\nsomething cute~ ♡" },
   gsupps: { brand: "Gamer Supps", save: "Save 10%", codeLabel: "use code", code: "KRAKEN" },

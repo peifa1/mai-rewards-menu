@@ -41,12 +41,14 @@ export type WidgetConfig = {
   intervalMs: number;
   transition: "fade" | "slide" | "scale" | "wipe" | "flip";
   glow: boolean;
+  alignX: "left" | "center" | "right";
+  alignY: "top" | "middle" | "bottom";
   order: WidgetSlideId[];
   enabled: Record<WidgetSlideId, boolean>;
   sakura: { show: boolean; size: number; spinSec: number; opacity: number };
   // per-slide text
   patreon: { eyebrow: string; name: string; url: string; note: string };
-  socials: { xHandle: string; ytHandle: string; ttHandle: string };
+  socials: { xHandle: string; ytHandle: string; ttHandle: string; iconBgColor: string; iconBgOpacity: number };
   throne: { eyebrow: string; url: string };
   comms: { title: string; url: string; note: string };
   gsupps: { brand: string; save: string; codeLabel: string; code: string };
@@ -57,14 +59,16 @@ export type WidgetConfig = {
 export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
   width: 480,
   height: 130,
-  intervalMs: 4000,
+  intervalMs: 7000,
   transition: "wipe",
   glow: false,
+  alignX: "right",
+  alignY: "bottom",
   order: ["patreon", "socials", "throne", "comms", "gsupps"],
   enabled: { patreon: true, socials: true, throne: true, comms: true, gsupps: true },
   sakura: { show: true, size: 58, spinSec: 12, opacity: 1 },
   patreon: { eyebrow: "support me on", name: "Patreon", url: "patreon.com/iomaya", note: "exclusive\ncontent ♡" },
-  socials: { xHandle: "@iomayamai", ytHandle: "@iomayaVT", ttHandle: "@iomaya" },
+  socials: { xHandle: "@iomayamai", ytHandle: "@iomayaVT", ttHandle: "@iomaya", iconBgColor: "#b41846", iconBgOpacity: 0.28 },
   throne: { eyebrow: "my wishlist", url: "throne.com/iomaya" },
   comms: { title: "Commissions", url: "iomaya.com", note: "let's create\nsomething cute~ ♡" },
   gsupps: { brand: "Gamer Supps", save: "Save 10%", codeLabel: "use code", code: "KRAKEN" },
@@ -86,6 +90,8 @@ export function normalizeWidgetConfig(raw: Partial<WidgetConfig> | null | undefi
       ? (c.transition as WidgetConfig["transition"])
       : d.transition,
     glow: typeof c.glow === "boolean" ? c.glow : d.glow,
+    alignX: (["left", "center", "right"] as const).includes(c.alignX as never) ? (c.alignX as WidgetConfig["alignX"]) : d.alignX,
+    alignY: (["top", "middle", "bottom"] as const).includes(c.alignY as never) ? (c.alignY as WidgetConfig["alignY"]) : d.alignY,
     order,
     enabled: { ...d.enabled, ...(c.enabled ?? {}) },
     sakura: {

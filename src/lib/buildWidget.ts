@@ -114,6 +114,17 @@ function num(v: unknown, fallback: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
+// Accepts #rgb / #rrggbb (any alpha in the input is ignored) and re-applies the given opacity.
+function withAlpha(color: string, alpha: number): string {
+  let hex = String(color ?? "").trim();
+  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) hex = "#b41846";
+  if (hex.length === 4) hex = "#" + hex.slice(1).split("").map((ch) => ch + ch).join("");
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 const esc = (s: string) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const multiline = (s: string) => esc(s).replace(/\n/g, "<br>");

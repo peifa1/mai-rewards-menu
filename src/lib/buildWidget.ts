@@ -101,12 +101,23 @@ export function normalizeWidgetConfig(raw: Partial<WidgetConfig> | null | undefi
       opacity: num(c.sakura?.opacity, d.sakura.opacity, 0, 1),
     },
     patreon: { ...d.patreon, ...(c.patreon ?? {}) },
-    socials: { ...d.socials, ...(c.socials ?? {}) },
+    socials: normalizeSocials(c.socials, d.socials),
     throne: { ...d.throne, ...(c.throne ?? {}) },
     comms: { ...d.comms, ...(c.comms ?? {}) },
     gsupps: { ...d.gsupps, ...(c.gsupps ?? {}) },
     images: { ...(c.images ?? {}) },
   };
+}
+
+// Migrates the old single shared iconBgColor into the three per-icon colors.
+function normalizeSocials(c: any, d: WidgetConfig["socials"]): WidgetConfig["socials"] {
+  const merged = { ...d, ...(c ?? {}) } as any;
+  const legacy = typeof c?.iconBgColor === "string" ? c.iconBgColor : undefined;
+  for (const key of ["xIconBgColor", "ytIconBgColor", "ttIconBgColor"] as const) {
+    if (typeof c?.[key] !== "string" && legacy) merged[key] = legacy;
+  }
+  delete merged.iconBgColor;
+  return merged;
 }
 
 function num(v: unknown, fallback: number, min: number, max: number) {
@@ -142,7 +153,9 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
   const slides = active.length ? active : (["patreon"] as WidgetSlideId[]);
   const interval = opts.fastPreview ? Math.min(cfg.intervalMs, 1600) : cfg.intervalMs;
   const g = cfg.glow ? " glow" : "";
-  const socialIconBg = withAlpha(cfg.socials.iconBgColor, cfg.socials.iconBgOpacity);
+  const socialBgX = withAlpha(cfg.socials.xIconBgColor, cfg.socials.iconBgOpacity);
+  const socialBgYt = withAlpha(cfg.socials.ytIconBgColor, cfg.socials.iconBgOpacity);
+  const socialBgTt = withAlpha(cfg.socials.ttIconBgColor, cfg.socials.iconBgOpacity);
   const flexX = cfg.alignX === "left" ? "flex-start" : cfg.alignX === "right" ? "flex-end" : "center";
   const flexY = cfg.alignY === "top" ? "flex-start" : cfg.alignY === "bottom" ? "flex-end" : "center";
 

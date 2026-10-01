@@ -85,7 +85,7 @@ export function normalizeWidgetConfig(raw: Partial<WidgetConfig> | null | undefi
   return {
     width: num(c.width, d.width, 120, 1920),
     height: num(c.height, d.height, 60, 1080),
-    intervalMs: num(c.intervalMs, d.intervalMs, 800, 120000),
+    intervalMs: num(c.intervalMs === 4000 ? undefined : c.intervalMs, d.intervalMs, 800, 120000),
     transition: (["fade", "slide", "scale", "wipe", "flip"] as const).includes(c.transition as never)
       ? (c.transition as WidgetConfig["transition"])
       : d.transition,

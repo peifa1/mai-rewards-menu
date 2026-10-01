@@ -219,7 +219,7 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;background:transparent;overflow:hidden;font-family:'Outfit',sans-serif;color:#fff}
-body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-size:cover;background-position:center;` : ""}display:flex;align-items:${flexY};justify-content:${flexX};padding:${cfg.alignX === "right" ? "0 24px 0 0" : "0"} ${cfg.alignY === "bottom" ? "0 0 24px 0" : "0"}}
+body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-size:cover;background-position:center;` : ""}display:flex;align-items:${flexY};justify-content:${flexX};padding:24px 24px 24px 24px}
 .pw{position:relative;display:inline-block;flex-shrink:0}
 .corner-sakura{position:absolute;top:-22px;left:-22px;width:${cfg.sakura.size}px;height:${cfg.sakura.size}px;z-index:30;
   animation:spinSakura ${cfg.sakura.spinSec}s linear infinite;filter:drop-shadow(0 0 12px rgba(248,184,204,0.85));
@@ -250,7 +250,7 @@ body{${opts.previewBg ? `background-image:url('${opts.previewBg}');background-si
 .social-col.left{animation:floatA 4.1s ease-in-out infinite}
 .social-col.mid{animation:floatB 3.6s ease-in-out infinite;animation-delay:.5s}
 .social-col.right{animation:floatC 4.4s ease-in-out infinite;animation-delay:.2s}
-.social-icon-bg{width:74px;height:74px;background:rgba(180,24,70,0.28);border:1.5px solid rgba(248,184,204,0.22);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(180,24,70,0.28)}
+.social-icon-bg{width:74px;height:74px;background:${socialIconBg};border:1.5px solid rgba(248,184,204,0.22);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(180,24,70,0.28)}
 .social-icon-bg img{width:44px;height:44px;object-fit:contain}
 .tiktok-white{filter:brightness(0) invert(1)}
 .social-handle{font-size:16px;font-weight:800;color:#fff;white-space:nowrap}

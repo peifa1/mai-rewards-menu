@@ -142,6 +142,12 @@ export function WidgetBuilder() {
     [],
   );
 
+  const setBackgroundCrop = useCallback(
+    (slide: "patreon" | "throne" | "comms", crop: { x: number; y: number; zoom: number }) =>
+      setCfg((c) => ({ ...c, backgroundCrops: { ...c.backgroundCrops, [slide]: crop } })),
+    [],
+  );
+
   const move = (slide: WidgetSlideId, dir: -1 | 1) =>
     setCfg((c) => {
       const order = [...c.order];
@@ -373,7 +379,7 @@ export function WidgetBuilder() {
                         <TextField label="Title" value={cfg.patreon.name} onChange={(v) => setSlideText("patreon", "name", v)} />
                         <TextField label="Link" value={cfg.patreon.url} onChange={(v) => setSlideText("patreon", "url", v)} />
                         <TextAreaField label="Handwritten note" value={cfg.patreon.note} onChange={(v) => setSlideText("patreon", "note", v)} />
-                        <ImageSlot label="Background" k="banner" cfg={cfg} assets={assets} onPick={setImage} />
+                        <BackgroundCropEditor slide="patreon" cfg={cfg} assets={assets} onPick={setImage} onCrop={setBackgroundCrop} />
                         <ImageSlot label="Patreon logo" k="patreon" cfg={cfg} assets={assets} onPick={setImage} />
                       </>
                     )}
@@ -418,6 +424,7 @@ export function WidgetBuilder() {
                       <>
                         <TextField label="Small text" value={cfg.throne.eyebrow} onChange={(v) => setSlideText("throne", "eyebrow", v)} />
                         <TextField label="Link" value={cfg.throne.url} onChange={(v) => setSlideText("throne", "url", v)} />
+                        <BackgroundCropEditor slide="throne" cfg={cfg} assets={assets} onPick={setImage} onCrop={setBackgroundCrop} />
                         <ImageSlot label="Throne logo" k="throne" cfg={cfg} assets={assets} onPick={setImage} />
                       </>
                     )}
@@ -426,6 +433,7 @@ export function WidgetBuilder() {
                         <TextField label="Title" value={cfg.comms.title} onChange={(v) => setSlideText("comms", "title", v)} />
                         <TextField label="Link" value={cfg.comms.url} onChange={(v) => setSlideText("comms", "url", v)} />
                         <TextAreaField label="Handwritten note" value={cfg.comms.note} onChange={(v) => setSlideText("comms", "note", v)} />
+                        <BackgroundCropEditor slide="comms" cfg={cfg} assets={assets} onPick={setImage} onCrop={setBackgroundCrop} />
                         <ImageSlot label="Mascot" k="squid" cfg={cfg} assets={assets} onPick={setImage} />
                       </>
                     )}

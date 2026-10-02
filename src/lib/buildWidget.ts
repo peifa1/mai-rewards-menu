@@ -26,7 +26,7 @@ export type WidgetAssetKey =
   | "gs_bottle"
   | "sakura";
 
-export const WIDGET_ASSET_FILES: Record<Exclude<WidgetAssetKey, "sakura">, string> = {
+export const WIDGET_ASSET_FILES: Record<Exclude<WidgetAssetKey, "sakura" | "patreon_bg" | "throne_bg" | "comms_bg">, string> = {
   banner: "/widget/banner.jpg",
   patreon: "/widget/patreon.png",
   x: "/widget/x.png",

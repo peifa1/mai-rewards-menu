@@ -13,6 +13,9 @@ export const WIDGET_SLIDE_LABELS: Record<WidgetSlideId, string> = {
 
 export type WidgetAssetKey =
   | "banner"
+  | "patreon_bg"
+  | "throne_bg"
+  | "comms_bg"
   | "patreon"
   | "x"
   | "yt"
@@ -23,7 +26,7 @@ export type WidgetAssetKey =
   | "gs_bottle"
   | "sakura";
 
-export const WIDGET_ASSET_FILES: Record<Exclude<WidgetAssetKey, "sakura">, string> = {
+export const WIDGET_ASSET_FILES: Record<Exclude<WidgetAssetKey, "sakura" | "patreon_bg" | "throne_bg" | "comms_bg">, string> = {
   banner: "/widget/banner.jpg",
   patreon: "/widget/patreon.png",
   x: "/widget/x.png",
@@ -54,6 +57,7 @@ export type WidgetConfig = {
   gsupps: { brand: string; save: string; codeLabel: string; code: string };
   // user image overrides (data URLs); "" = use bundled artwork
   images: Partial<Record<WidgetAssetKey, string>>;
+  backgroundCrops: Record<"patreon" | "throne" | "comms", { x: number; y: number; zoom: number }>;
 };
 
 export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
@@ -73,6 +77,11 @@ export const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
   comms: { title: "Commissions", url: "iomaya.com", note: "let's create\nsomething cute~ ♡" },
   gsupps: { brand: "Gamer Supps", save: "Save 10%", codeLabel: "use code", code: "KRAKEN" },
   images: {},
+  backgroundCrops: {
+    patreon: { x: 50, y: 50, zoom: 1 },
+    throne: { x: 50, y: 50, zoom: 1 },
+    comms: { x: 50, y: 50, zoom: 1 },
+  },
 };
 
 const ALL_SLIDES: WidgetSlideId[] = ["patreon", "socials", "throne", "comms", "gsupps"];
@@ -106,6 +115,22 @@ export function normalizeWidgetConfig(raw: Partial<WidgetConfig> | null | undefi
     comms: { ...d.comms, ...(c.comms ?? {}) },
     gsupps: { ...d.gsupps, ...(c.gsupps ?? {}) },
     images: { ...(c.images ?? {}) },
+    backgroundCrops: {
+      patreon: normalizeCrop(c.backgroundCrops?.patreon, d.backgroundCrops.patreon),
+      throne: normalizeCrop(c.backgroundCrops?.throne, d.backgroundCrops.throne),
+      comms: normalizeCrop(c.backgroundCrops?.comms, d.backgroundCrops.comms),
+    },
+  };
+}
+
+function normalizeCrop(
+  crop: Partial<{ x: number; y: number; zoom: number }> | undefined,
+  fallback: { x: number; y: number; zoom: number },
+) {
+  return {
+    x: num(crop?.x, fallback.x, 0, 100),
+    y: num(crop?.y, fallback.y, 0, 100),
+    zoom: num(crop?.zoom, fallback.zoom, 1, 3),
   };
 }
 
@@ -158,12 +183,17 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
   const socialBgTt = withAlpha(cfg.socials.ttIconBgColor, cfg.socials.iconBgOpacity);
   const flexX = cfg.alignX === "left" ? "flex-start" : cfg.alignX === "right" ? "flex-end" : "center";
   const flexY = cfg.alignY === "top" ? "flex-start" : cfg.alignY === "bottom" ? "flex-end" : "center";
+  const bg = (slide: "patreon" | "throne" | "comms") => cfg.images[`${slide}_bg` as WidgetAssetKey] || img("banner");
+  const bgStyle = (slide: "patreon" | "throne" | "comms") => {
+    const crop = cfg.backgroundCrops[slide];
+    return `object-position:${crop.x}% ${crop.y}%;transform:scale(${crop.zoom});transform-origin:${crop.x}% ${crop.y}%`;
+  };
 
   const slideHtml = (id: WidgetSlideId, i: number) => {
     const cls = `rs panel slide-${id}${i === 0 ? "" : " out"}`;
     if (id === "patreon")
       return `<div class="${cls}" data-sakura="1">
-  <img class="panel-bg" src="${img("banner")}" alt="">
+  <img class="panel-bg" src="${bg("patreon")}" alt="" style="${bgStyle("patreon")}">
   <div class="scrim"></div>
   <div class="content">
     <div class="patreon-icon"><img src="${img("patreon")}" alt=""></div>
@@ -185,7 +215,7 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
 </div>`;
     if (id === "throne")
       return `<div class="${cls}" data-sakura="1">
-  <img class="panel-bg" src="${img("banner")}" alt="">
+  <img class="panel-bg" src="${bg("throne")}" alt="" style="${bgStyle("throne")}">
   <div class="scrim"></div>
   <div class="content">
     <img class="throne-logo" src="${img("throne")}" alt="">
@@ -198,7 +228,7 @@ export function buildWidgetHtml(rawCfg: Partial<WidgetConfig>, opts: WidgetBuild
 </div>`;
     if (id === "comms")
       return `<div class="${cls}" data-sakura="1">
-  <img class="panel-bg" src="${img("banner")}" alt="">
+  <img class="panel-bg" src="${bg("comms")}" alt="" style="${bgStyle("comms")}">
   <div class="scrim"></div>
   <div class="content">
     <img class="comms-mascot" src="${img("squid")}" alt="">

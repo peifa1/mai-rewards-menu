@@ -142,6 +142,12 @@ export function WidgetBuilder() {
     [],
   );
 
+  const setBackgroundCrop = useCallback(
+    (slide: "patreon" | "throne" | "comms", crop: { x: number; y: number; zoom: number }) =>
+      setCfg((c) => ({ ...c, backgroundCrops: { ...c.backgroundCrops, [slide]: crop } })),
+    [],
+  );
+
   const move = (slide: WidgetSlideId, dir: -1 | 1) =>
     setCfg((c) => {
       const order = [...c.order];
@@ -373,7 +379,7 @@ export function WidgetBuilder() {
                         <TextField label="Title" value={cfg.patreon.name} onChange={(v) => setSlideText("patreon", "name", v)} />
                         <TextField label="Link" value={cfg.patreon.url} onChange={(v) => setSlideText("patreon", "url", v)} />
                         <TextAreaField label="Handwritten note" value={cfg.patreon.note} onChange={(v) => setSlideText("patreon", "note", v)} />
-                        <ImageSlot label="Background" k="banner" cfg={cfg} assets={assets} onPick={setImage} />
+                        <BackgroundCropEditor slide="patreon" cfg={cfg} assets={assets} onPick={setImage} onCrop={setBackgroundCrop} />
                         <ImageSlot label="Patreon logo" k="patreon" cfg={cfg} assets={assets} onPick={setImage} />
                       </>
                     )}
@@ -418,6 +424,7 @@ export function WidgetBuilder() {
                       <>
                         <TextField label="Small text" value={cfg.throne.eyebrow} onChange={(v) => setSlideText("throne", "eyebrow", v)} />
                         <TextField label="Link" value={cfg.throne.url} onChange={(v) => setSlideText("throne", "url", v)} />
+                        <BackgroundCropEditor slide="throne" cfg={cfg} assets={assets} onPick={setImage} onCrop={setBackgroundCrop} />
                         <ImageSlot label="Throne logo" k="throne" cfg={cfg} assets={assets} onPick={setImage} />
                       </>
                     )}
@@ -426,6 +433,7 @@ export function WidgetBuilder() {
                         <TextField label="Title" value={cfg.comms.title} onChange={(v) => setSlideText("comms", "title", v)} />
                         <TextField label="Link" value={cfg.comms.url} onChange={(v) => setSlideText("comms", "url", v)} />
                         <TextAreaField label="Handwritten note" value={cfg.comms.note} onChange={(v) => setSlideText("comms", "note", v)} />
+                        <BackgroundCropEditor slide="comms" cfg={cfg} assets={assets} onPick={setImage} onCrop={setBackgroundCrop} />
                         <ImageSlot label="Mascot" k="squid" cfg={cfg} assets={assets} onPick={setImage} />
                       </>
                     )}
@@ -782,6 +790,145 @@ function NumberField({
         style={{ background: FIELD, border: `1px solid ${LINE_STRONG}`, color: "#fff" }}
       />
     </label>
+  );
+}
+
+type CroppableSlide = "patreon" | "throne" | "comms";
+
+function BackgroundCropEditor({
+  slide,
+  cfg,
+  assets,
+  onPick,
+  onCrop,
+}: {
+  slide: CroppableSlide;
+  cfg: WidgetConfig;
+  assets: Record<WidgetAssetKey, string> | null;
+  onPick: (k: WidgetAssetKey, value: string) => void;
+  onCrop: (slide: CroppableSlide, crop: { x: number; y: number; zoom: number }) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const imageKey = `${slide}_bg` as WidgetAssetKey;
+  const custom = cfg.images[imageKey];
+  const src = custom || cfg.images.banner || assets?.banner || "";
+  const crop = cfg.backgroundCrops[slide];
+  const naturalRef = useRef({ width: 0, height: 0 });
+  const dragRef = useRef<{
+    pointerId: number;
+    clientX: number;
+    clientY: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const updateFromPointer = (clientX: number, clientY: number) => {
+    const start = dragRef.current;
+    const frame = frameRef.current;
+    const natural = naturalRef.current;
+    if (!start || !frame || !natural.width || !natural.height) return;
+    const rect = frame.getBoundingClientRect();
+    const coverScale = Math.max(rect.width / natural.width, rect.height / natural.height);
+    const renderedWidth = natural.width * coverScale * crop.zoom;
+    const renderedHeight = natural.height * coverScale * crop.zoom;
+    const overflowX = Math.max(0, renderedWidth - rect.width);
+    const overflowY = Math.max(0, renderedHeight - rect.height);
+    const x = overflowX > 0 ? Math.min(100, Math.max(0, start.x - ((clientX - start.clientX) / overflowX) * 100)) : 50;
+    const y = overflowY > 0 ? Math.min(100, Math.max(0, start.y - ((clientY - start.clientY) / overflowY) * 100)) : 50;
+    onCrop(slide, { ...crop, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 });
+  };
+
+  return (
+    <div className="flex flex-col gap-2.5 rounded-lg border p-2.5" style={{ borderColor: LINE, background: FIELD }}>
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-[10px] uppercase tracking-[0.18em]" style={{ color: INK_SOFT }}>
+          Background crop
+        </span>
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="px-3 py-1.5 rounded-full text-[10px] uppercase tracking-[0.2em]"
+          style={{ border: `1px solid ${LINE_STRONG}`, color: INK }}
+        >
+          Upload
+        </button>
+        {(custom || crop.x !== 50 || crop.y !== 50 || crop.zoom !== 1) && (
+          <button
+            onClick={() => {
+              if (custom) onPick(imageKey, "");
+              onCrop(slide, { x: 50, y: 50, zoom: 1 });
+            }}
+            className="px-2 py-1 text-[10px] opacity-70 hover:opacity-100"
+            style={{ color: "#ffd0dc" }}
+          >
+            Reset
+          </button>
+        )}
+      </div>
+      <div
+        ref={frameRef}
+        className="relative w-full overflow-hidden rounded-md border select-none cursor-grab active:cursor-grabbing touch-none"
+        style={{ aspectRatio: "480 / 130", borderColor: LINE_STRONG, background: "rgba(0,0,0,0.35)" }}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          dragRef.current = { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY, x: crop.x, y: crop.y };
+        }}
+        onPointerMove={(e) => {
+          if (dragRef.current?.pointerId === e.pointerId) updateFromPointer(e.clientX, e.clientY);
+        }}
+        onPointerUp={(e) => {
+          if (dragRef.current?.pointerId === e.pointerId) dragRef.current = null;
+        }}
+        onPointerCancel={() => {
+          dragRef.current = null;
+        }}
+      >
+        {src && (
+          <img
+            src={src}
+            alt=""
+            draggable={false}
+            onLoad={(e) => {
+              naturalRef.current = { width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight };
+            }}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{
+              objectFit: "cover",
+              objectPosition: `${crop.x}% ${crop.y}%`,
+              transform: `scale(${crop.zoom})`,
+              transformOrigin: `${crop.x}% ${crop.y}%`,
+            }}
+          />
+        )}
+        <div className="absolute inset-0 pointer-events-none" style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }} />
+      </div>
+      <div className="flex items-center justify-between gap-3 text-[10px]" style={{ color: INK_SOFT }}>
+        <span>Drag to reposition</span>
+        <span className="font-mono">X {crop.x.toFixed(1)}% · Y {crop.y.toFixed(1)}%</span>
+      </div>
+      <SliderField
+        label="Image zoom"
+        value={crop.zoom}
+        min={1}
+        max={3}
+        step={0.05}
+        onChange={(zoom) => onCrop(slide, { ...crop, zoom })}
+      />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            onPick(imageKey, await readFileAsDataUrl(file));
+            onCrop(slide, { x: 50, y: 50, zoom: 1 });
+          }
+          e.currentTarget.value = "";
+        }}
+      />
+    </div>
   );
 }
 

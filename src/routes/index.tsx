@@ -223,10 +223,11 @@ function cacheTextState(state: PersistedState) {
 type TopTab = "patreon" | "twitch" | "audio";
 
 function Index() {
-  const [tab, setTab] = useState<TopTab>(() => {
-    if (typeof window === "undefined") return "patreon";
-    return (localStorage.getItem("active-tab") as TopTab) || "patreon";
-  });
+  const [tab, setTab] = useState<TopTab>("patreon");
+  useEffect(() => {
+    const saved = localStorage.getItem("active-tab") as TopTab | null;
+    if (saved === "patreon" || saved === "twitch" || saved === "audio") setTab(saved);
+  }, []);
   useEffect(() => {
     try { localStorage.setItem("active-tab", tab); } catch {}
   }, [tab]);
@@ -272,10 +273,11 @@ function Index() {
 type TwitchSub = "patreon" | "gamersupps" | "social" | "widget";
 
 function TwitchOverlays() {
-  const [sub, setSub] = useState<TwitchSub>(() => {
-    if (typeof window === "undefined") return "patreon";
-    return (localStorage.getItem("twitch-sub-tab") as TwitchSub) || "patreon";
-  });
+  const [sub, setSub] = useState<TwitchSub>("patreon");
+  useEffect(() => {
+    const saved = localStorage.getItem("twitch-sub-tab") as TwitchSub | null;
+    if (saved === "patreon" || saved === "gamersupps" || saved === "social" || saved === "widget") setSub(saved);
+  }, []);
   useEffect(() => {
     try { localStorage.setItem("twitch-sub-tab", sub); } catch {}
   }, [sub]);

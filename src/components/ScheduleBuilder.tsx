@@ -129,31 +129,34 @@ export default function ScheduleBuilder() {
             {cfg.bg && <img src={cfg.bg} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
             <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse at center, rgba(10,2,6,${cfg.darken}) 0%, rgba(10,2,6,${Math.min(1, cfg.darken + 0.25)}) 100%)` }} />
 
-            {cfg.showChibi && (
-              <img src={chibiSrc} alt="" style={{ position: "absolute", top: 60, right: 60, width: 260, height: 260, objectFit: "contain", filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.5))" }} />
-            )}
-
-            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 90px", color: "#fff5f8" }}>
-              <h1 style={{ fontSize: 108, fontWeight: 700, lineHeight: 1.02, textAlign: "center", whiteSpace: "pre-line", textShadow: "0 4px 24px rgba(0,0,0,0.7)" }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 110px", color: "#fff5f8" }}>
+              <h1 style={{ fontSize: 96, fontWeight: 600, lineHeight: 1.05, whiteSpace: "pre-line", textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>
                 {cfg.title}
               </h1>
               {cfg.subtitle && (
-                <div style={{ marginTop: 22, fontSize: 36, fontStyle: "italic", color: cfg.accent, letterSpacing: "0.06em" }}>{cfg.subtitle}</div>
+                <div style={{ marginTop: 14, fontSize: 34, fontStyle: "italic", color: cfg.accent }}>{cfg.subtitle}</div>
               )}
-              <div style={{ width: 220, height: 2, margin: "48px 0", background: `linear-gradient(90deg, transparent, ${cfg.accent}, transparent)` }} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 26, width: "100%" }}>
-                {cfg.rows.map((r) => (
-                  <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "26px 44px", borderRadius: 24, background: "rgba(20,4,12,0.55)", border: `2px solid ${cfg.accent}55`, boxShadow: "0 8px 30px rgba(0,0,0,0.35)" }}>
-                    <span style={{ fontSize: 52, fontWeight: 700 }}>{r.day}</span>
-                    <span style={{ fontSize: 46, fontWeight: 600, color: cfg.accent }}>{r.time}</span>
+              <div style={{ display: "flex", flexDirection: "column", marginTop: 70, width: "100%" }}>
+                {cfg.rows.map((r, i) => (
+                  <div key={r.id} style={{ display: "flex", alignItems: "baseline", gap: 24, padding: "30px 0", borderTop: i === 0 ? `1px solid rgba(255,240,245,0.35)` : "none", borderBottom: "1px solid rgba(255,240,245,0.35)" }}>
+                    <span style={{ fontSize: 54, fontWeight: 600, flexShrink: 0 }}>{r.day}</span>
+                    <span style={{ flex: 1, borderBottom: "3px dotted rgba(255,240,245,0.3)", transform: "translateY(-10px)" }} />
+                    <span style={{ fontSize: 46, fontWeight: 500, fontStyle: "italic", color: cfg.accent, flexShrink: 0 }}>{r.time}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {cfg.signature && (
-              <div style={{ position: "absolute", right: 80, bottom: 90, fontFamily: "'Great Vibes', cursive", fontSize: 110, color: cfg.accent, transform: "rotate(-6deg)", textShadow: "0 4px 18px rgba(0,0,0,0.7)" }}>
-                {cfg.signature}
+            {(cfg.signature || cfg.showChibi) && (
+              <div style={{ position: "absolute", right: 70, bottom: 80, display: "flex", alignItems: "flex-end", gap: 10 }}>
+                {cfg.signature && (
+                  <div style={{ fontFamily: "'Great Vibes', cursive", fontSize: 100, lineHeight: 1, color: cfg.accent, transform: "rotate(-5deg)", marginBottom: 40, textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>
+                    {cfg.signature}
+                  </div>
+                )}
+                {cfg.showChibi && (
+                  <img src={chibiSrc} alt="" style={{ width: 230, height: 230, objectFit: "contain", filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.5))" }} />
+                )}
               </div>
             )}
           </div>

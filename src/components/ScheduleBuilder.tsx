@@ -130,15 +130,15 @@ export default function ScheduleBuilder() {
             <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse at center, rgba(10,2,6,${cfg.darken}) 0%, rgba(10,2,6,${Math.min(1, cfg.darken + 0.25)}) 100%)` }} />
 
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 110px", color: "#fff5f8" }}>
-              <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 104, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.05, whiteSpace: "pre-line", textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 104, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.05, whiteSpace: "pre-line", textAlign: "center", textShadow: "0 2px 10px rgba(0,0,0,0.6)" }}>
                 {cfg.title}
               </h1>
               {cfg.subtitle && (
-                <div style={{ marginTop: 14, fontSize: 34, fontStyle: "italic", color: cfg.accent }}>{cfg.subtitle}</div>
+                <div style={{ marginTop: 14, textAlign: "center", fontSize: 34, fontStyle: "italic", color: cfg.accent }}>{cfg.subtitle}</div>
               )}
               <div style={{ display: "flex", flexDirection: "column", marginTop: 70, width: "100%", fontFamily: "'Bricolage Grotesque', sans-serif" }}>
                 {cfg.rows.map((r, i) => (
-                  <div key={r.id} style={{ display: "flex", alignItems: "baseline", gap: 24, padding: "30px 0", borderTop: i === 0 ? `1px solid rgba(255,240,245,0.35)` : "none", borderBottom: "1px solid rgba(255,240,245,0.35)" }}>
+                  <div key={r.id} style={{ display: "flex", alignItems: "baseline", gap: 24, padding: "30px 0" }}>
                     <span style={{ fontSize: 52, fontWeight: 700, letterSpacing: "-0.01em", flexShrink: 0 }}>{r.day}</span>
                     <span style={{ flex: 1, borderBottom: "3px dotted rgba(255,240,245,0.3)", transform: "translateY(-10px)" }} />
                     <span style={{ fontSize: 44, fontWeight: 500, color: cfg.accent, flexShrink: 0 }}>{r.time}</span>

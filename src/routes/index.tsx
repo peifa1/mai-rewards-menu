@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toPng } from "html-to-image";
+import ScheduleBuilder from "@/components/ScheduleBuilder";
 import { Mic, Move, ArrowUp, ArrowDown, Plus, Trash2, AudioLines, ImagePlus } from "lucide-react";
 import { TwitchOverlayBuilder } from "@/components/TwitchOverlayBuilder";
 import { GamersuppsBuilder } from "@/components/GamersuppsBuilder";
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/")({
     links: [
       { rel: "icon", type: "image/png", href: "/images/Chibi%20art%20thank%20you.png" },
       { rel: "apple-touch-icon", href: "/images/Chibi%20art%20thank%20you.png" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" },
     ],
   }),
   component: Index,
@@ -220,13 +222,13 @@ function cacheTextState(state: PersistedState) {
 }
 
 
-type TopTab = "patreon" | "twitch" | "audio";
+type TopTab = "patreon" | "twitch" | "audio" | "schedule";
 
 function Index() {
   const [tab, setTab] = useState<TopTab>("patreon");
   useEffect(() => {
     const saved = localStorage.getItem("active-tab") as TopTab | null;
-    if (saved === "patreon" || saved === "twitch" || saved === "audio") setTab(saved);
+    if (saved === "patreon" || saved === "twitch" || saved === "audio" || saved === "schedule") setTab(saved);
   }, []);
   useEffect(() => {
     try { localStorage.setItem("active-tab", tab); } catch {}
@@ -250,6 +252,7 @@ function Index() {
             { id: "patreon", label: "Patreon Showcase" },
             { id: "twitch",  label: "Twitch Overlays" },
             { id: "audio",   label: "Audio Teasers" },
+            { id: "schedule", label: "Stream Schedule" },
           ] as const).map(({ id, label }) => (
             <button
               key={id}
@@ -265,7 +268,7 @@ function Index() {
           ))}
         </div>
       </div>
-      {tab === "patreon" ? <PatreonShowcase /> : tab === "twitch" ? <TwitchOverlays /> : <AudioTeaserBuilder />}
+      {tab === "patreon" ? <PatreonShowcase /> : tab === "twitch" ? <TwitchOverlays /> : tab === "schedule" ? <ScheduleBuilder /> : <AudioTeaserBuilder />}
     </div>
   );
 }

@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
     links: [
       { rel: "icon", type: "image/png", href: "/images/Chibi%20art%20thank%20you.png" },
       { rel: "apple-touch-icon", href: "/images/Chibi%20art%20thank%20you.png" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Great+Vibes&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap" },
     ],
   }),
   component: Index,

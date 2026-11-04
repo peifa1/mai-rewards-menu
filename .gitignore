@@ -31,3 +31,4 @@ dist-ssr
 *.sln
 *.sw?
 .vercel/
+public/images/_mock-schedule-bg.jpg

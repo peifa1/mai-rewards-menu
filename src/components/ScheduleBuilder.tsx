@@ -2,7 +2,13 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { toPng } from "html-to-image";
 
 const W = 1080;
-const H = 1920;
+// Output formats. Story is 9:16; Discord previews portrait images in a ~550×350 box,
+// so a shorter 4:5 card shows ~40% larger there. Each format has its own vertical layout.
+const FORMATS = {
+  discord: { label: "Discord 4:5", h: 1350, titleTop: 64, noteTop: 476, chibiH: 340, sigBottom: 64, file: "discord" },
+  story: { label: "Story 9:16", h: 1920, titleTop: 100, noteTop: 860, chibiH: 400, sigBottom: 90, file: "story" },
+} as const;
+type FormatId = keyof typeof FORMATS;
 const KEY = "schedule-cfg";
 
 type Row = { id: string; day: string; time: string; content?: string };
@@ -26,6 +32,7 @@ type Cfg = {
   bg: string;
   bgPosX: number;
   bgPosY: number;
+  format: FormatId;
   darken: number;
   dimColor: string;
   showChibi: boolean;
@@ -76,6 +83,7 @@ const DEFAULT: Cfg = {
   bg: "",
   bgPosX: 50,
   bgPosY: 0,
+  format: "discord",
   darken: 0.55,
   dimColor: "#000000",
   showChibi: true,
@@ -109,6 +117,7 @@ export default function ScheduleBuilder() {
       if (s) {
         const saved = { ...DEFAULT, ...JSON.parse(s) } as Cfg & { design?: string };
         delete saved.design;
+        if (!(saved.format in FORMATS)) saved.format = DEFAULT.format;
         if (!TITLE_FONTS.some((f) => f.id === saved.titleFont)) saved.titleFont = DEFAULT.titleFont;
         setCfg(saved);
       }
@@ -139,6 +148,8 @@ export default function ScheduleBuilder() {
     set({ rows });
   };
 
+  const H = FORMATS[cfg.format].h;
+
   const exportImg = async () => {
     if (!ref.current) return;
     setExporting(true);
@@ -148,7 +159,7 @@ export default function ScheduleBuilder() {
       await toPng(ref.current, opts);
       const url = await toPng(ref.current, opts);
       const a = document.createElement("a");
-      a.download = "iomaya-stream-schedule.png";
+      a.download = `iomaya-stream-schedule-${FORMATS[cfg.format].file}.png`;
       a.href = url;
       a.click();
     } catch (e) {
@@ -162,6 +173,19 @@ export default function ScheduleBuilder() {
 
   return (
     <div className="w-full flex flex-col items-center gap-6 py-8 px-4">
+      <div className="flex gap-1 rounded-full p-1" style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,180,200,0.2)" }}>
+        {(Object.keys(FORMATS) as FormatId[]).map((id) => (
+          <button
+            key={id}
+            onClick={() => set({ format: id })}
+            className="px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase transition-colors"
+            style={{ background: cfg.format === id ? "rgba(255,182,203,0.22)" : "transparent", color: cfg.format === id ? "#fff0f4" : "rgba(255,210,222,0.6)" }}
+          >
+            {FORMATS[id].label}
+          </button>
+        ))}
+      </div>
+
       <button
         onClick={exportImg}
         disabled={exporting}
@@ -321,9 +345,9 @@ export default function ScheduleBuilder() {
 const abs = (s: CSSProperties): CSSProperties => ({ position: "absolute", ...s });
 
 /** Full-bleed art (or a sky→blush gradient fallback matching the OC art). */
-function ArtBg({ cfg, height = H }: { cfg: Cfg; height?: number }) {
+function ArtBg({ cfg }: { cfg: Cfg }) {
   return (
-    <div style={abs({ left: 0, top: 0, width: W, height, overflow: "hidden", background: `linear-gradient(180deg, ${C.sky} 0%, #c9dcf2 45%, ${C.blush} 100%)` })}>
+    <div style={abs({ left: 0, top: 0, width: W, height: "100%", overflow: "hidden", background: `linear-gradient(180deg, ${C.sky} 0%, #c9dcf2 45%, ${C.blush} 100%)` })}>
       {cfg.bg && (
         <img src={cfg.bg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${cfg.bgPosX}% ${cfg.bgPosY}%`, display: "block" }} />
       )}
@@ -524,13 +548,14 @@ function ZineCard({ cfg }: { cfg: Cfg }) {
   const PW = W - 66 - 84;
   const PH = PAD_TOP + cfg.rows.length * LINE + 92;
   const tf = TITLE_FONTS.find((f) => f.id === cfg.titleFont) ?? TITLE_FONTS[0];
+  const L = FORMATS[cfg.format];
   return (
     <>
       <ArtBg cfg={cfg} />
       <div style={abs({ inset: 0, background: cfg.dimColor, opacity: cfg.darken })} />
 
       {/* Title as label strips */}
-      <div style={abs({ left: 56, top: 100, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 16 })}>
+      <div style={abs({ left: 56, top: L.titleTop, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 16 })}>
         {lines.map((l, i) => (
           <span
             key={i}
@@ -566,7 +591,7 @@ function ZineCard({ cfg }: { cfg: Cfg }) {
       </div>
 
       {/* Notebook page */}
-      <div style={abs({ left: 66, top: 860, width: PW, height: PH, transform: "rotate(-1.6deg)", filter: "drop-shadow(0 18px 24px rgba(40,10,30,0.42))" })}>
+      <div style={abs({ left: 66, top: L.noteTop, width: PW, height: PH, transform: "rotate(-1.6deg)", filter: "drop-shadow(0 18px 24px rgba(40,10,30,0.42))" })}>
         <NotebookPaper w={PW} h={PH} line={LINE} rows={cfg.rows.length} top={PAD_TOP} />
         <div style={{ position: "relative", padding: `${PAD_TOP}px 40px 0 128px` }}>
           {cfg.rows.map((r, i) => (
@@ -585,7 +610,7 @@ function ZineCard({ cfg }: { cfg: Cfg }) {
         <Tape stripe={`${cfg.color}bf`} style={{ left: PW - 148, top: -1, transform: "rotate(45deg)" }} />
       </div>
 
-      <Corner cfg={cfg} chibiH={400} sigColor="#fff" sigShadow={`0 3px 0 ${C.crimson}, 0 6px 18px rgba(40,10,30,0.5)`} sigBottom={90} font={FONT_HAND} sigSize={92} />
+      <Corner cfg={cfg} chibiH={L.chibiH} sigColor="#fff" sigShadow={`0 3px 0 ${C.crimson}, 0 6px 18px rgba(40,10,30,0.5)`} sigBottom={L.sigBottom} font={FONT_HAND} sigSize={92} />
     </>
   );
 }

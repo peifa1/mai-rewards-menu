@@ -495,9 +495,6 @@ function NotebookPaper({ w, h, line, rows, top }: { w: number; h: number; line: 
           <line key={y} x1={0} x2={w} y1={y} y2={y} stroke="rgba(90,155,212,0.42)" strokeWidth="2" />
         ))}
         <line x1={105} x2={105} y1={0} y2={h + 24} stroke="rgba(200,30,74,0.5)" strokeWidth="3" />
-        {/* a soft fold crease */}
-        <line x1={w * 0.64} y1={-10} x2={w * 0.5} y2={h + 30} stroke="rgba(60,30,30,0.06)" strokeWidth="5" />
-        <line x1={w * 0.64 + 4} y1={-10} x2={w * 0.5 + 4} y2={h + 30} stroke="rgba(255,255,255,0.55)" strokeWidth="2" />
         <rect width={w} height={h + 24} filter="url(#zine-grain)" />
         {/* slight darkening toward the torn edge, like handled paper */}
         <rect y={h - 70} width={w} height={94} fill="rgba(150,110,90,0.05)" />

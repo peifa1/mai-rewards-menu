@@ -9,6 +9,7 @@ import { GamersuppsBuilder } from "@/components/GamersuppsBuilder";
 import { SocialWidgetBuilder } from "@/components/SocialWidgetBuilder";
 import { WidgetBuilder } from "@/components/WidgetBuilder";
 import { AudioTeaserBuilder } from "@/components/AudioTeaserBuilder";
+import { BirthdayWheelBuilder } from "@/components/BirthdayWheelBuilder";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 
 const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
@@ -273,13 +274,13 @@ function Index() {
   );
 }
 
-type TwitchSub = "patreon" | "gamersupps" | "social" | "widget";
+type TwitchSub = "patreon" | "gamersupps" | "social" | "widget" | "birthday";
 
 function TwitchOverlays() {
   const [sub, setSub] = useState<TwitchSub>("patreon");
   useEffect(() => {
     const saved = localStorage.getItem("twitch-sub-tab") as TwitchSub | null;
-    if (saved === "patreon" || saved === "gamersupps" || saved === "social" || saved === "widget") setSub(saved);
+    if (saved === "patreon" || saved === "gamersupps" || saved === "social" || saved === "widget" || saved === "birthday") setSub(saved);
   }, []);
   useEffect(() => {
     try { localStorage.setItem("twitch-sub-tab", sub); } catch {}
@@ -297,6 +298,7 @@ function TwitchOverlays() {
             { id: "gamersupps", label: "Gamersupps", kanji: "飲" },
             { id: "social", label: "Social", kanji: "縁" },
             { id: "widget", label: "Widget", kanji: "札" },
+            { id: "birthday", label: "Birthday", kanji: "祝" },
           ] as const).map(({ id, label, kanji }) => (
             <button
               key={id}
@@ -313,7 +315,7 @@ function TwitchOverlays() {
           ))}
         </div>
       </div>
-      {sub === "patreon" ? <TwitchOverlayBuilder /> : sub === "gamersupps" ? <GamersuppsBuilder /> : sub === "social" ? <SocialWidgetBuilder /> : <WidgetBuilder />}
+      {sub === "patreon" ? <TwitchOverlayBuilder /> : sub === "gamersupps" ? <GamersuppsBuilder /> : sub === "social" ? <SocialWidgetBuilder /> : sub === "birthday" ? <BirthdayWheelBuilder /> : <WidgetBuilder />}
     </div>
   );
 }

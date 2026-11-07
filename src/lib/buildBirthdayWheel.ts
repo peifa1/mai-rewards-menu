@@ -29,10 +29,15 @@ export type BirthdayWheelConfig = {
   title: string;
   onceLabel: string;
   repeatLabel: string;
+  showTimer: boolean; // countdown timer in the panel
+  timerSeconds: number; // its starting time (adjustable live in the scene)
   items: WheelOption[];
 };
 
 export const WHEEL_LABEL_MAX = 24;
+export const TIMER_MAX_SECONDS = 99 * 60 + 59;
+const clampTimer = (v: unknown, fallback: number) =>
+  typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(TIMER_MAX_SECONDS, Math.round(v))) : fallback;
 
 const o = (id: string, label: string, full: string, type: WheelOptionType, double = false): WheelOption =>
   double ? { id, label, full, type, double } : { id, label, full, type };
@@ -44,6 +49,8 @@ export const DEFAULT_BIRTHDAY_WHEEL_CONFIG: BirthdayWheelConfig = {
   title: "Birthday Wheel",
   onceLabel: "one time only!",
   repeatLabel: "can come back for more",
+  showTimer: true,
+  timerSeconds: 5 * 60,
   items: [
     o("story", "Embarrassing story", "Tell an embarrassing story", "once"),
     o("sour", "Sour challenge", "Sour challenge!", "once"),
@@ -101,6 +108,8 @@ export function normalizeBirthdayWheelConfig(raw: Partial<BirthdayWheelConfig> |
     title: str(raw?.title, d.title),
     onceLabel: str(raw?.onceLabel, d.onceLabel),
     repeatLabel: str(raw?.repeatLabel, d.repeatLabel),
+    showTimer: raw?.showTimer !== false,
+    timerSeconds: clampTimer(raw?.timerSeconds, d.timerSeconds),
     items,
   };
 }

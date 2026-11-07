@@ -6,6 +6,7 @@ import {
   DEFAULT_BIRTHDAY_WHEEL_CONFIG,
   newWheelOptionId,
   normalizeBirthdayWheelConfig,
+  TIMER_MAX_SECONDS,
   WHEEL_LABEL_MAX,
   type BirthdayWheelConfig,
   type WheelOption,
@@ -231,6 +232,27 @@ export function BirthdayWheelBuilder() {
         </div>
 
         <div>
+          <SectionTitle kanji="時">Timer</SectionTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap text-xs">
+            <label className="flex items-center gap-2 cursor-pointer select-none" style={{ color: INK }}>
+              <input type="checkbox" checked={cfg.showTimer} onChange={(e) => setField("showTimer", e.target.checked)} />
+              Show timer in the panel
+            </label>
+            <div className={`flex items-center gap-1.5 transition ${cfg.showTimer ? "" : "opacity-40 pointer-events-none"}`}>
+              <span className="uppercase tracking-[0.2em] mr-1" style={{ color: INK_SOFT }}>Starts at</span>
+              <TimeInput value={Math.floor(cfg.timerSeconds / 60)} max={99} label="Minutes"
+                onChange={(m) => setField("timerSeconds", Math.min(TIMER_MAX_SECONDS, m * 60 + (cfg.timerSeconds % 60)))} />
+              <span className="text-sm font-bold" style={{ color: INK_SOFT }}>:</span>
+              <TimeInput value={cfg.timerSeconds % 60} max={59} label="Seconds"
+                onChange={(s) => setField("timerSeconds", Math.floor(cfg.timerSeconds / 60) * 60 + s)} />
+            </div>
+          </div>
+          <p className="text-[10px] opacity-60 leading-snug mt-2" style={{ color: INK_SOFT }}>
+            Change it live in OBS Interact: hover it for arrows, scroll on the numbers, or click one and type.
+          </p>
+        </div>
+
+        <div>
           <SectionTitle kanji="輪">Options</SectionTitle>
           <div className="flex items-center gap-2 mb-3 text-[11px]" style={{ color: INK_SOFT }}>
             <span>{onWheel.length} on the wheel</span>
@@ -329,6 +351,24 @@ function TextField({ label, value, onChange, swatch }: { label: string; value: s
         style={{ background: FIELD, border: `1px solid ${LINE_STRONG}`, color: "#fff" }}
       />
     </label>
+  );
+}
+
+function TimeInput({ value, max, label, onChange }: { value: number; max: number; label: string; onChange: (v: number) => void }) {
+  return (
+    <input
+      type="number"
+      min={0}
+      max={max}
+      value={String(value).padStart(2, "0")}
+      aria-label={label}
+      onChange={(e) => {
+        const v = parseInt(e.target.value, 10);
+        onChange(Number.isNaN(v) ? 0 : Math.max(0, Math.min(max, v)));
+      }}
+      className="w-12 px-1.5 py-1.5 rounded-lg outline-none text-sm text-center tabular-nums"
+      style={{ background: FIELD, border: `1px solid ${LINE_STRONG}`, color: "#fff" }}
+    />
   );
 }
 

@@ -116,7 +116,7 @@
   body.layout-side #result .text { font-size: 40px; }
   body.layout-side #mascot { width: 120px; right: -30px; top: -40px; }
 
-  #result { flex: 0 0 318px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-radius: 34px; background: var(--result-bg); padding: 20px 24px; }
+  #result { flex: 0 0 318px; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-radius: 34px; background: var(--result-bg); padding: 20px 24px; }
   #result .text { font: italic 400 50px/1.05 var(--head); margin: 14px 0 16px; }
   #result .text .plus { display: block; font: 900 26px/1.2 var(--label); color: var(--plus); font-style: normal; }
   #result .idle { font: italic 400 54px/1 var(--head); }
@@ -144,6 +144,40 @@
   #doneList .dot.once { background: var(--once2); } #doneList .dot.repeat { background: var(--repeat2); }
   #doneList .times { margin-left: auto; padding: 4px 10px; border-radius: 20px; background: var(--repeat); color: var(--repeat-ink); font: 900 14px/1 var(--label); letter-spacing: .06em; }
 
+  /* ── Timer (countdown, MM:SS). Adjust live in OBS Interact: move the mouse over it for the
+     arrows (hold to repeat), scroll over the minutes/seconds, or click a number and type. ── */
+  #timer { position: relative; flex: none; display: flex; align-items: center; gap: 14px; margin-top: 18px; padding: 20px 18px 26px 24px; border-radius: 30px; background: var(--result-bg); transition: background .3s; }
+  body.no-timer #timer { display: none; }
+  #timer .clock { position: relative; display: flex; align-items: center; margin-right: auto; color: var(--title); font: 900 62px/1 var(--label); font-variant-numeric: tabular-nums; transition: color .3s; }
+  #timer .field { position: relative; }
+  #timer input { display: block; width: 1.24em; height: 1.04em; padding: 0; margin: 0; border: 0; border-radius: 14px; outline: 0; background: transparent; color: inherit; font: inherit; font-variant-numeric: tabular-nums; text-align: center; caret-color: var(--accent-d); }
+  #timer input:focus { background: var(--panel-bg); }
+  #timer .colon { position: relative; top: -.06em; padding: 0 2px; opacity: .55; }
+  #timer .step { position: absolute; left: 50%; width: 46px; height: 20px; margin-left: -23px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  #timer .step svg { display: block; width: 18px; height: 12px; margin: auto; }
+  #timer .step.up { top: -20px; } #timer .step.dn { bottom: -20px; }
+  #timer.adjust .step { opacity: 1; pointer-events: auto; }
+  #timer .step:hover { color: var(--text); }
+  #timer .tbtn { flex: none; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; cursor: pointer; }
+  #timer .tbtn svg { display: block; }
+  #tPlay { width: 62px; height: 62px; background: var(--accent); color: var(--accent-ink); box-shadow: 0 5px 0 var(--accent-d); }
+  #tPlay:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--accent-d); }
+  #timer #tPlay .i-pause, #timer.running #tPlay .i-play { display: none; } #timer.running #tPlay .i-pause { display: block; }  #tReset { width: 46px; height: 46px; background: var(--panel-bg); color: var(--muted); }
+  #tReset:hover { color: var(--text); }
+  #timer .bar { position: absolute; left: 24px; right: 24px; bottom: 11px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; transition: opacity .2s; }
+  #timer.adjust .bar { opacity: 0; }
+  #timer .bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transform-origin: left; transition: transform .25s linear; }
+  #timer.low .clock { color: var(--plus); }
+  #timer.over { background: var(--once); } #timer.over .clock { color: var(--once-ink); }
+  #timer.pop { animation: thump .5s cubic-bezier(.2,1.6,.4,1); }
+  body:not(.no-timer) #result { flex-basis: 272px; }
+  body.layout-side:not(.no-timer) #result { flex-basis: 276px; }
+  body.layout-side #timer { padding: 18px 14px 24px 18px; gap: 10px; }
+  body.layout-side #timer .clock { font-size: 54px; }
+  body.layout-side #tPlay { width: 56px; height: 56px; }
+  body.layout-side #tReset { width: 42px; height: 42px; }
+  body.layout-side #timer .bar { left: 18px; right: 18px; }
+
   .confetti { position: absolute; z-index: 7; pointer-events: none; will-change: transform; }
 
 </style>
@@ -168,6 +202,27 @@
     <h1>Birthday Wheel</h1>
     <hr />
     <div id="result"></div>
+    <div id="timer">
+      <div class="clock">
+        <div class="field" data-unit="60">
+          <button class="step up" data-d="1" tabindex="-1" aria-label="+1 minute"><svg viewBox="0 0 18 12"><path d="M3 9.5l6-6 6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <input id="tMin" inputmode="numeric" maxlength="2" autocomplete="off" spellcheck="false" value="05" aria-label="Minutes" />
+          <button class="step dn" data-d="-1" tabindex="-1" aria-label="-1 minute"><svg viewBox="0 0 18 12"><path d="M3 2.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+        <span class="colon">:</span>
+        <div class="field" data-unit="1">
+          <button class="step up" data-d="1" tabindex="-1" aria-label="+1 second"><svg viewBox="0 0 18 12"><path d="M3 9.5l6-6 6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <input id="tSec" inputmode="numeric" maxlength="2" autocomplete="off" spellcheck="false" value="00" aria-label="Seconds" />
+          <button class="step dn" data-d="-1" tabindex="-1" aria-label="-1 second"><svg viewBox="0 0 18 12"><path d="M3 2.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+      </div>
+      <button class="tbtn" id="tPlay" aria-label="Start / pause">
+        <svg class="i-play" width="28" height="28" viewBox="0 0 24 24"><path d="M8 5.2v13.6a1 1 0 0 0 1.5.86l10.7-6.8a1 1 0 0 0 0-1.72L9.5 4.34A1 1 0 0 0 8 5.2z" fill="currentColor"/></svg>
+        <svg class="i-pause" width="26" height="26" viewBox="0 0 24 24"><rect x="5.5" y="4.5" width="4.6" height="15" rx="2" fill="currentColor"/><rect x="13.9" y="4.5" width="4.6" height="15" rx="2" fill="currentColor"/></svg>
+      </button>
+      <button class="tbtn" id="tReset" aria-label="Reset timer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+      <div class="bar"><i></i></div>
+    </div>
     <div id="legend">
       <span class="pill once">one time only!</span>
       <span class="pill repeat">can come back for more</span>
@@ -180,7 +235,7 @@
 
 
 <script>
-/*__CONFIG__*/const CONFIG = {"title":"Birthday Wheel","onceLabel":"one time only!","repeatLabel":"can come back for more","items":[]};/*__END_CONFIG__*/
+/*__CONFIG__*/const CONFIG = {"title":"Birthday Wheel","onceLabel":"one time only!","repeatLabel":"can come back for more","showTimer":true,"timerSeconds":300,"items":[]};/*__END_CONFIG__*/
 const ITEMS = CONFIG.items; // { id, label (on the wheel), full (result text), type: "once" | "repeat", double?: spin twice }
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 document.querySelector("#panel h1").textContent = CONFIG.title;
@@ -305,6 +360,9 @@ function landed(it) {
 function show(list, kicker, isCombo = false, isDouble = false) {
   picks = isCombo && comboFrom ? [...list, comboFrom] : list;
   result.innerHTML = `<div class="text">${list.map((p) => esc(p.full)).join('<span class="plus">+</span>')}</div>`;
+  // Long texts (double-trouble combos) shrink until they fit the box.
+  const t = result.firstChild, room = result.clientHeight - 70;
+  for (let fs = parseFloat(getComputedStyle(t).fontSize); t.offsetHeight > room && fs > 22; ) t.style.fontSize = (fs -= 2) + "px";
   setBtn(isDouble ? "double" : "done");
   result.classList.remove("pop"); void result.offsetWidth; result.classList.add("pop");
 }
@@ -355,6 +413,118 @@ mini.addEventListener("click", () => {
   wheel.classList.remove("picked");
   resetAll();
 });
+
+/* ── Timer: a minutes:seconds countdown with its own saved state (survives OBS reloads).
+   Not tied to the wheel: it works mid-spin and the wheel's reset leaves it alone. ── */
+const TMAX = 99 * 60 + 59;
+const clampT = (v) => Math.max(0, Math.min(TMAX, Math.round(Number(v) || 0)));
+if (CONFIG.showTimer === false) document.body.classList.add("no-timer");
+else (() => {
+  const TKEY = "bday-timer-v1", DEF = clampT(CONFIG.timerSeconds ?? 300);
+  // preset: seconds ↺ goes back to · left: ms left while stopped · endAt: wall-clock end while running
+  const tm = { def: DEF, preset: DEF, left: DEF * 1000, endAt: 0, over: false };
+  try {
+    const s = JSON.parse(localStorage.getItem(TKEY) || "null");
+    if (s && s.def === DEF) Object.assign(tm, { preset: clampT(s.preset), left: Math.max(0, Math.min(TMAX * 1000, +s.left || 0)), endAt: +s.endAt || 0, over: !!s.over });
+  } catch {}
+  const tsave = () => { try { localStorage.setItem(TKEY, JSON.stringify(tm)); } catch {} };
+  const box = $("#timer"), bar = $("#timer .bar i"), inputs = [[$("#tMin"), 60], [$("#tSec"), 1]];
+  const running = () => tm.endAt > 0;
+  const msLeft = () => (running() ? Math.max(0, tm.endAt - Date.now()) : tm.left);
+  const secLeft = () => Math.ceil(msLeft() / 1000);
+  const part = (sec, unit) => String(unit === 60 ? Math.floor(sec / 60) : sec % 60).padStart(2, "0");
+  let shown = -1, ticker = 0;
+
+  function paint(force) {
+    const ms = msLeft(), sec = Math.ceil(ms / 1000);
+    bar.style.transform = `scaleX(${tm.preset ? Math.min(1, ms / (tm.preset * 1000)) : 0})`;
+    if (sec === shown && !force) return;
+    shown = sec;
+    // Don't overwrite a number that's being typed.
+    inputs.forEach(([inp, unit]) => { if (!(inp === document.activeElement && inp.dataset.dirty)) inp.value = part(sec, unit); });
+    box.classList.toggle("running", running());
+    box.classList.toggle("low", running() && sec <= 10);
+    box.classList.toggle("over", tm.over);
+  }
+  function tick() {
+    if (running() && tm.endAt <= Date.now()) {
+      tm.endAt = 0; tm.left = 0; tm.over = true; tsave(); loop(); paint(true);
+      box.classList.remove("pop"); void box.offsetWidth; box.classList.add("pop");
+      return;
+    }
+    paint();
+  }
+  const loop = () => { clearInterval(ticker); ticker = running() ? setInterval(tick, 250) : 0; };
+
+  // Set the time left. While running it just nudges the countdown; while stopped at the start
+  // (or after it ran out) it also becomes the time ↺ goes back to.
+  function setLeft(next) {
+    next = clampT(next);
+    if (running()) tm.endAt += (next - secLeft()) * 1000;
+    else { if (tm.over || tm.left === tm.preset * 1000) tm.preset = next; tm.left = next * 1000; }
+    tm.over = false; tsave(); tick(); paint(true);
+  }
+  const step = (unit, d) => { inputs.forEach(([inp]) => delete inp.dataset.dirty); showAdjust(); setLeft(secLeft() + unit * d); };
+
+  $("#tPlay").addEventListener("click", () => {
+    if (running()) { tm.left = msLeft(); tm.endAt = 0; }
+    else { if (tm.left <= 0) tm.left = tm.preset * 1000; if (tm.left > 0) tm.endAt = Date.now() + tm.left; }
+    tm.over = false; tsave(); loop(); paint(true);
+  });
+  $("#tReset").addEventListener("click", () => { tm.endAt = 0; tm.left = tm.preset * 1000; tm.over = false; tsave(); loop(); paint(true); });
+
+  // Arrows show while the mouse moves over the timer, and hide again shortly after.
+  let adjT = 0;
+  function showAdjust() {
+    box.classList.add("adjust"); clearTimeout(adjT);
+    adjT = setTimeout(() => { if (!box.contains(document.activeElement)) box.classList.remove("adjust"); else showAdjust(); }, 2500);
+  }
+  box.addEventListener("pointermove", showAdjust);
+  box.addEventListener("pointerdown", showAdjust);
+  box.addEventListener("pointerleave", () => { if (!box.contains(document.activeElement)) { clearTimeout(adjT); box.classList.remove("adjust"); } });
+
+  // Arrows: click = ±1, hold = keep going.
+  let holdT = 0, holdI = 0;
+  const stopHold = () => { clearTimeout(holdT); clearInterval(holdI); };
+  box.querySelectorAll(".step").forEach((b) => {
+    const unit = +b.parentElement.dataset.unit, d = +b.dataset.d;
+    b.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); stopHold(); step(unit, d);
+      holdT = setTimeout(() => { holdI = setInterval(() => step(unit, d), unit === 60 ? 160 : 70); }, 400);
+    });
+    ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => b.addEventListener(ev, stopHold));
+  });
+  addEventListener("pointerup", stopHold); addEventListener("blur", stopHold);
+
+  // Scroll over minutes or seconds = ±1.
+  let lastWheel = 0;
+  box.querySelectorAll(".field").forEach((f) => f.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const now = performance.now(); if (now - lastWheel < 40) return; lastWheel = now;
+    step(+f.dataset.unit, e.deltaY < 0 ? 1 : -1);
+  }, { passive: false }));
+
+  // Click a number and type; Enter (or clicking away) sets it, Esc cancels.
+  inputs.forEach(([inp, unit]) => {
+    inp.addEventListener("focus", () => { showAdjust(); inp.select(); });
+    inp.addEventListener("input", () => { inp.value = inp.value.replace(/\D/g, "").slice(0, 2); inp.dataset.dirty = "1"; });
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") inp.blur();
+      else if (e.key === "Escape") { delete inp.dataset.dirty; inp.blur(); }
+      else if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); step(unit, e.key === "ArrowUp" ? 1 : -1); inp.select(); }
+    });
+    inp.addEventListener("blur", () => {
+      const v = parseInt(inp.value, 10);
+      if (inp.dataset.dirty && !Number.isNaN(v)) {
+        const sec = secLeft();
+        setLeft(unit === 60 ? Math.min(99, v) * 60 + (sec % 60) : Math.floor(sec / 60) * 60 + Math.min(59, v));
+      }
+      delete inp.dataset.dirty; paint(true); showAdjust();
+    });
+  });
+
+  loop(); tick(); paint(true);
+})();
 
 function fit() { const s = Math.min(1, innerWidth / 1920, innerHeight / 1080); stage.style.transform = `translateX(-50%) scale(${s})`; }
 addEventListener("resize", fit); fit();

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { htmlToBlobUrl } from "@/lib/buildOverlay";
 import {
+  BIRTHDAY_WHEEL_THEMES,
   buildBirthdayWheelHtml,
   DEFAULT_BIRTHDAY_WHEEL_CONFIG,
   newWheelOptionId,
@@ -160,7 +161,9 @@ export function BirthdayWheelBuilder() {
           )}
         </div>
         <p className="text-[11px] opacity-60 px-1" style={{ color: INK_SOFT }}>
-          The checkered circle in the middle is see-through — your VTube Studio model goes underneath it in OBS.
+          {cfg.layout === "side"
+            ? "Everything checkered is see-through — only the wheel and the panel show. Put your VTube Studio model underneath, on the left."
+            : "The checkered circle in the middle is see-through — your VTube Studio model goes underneath it in OBS."}
         </p>
 
         <BirthdayObsGuide />
@@ -168,6 +171,54 @@ export function BirthdayWheelBuilder() {
 
       {/* EDITOR */}
       <div className="rounded-2xl p-5 flex flex-col gap-6 border" style={{ background: PANEL, borderColor: LINE, color: INK }}>
+        <div>
+          <SectionTitle kanji="型">Layout</SectionTitle>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { id: "side", name: "Model on the left", note: "Just the wheel + panel, no background; Choppy fills the circle" },
+              { id: "center", name: "Model in the circle", note: "Your model shows through the middle of the wheel" },
+            ] as const).map((l) => (
+              <button
+                key={l.id}
+                onClick={() => setField("layout", l.id)}
+                className="text-left rounded-xl px-3 py-2.5 border transition"
+                style={{
+                  background: cfg.layout === l.id ? "rgba(200,19,42,0.22)" : CARD,
+                  borderColor: cfg.layout === l.id ? "rgba(255,200,215,0.6)" : LINE,
+                }}
+              >
+                <div className="text-sm font-semibold" style={{ color: BRIGHT }}>{l.name}</div>
+                <div className="text-[11px] leading-snug opacity-70" style={{ color: INK_SOFT }}>{l.note}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <SectionTitle kanji="色">Colors</SectionTitle>
+          <div className="grid grid-cols-3 gap-2">
+            {BIRTHDAY_WHEEL_THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setField("theme", t.id)}
+                className="text-left rounded-xl px-2.5 py-2.5 border transition"
+                style={{
+                  background: cfg.theme === t.id ? "rgba(200,19,42,0.22)" : CARD,
+                  borderColor: cfg.theme === t.id ? "rgba(255,200,215,0.6)" : LINE,
+                }}
+              >
+                <div className="flex gap-1 mb-1.5">
+                  {t.swatches.map((c) => (
+                    <i key={c} className="w-4 h-4 rounded-full inline-block border" style={{ background: c, borderColor: "rgba(255,255,255,0.25)" }} />
+                  ))}
+                </div>
+                <div className="text-[13px] font-semibold leading-tight" style={{ color: BRIGHT }}>{t.name}</div>
+                <div className="text-[10px] leading-snug opacity-70" style={{ color: INK_SOFT }}>{t.note}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div>
           <SectionTitle kanji="名">Text</SectionTitle>
           <div className="flex flex-col gap-3 text-xs">
@@ -298,7 +349,7 @@ const OBS_STEPS: { title: string; detail?: string }[] = [
   { title: "Press “DOWNLOAD HTML”", detail: "Save birthday_wheel.html somewhere you'll keep it." },
   { title: "Add a Browser source", detail: "In OBS: Sources → + → Browser. Tick “Local File” and pick the file." },
   { title: "Set the size", detail: "Width 1920 · Height 1080. Tick “Use custom frame rate” → 60." },
-  { title: "Put your model underneath", detail: "Drag VTube Studio BELOW the wheel source and fit your face into the circle." },
+  { title: "Put your model underneath", detail: "Drag VTube Studio BELOW the wheel source, then place it in the circle (or the left strip, for “Model on the left”)." },
   { title: "Spin", detail: "Right-click the wheel source → Interact → Spin. Press Done once it's done." },
   { title: "Edited the options?", detail: "Download again and overwrite the same file, then right-click the source → Refresh." },
 ];

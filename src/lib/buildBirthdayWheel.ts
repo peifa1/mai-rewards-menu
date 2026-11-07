@@ -11,7 +11,21 @@ export type WheelOption = {
   double?: boolean; // "Double trouble": spin twice and combine both results
 };
 
+// "center": the model shows through the transparent circle in the middle of the wheel.
+// "side": the model stands in a transparent strip on the left; the circle is filled with art.
+export type BirthdayWheelLayout = "center" | "side";
+
+// Colour presets — the palettes themselves live in the template's CSS (body.theme-*).
+export type BirthdayWheelTheme = "sakura" | "diablita" | "lantern";
+export const BIRTHDAY_WHEEL_THEMES: { id: BirthdayWheelTheme; name: string; note: string; swatches: string[] }[] = [
+  { id: "sakura", name: "Sakura", note: "Pastel pink & baby blue", swatches: ["#ffc6d5", "#b2e2f2", "#fff0f5"] },
+  { id: "diablita", name: "Diablita", note: "Wine, crimson & gold", swatches: ["#c8132a", "#ffb8c8", "#1a0610"] },
+  { id: "lantern", name: "Lantern Night", note: "Lantern pink, night blue & red wood", swatches: ["#f08fb8", "#7f8fd6", "#a8243f"] },
+];
+
 export type BirthdayWheelConfig = {
+  layout: BirthdayWheelLayout;
+  theme: BirthdayWheelTheme;
   title: string;
   onceLabel: string;
   repeatLabel: string;
@@ -25,6 +39,8 @@ const o = (id: string, label: string, full: string, type: WheelOptionType, doubl
 
 // Ids match the original standalone scene, so progress saved in OBS carries over.
 export const DEFAULT_BIRTHDAY_WHEEL_CONFIG: BirthdayWheelConfig = {
+  layout: "side",
+  theme: "sakura",
   title: "Birthday Wheel",
   onceLabel: "one time only!",
   repeatLabel: "can come back for more",
@@ -80,6 +96,8 @@ export function normalizeBirthdayWheelConfig(raw: Partial<BirthdayWheelConfig> |
     return opt;
   });
   return {
+    layout: raw?.layout === "center" ? "center" : "side",
+    theme: BIRTHDAY_WHEEL_THEMES.some((t) => t.id === raw?.theme) ? (raw!.theme as BirthdayWheelTheme) : "sakura",
     title: str(raw?.title, d.title),
     onceLabel: str(raw?.onceLabel, d.onceLabel),
     repeatLabel: str(raw?.repeatLabel, d.repeatLabel),

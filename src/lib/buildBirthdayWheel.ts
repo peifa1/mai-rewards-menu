@@ -9,6 +9,7 @@ export type WheelOption = {
   full: string; // full text shown when it lands
   type: WheelOptionType; // "once" = removed after Done, "repeat" = stays on the wheel
   double?: boolean; // "Double trouble": spin twice and combine both results
+  delta?: number; // minutes added to (or taken off) the Stream Timer when it lands
 };
 
 // "center": the model shows through the transparent circle in the middle of the wheel.
@@ -31,16 +32,26 @@ export type BirthdayWheelConfig = {
   repeatLabel: string;
   showTimer: boolean; // countdown timer in the panel
   timerSeconds: number; // its starting time (adjustable live in the scene)
+  fullScene: string; // OBS scene where the wheel is full size; compact in every other scene ("" = button only)
+  compactX: number; // compact card's top-left corner in the 1920×1080 scene (card is 780×300)
+  compactY: number;
   items: WheelOption[];
 };
 
 export const WHEEL_LABEL_MAX = 24;
 export const TIMER_MAX_SECONDS = 99 * 60 + 59;
+export const DELTA_MAX_MINUTES = 600;
+export const COMPACT_SIZE = { width: 780, height: 300 };
+export const COMPACT_MAX = { x: 1920 - COMPACT_SIZE.width, y: 1080 - COMPACT_SIZE.height };
+const clampPos = (v: unknown, max: number, fallback: number) =>
+  typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(max, Math.round(v))) : fallback;
+const clampDelta = (v: unknown) =>
+  typeof v === "number" && Number.isFinite(v) ? Math.max(-DELTA_MAX_MINUTES, Math.min(DELTA_MAX_MINUTES, Math.round(v))) : 0;
 const clampTimer = (v: unknown, fallback: number) =>
   typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(TIMER_MAX_SECONDS, Math.round(v))) : fallback;
 
-const o = (id: string, label: string, full: string, type: WheelOptionType, double = false): WheelOption =>
-  double ? { id, label, full, type, double } : { id, label, full, type };
+const o = (id: string, label: string, full: string, type: WheelOptionType, extra: Partial<WheelOption> = {}): WheelOption =>
+  ({ id, label, full, type, ...extra });
 
 // Ids match the original standalone scene, so progress saved in OBS carries over.
 export const DEFAULT_BIRTHDAY_WHEEL_CONFIG: BirthdayWheelConfig = {
@@ -51,16 +62,20 @@ export const DEFAULT_BIRTHDAY_WHEEL_CONFIG: BirthdayWheelConfig = {
   repeatLabel: "can come back for more",
   showTimer: true,
   timerSeconds: 5 * 60,
+  fullScene: "Birthday Wheel",
+  compactX: 30,
+  compactY: 30,
   items: [
     o("story", "Embarrassing story", "Tell an embarrassing story", "once"),
     o("sour", "Sour challenge", "Sour challenge!", "once"),
-    o("extend", "+10 min stream", "Extend stream time +10 mins", "repeat"),
+    o("extend", "+10 min stream", "Extend stream time +10 mins", "repeat", { delta: 10 }),
+    o("cut", "-10 min stream", "Cut stream time -10 mins", "repeat", { delta: -10 }),
     o("villain", "Villain mode", "Become a villain for 5 mins", "repeat"),
     o("uwu", "UwU voice", "UwU voice + say cringe things for 5 mins", "repeat"),
     o("sing", "Sing everything", "Sing everything I say for 5 mins", "repeat"),
     o("chatline", "Chat picks a line", "Chat decides 1 thing for me to say (nothing bad!)", "repeat"),
     o("chibi", "Chibi vibe", "Turn into chibi and vibe to a stupid song", "once"),
-    o("double", "Double trouble", "Double trouble! Spin twice and combine both", "repeat", true),
+    o("double", "Double trouble", "Double trouble! Spin twice and combine both", "repeat", { double: true }),
     o("vchanger", "Voice changer", "Voice changer for 15 minutes", "once"),
     o("room", "Rate chat's room", "Rate chat's room on stream", "once"),
     o("shot", "Tiny shot", "Alcohol shot (tiny!)", "once"),
@@ -88,7 +103,16 @@ const str = (v: unknown, fallback: string) => (typeof v === "string" ? v : fallb
 export function normalizeBirthdayWheelConfig(raw: Partial<BirthdayWheelConfig> | null | undefined): BirthdayWheelConfig {
   const d = DEFAULT_BIRTHDAY_WHEEL_CONFIG;
   const seen = new Set<string>();
-  const items = (Array.isArray(raw?.items) ? raw!.items : d.items).map((it) => {
+  let rawItems = Array.isArray(raw?.items) ? raw!.items : d.items;
+  // Setups saved before stream-time values existed: give "+10 min stream" its +10 and add "-10 min stream".
+  if (raw && raw.fullScene === undefined && Array.isArray(raw.items)) {
+    rawItems = rawItems.flatMap((it) => {
+      if (it?.id !== "extend" || it.delta !== undefined) return [it];
+      const cut = d.items.find((x) => x.id === "cut")!;
+      return rawItems.some((x) => x?.id === "cut") ? [{ ...it, delta: 10 }] : [{ ...it, delta: 10 }, cut];
+    });
+  }
+  const items = rawItems.map((it) => {
     let id = typeof it?.id === "string" && it.id ? it.id : newWheelOptionId();
     while (seen.has(id)) id = newWheelOptionId();
     seen.add(id);
@@ -100,6 +124,8 @@ export function normalizeBirthdayWheelConfig(raw: Partial<BirthdayWheelConfig> |
       type: it?.type === "once" ? "once" : "repeat",
     };
     if (it?.double) opt.double = true;
+    const delta = clampDelta(it?.delta);
+    if (delta) opt.delta = delta;
     return opt;
   });
   return {
@@ -110,6 +136,9 @@ export function normalizeBirthdayWheelConfig(raw: Partial<BirthdayWheelConfig> |
     repeatLabel: str(raw?.repeatLabel, d.repeatLabel),
     showTimer: raw?.showTimer !== false,
     timerSeconds: clampTimer(raw?.timerSeconds, d.timerSeconds),
+    fullScene: str(raw?.fullScene, d.fullScene),
+    compactX: clampPos(raw?.compactX, COMPACT_MAX.x, d.compactX),
+    compactY: clampPos(raw?.compactY, COMPACT_MAX.y, d.compactY),
     items,
   };
 }

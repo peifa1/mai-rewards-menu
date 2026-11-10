@@ -22,7 +22,7 @@
     --rim: #fff; --dot-a: #ffb3c7; --dot-b: #9dd6ea; --win: #fff;
     --accent: #b2e2f2; --accent-d: #a5c9d6; --accent-ink: #5d5c61;
     --done: #ffd3df; --done-d: #f3b4c6; --done-ink: #5d5c61;
-    --pointer: #b2e2f2; --pointer-d: #a5c9d6; --hub-fill: #fff; --plus: #ff9fb8; --drop: rgba(93,92,97,.18);
+    --pointer: #7fcbe8; --pointer-d: #4e9dbd; --spin: #7fcbe8; --spin-d: #4e9dbd; --spin-ink: #33424d; --hub-fill: #fff; --plus: #ff9fb8; --drop: rgba(93,92,97,.18);
     --head: Tambyon, 'Nunito Sans', serif; --label: 'Nunito Sans', Avenir, sans-serif;
   }
   /* Diablita: the rewards-page look - deep wine, crimson seal, blush ink, a touch of gold. */
@@ -35,7 +35,7 @@
     --rim: #2a0712; --dot-a: #ffd28a; --dot-b: #ff8fa8; --win: #ffd28a;
     --accent: #c8132a; --accent-d: #7a0a18; --accent-ink: #fff0f4;
     --done: #ffb8c8; --done-d: #c47a8e; --done-ink: #3a0a18;
-    --pointer: #ffd28a; --pointer-d: #a8743a; --hub-fill: #3a0c1c; --plus: #ff8fa8; --drop: rgba(0,0,0,.45);
+    --pointer: #ffc561; --pointer-d: #9a6524; --spin: #e01a35; --spin-d: #6e0715; --spin-ink: #fff4f6; --hub-fill: #3a0c1c; --plus: #ff8fa8; --drop: rgba(0,0,0,.45);
     --head: 'Fraunces', serif;
   }
   /* Lantern Night: pink lantern glow, dusky night-sky periwinkle, red lacquered wood. */
@@ -48,7 +48,7 @@
     --rim: #a8243f; --dot-a: #ffd0e4; --dot-b: #ff9cc6; --win: #fff1f7;
     --accent: #f08fb8; --accent-d: #b2577f; --accent-ink: #3a1030;
     --done: #7f8fd6; --done-d: #4f5ea8; --done-ink: #f4f2ff;
-    --pointer: #ffd0e4; --pointer-d: #a8243f; --hub-fill: #2d2a55; --plus: #f08fb8; --drop: rgba(0,0,0,.4);
+    --pointer: #ff9cc6; --pointer-d: #a8243f; --spin: #f27aae; --spin-d: #a8436f; --spin-ink: #2e0c26; --hub-fill: #2d2a55; --plus: #f08fb8; --drop: rgba(0,0,0,.4);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: transparent; overflow: hidden; }
@@ -87,6 +87,8 @@
     box-shadow: inset 0 0 0 30px var(--rim), inset 0 0 0 36px var(--accent), 0 8px 0 var(--accent-d), 0 18px 40px var(--drop); transition: box-shadow .3s; }
   #hubBtn { pointer-events: auto; position: absolute; left: 50%; bottom: -32px; transform: translateX(-50%); padding: 20px 56px; border: 0; border-radius: 30px; cursor: pointer; white-space: nowrap;
     background: var(--accent); color: var(--accent-ink); font: 900 26px/1 var(--label); letter-spacing: .22em; text-transform: uppercase; box-shadow: 0 6px 0 var(--accent-d); transition: background .2s, box-shadow .2s, opacity .2s; }
+  #hubBtn:not(.done) { background: var(--spin); color: var(--spin-ink); box-shadow: 0 6px 0 var(--spin-d); }
+  #hubBtn:not(.done):active { box-shadow: 0 2px 0 var(--spin-d); }
   #hubBtn.done { background: var(--done); color: var(--done-ink); box-shadow: 0 6px 0 var(--done-d); }
   #hubBtn:active { transform: translateX(-50%) translateY(4px); box-shadow: 0 2px 0 var(--accent-d); }
   #hubBtn.done:active { box-shadow: 0 2px 0 var(--done-d); }
@@ -178,6 +180,54 @@
   body.layout-side #tReset { width: 42px; height: 42px; }
   body.layout-side #timer .bar { left: 18px; right: 18px; }
 
+  /* ── Compact: a small fixed card in the top-left corner (780×300 at 30,30) for the other
+     scenes — mini wheel (still the real one), current result, timer, options left.
+     Crop / move the source per scene in OBS; the card never changes size. ── */
+  #modeBtn { position: absolute; left: 20px; bottom: 14px; z-index: 4; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; opacity: 0; transition: opacity .2s; }
+  #modeBtn svg { display: block; margin: auto; }
+  #panel:hover #modeBtn { opacity: .6; } #modeBtn:hover { opacity: 1 !important; color: var(--text); }
+  #modeBtn .i-max, body.compact #modeBtn .i-min { display: none; } body.compact #modeBtn .i-max { display: block; }
+  body.compact #bg, body.compact #wheelArea .card, body.compact #mascot2, body.compact #mascot, body.compact #hubBtn,
+  body.compact #panel hr, body.compact #legend, body.compact #doneList, body.compact #miniReset, body.compact #doneHead b { display: none; }
+  body.compact #wheelArea { z-index: 2; transform: translate(calc(var(--cx, 30px) - 490px), calc(var(--cy, 30px) - 395px)) scale(.27); }
+  body.compact #panel { left: var(--cx, 30px); top: var(--cy, 30px); width: 780px; height: 300px; padding: 22px 26px 18px 336px; border-radius: 40px; box-shadow: 0 10px 0 var(--panel-shadow), 0 14px 24px var(--drop); }
+  body.compact #panel h1 { display: none; font-size: 46px; }
+  body.compact.idle #panel h1 { display: flex; flex: 1; align-items: center; }
+  body.compact #panel #result { flex: 1 1 0; min-height: 0; border-radius: 24px; padding: 8px 16px; }
+  body.compact.idle #panel #result { display: none; }
+  body.compact #result .text { font-size: 30px; margin: 0; }
+  body.compact #result .text .plus { font-size: 18px; }
+  body.compact #result .idle, body.compact #result .suspense { font-size: 34px; }
+  body.compact #panel #timer { margin-top: 12px; padding: 14px 12px 19px 16px; gap: 10px; border-radius: 24px; }
+  body.compact #panel #timer .clock { font-size: 42px; }
+  body.compact #panel #tPlay { width: 46px; height: 46px; }
+  body.compact #panel #tReset { width: 36px; height: 36px; }
+  body.compact #panel #timer .bar { left: 16px; right: 16px; bottom: 8px; height: 5px; }
+  body.compact #timer .step { height: 16px; } body.compact #timer .step.up { top: -15px; } body.compact #timer .step.dn { bottom: -16px; }
+  body.compact #doneHead { justify-content: flex-end; margin-top: 10px; }
+  /* Compact: while stopped the timer is just faint digits (no box, no buttons). Running, time's up,
+     or hovering the card in OBS Interact brings it back in full. */
+  body.compact #panel:not(:hover):not(:focus-within) #timer:not(.running):not(.over) { background: transparent; opacity: .45; }
+  body.compact #panel:not(:hover):not(:focus-within) #timer:not(.running):not(.over) :is(.tbtn, .bar) { visibility: hidden; }
+  body.compact #panel #timer { transition: background .3s, opacity .3s; }
+
+  /* ── Glass panel (full + compact): see-through with a slightly darker tint, light text.
+     (An OBS browser source can't blur the sources below it — a real blur has to be done in OBS.) ── */
+  body { --tint: rgba(38,16,32,.5); }
+  body.theme-diablita { --tint: rgba(26,6,16,.55); }
+  body.theme-lantern { --tint: rgba(18,14,42,.55); }
+  #panel { --text: #fff; --title: #fff; --muted: rgba(255,255,255,.88); --line: rgba(255,255,255,.16);
+    --result-bg: rgba(255,255,255,.09); --panel-bg: rgba(255,255,255,.16);
+    background: none; box-shadow: none; isolation: isolate; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+  body.compact #panel { box-shadow: none; }
+  /* The tint: an inner block whose blurred shadow fades it out softly toward the edges (no hard border).
+     A shadow, not a CSS mask: much cheaper for OBS to draw. */
+  #panel::before { content: ""; position: absolute; inset: 34px; z-index: -1; border-radius: 24px; background: var(--tint); box-shadow: 0 0 44px 26px var(--tint); pointer-events: none; }
+  /* Wheel centre (model-on-the-left layout): the white disc becomes the same tint; the accent ring stays. */
+  body.layout-side #hub { background: radial-gradient(circle closest-side, var(--tint) 129px, var(--accent) 129.5px, var(--accent) 135px, var(--tint) 135.5px);
+    box-shadow: 0 8px 0 var(--accent-d), 0 18px 40px var(--drop); }
+  #panel .pill, #panel .times, #panel .tbtn, #timer.over .clock { text-shadow: none; }
+
   .confetti { position: absolute; z-index: 7; pointer-events: none; will-change: transform; }
 
 </style>
@@ -230,12 +280,13 @@
     <div id="doneHead"><b>done so far</b><span id="left"></span></div>
     <ul id="doneList"></ul>
     <button id="miniReset" title="Put every option back and clear the list">↺ reset</button>
+    <button id="modeBtn" aria-label="Compact / full size"><svg class="i-min" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg><svg class="i-max" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
   </div>
 </div>
 
 
 <script>
-/*__CONFIG__*/const CONFIG = {"title":"Birthday Wheel","onceLabel":"one time only!","repeatLabel":"can come back for more","showTimer":true,"timerSeconds":300,"items":[]};/*__END_CONFIG__*/
+/*__CONFIG__*/const CONFIG = {"title":"Birthday Wheel","onceLabel":"one time only!","repeatLabel":"can come back for more","showTimer":true,"timerSeconds":300,"fullScene":"Birthday Wheel","compactX":30,"compactY":30,"items":[]};/*__END_CONFIG__*/
 const ITEMS = CONFIG.items; // { id, label (on the wheel), full (result text), type: "once" | "repeat", double?: spin twice }
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 document.querySelector("#panel h1").textContent = CONFIG.title;
@@ -342,9 +393,33 @@ async function spin(exclude = []) {
   requestAnimationFrame(frame);
 }
 
+// Long texts (double-trouble combos) shrink until they fit the result box.
+function fitText() {
+  const t = result.querySelector(".text"); if (!t) return;
+  document.body.classList.remove("idle"); // (the observer would only catch up after this measure)
+  t.style.fontSize = "";
+  const compact = document.body.classList.contains("compact"), room = result.clientHeight - (compact ? 16 : 70), min = compact ? 16 : 22;
+  for (let fs = parseFloat(getComputedStyle(t).fontSize); t.offsetHeight > room && fs > min; ) t.style.fontSize = (fs -= 2) + "px";
+}
+
+/* Options with a time value (+10 / -10 min…) tell the separate Stream Timer source.
+   Each landing is one event with its own id, so the timer applies it exactly once — even if
+   the timer source loads later. Both sources must be OBS "Local file" sources (shared storage). */
+const EKEY = "stream-timer-events";
+function sendTime(it) {
+  const d = Math.round(Number(it.delta) || 0) * 60; if (!d) return;
+  try {
+    const evs = JSON.parse(localStorage.getItem(EKEY) || "[]");
+    const list = Array.isArray(evs) ? evs : [];
+    list.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), d, at: Date.now() });
+    localStorage.setItem(EKEY, JSON.stringify(list.slice(-50)));
+  } catch {}
+}
+
 function landed(it) {
   busy = false; stage.classList.remove("busy"); hub.classList.remove("spinning");
-  celebrate();
+  sendTime(it);
+  if (!document.body.classList.contains("compact")) celebrate();
   const wrap = $("#wheelWrap"); wrap.classList.remove("landed"); void wrap.offsetWidth; wrap.classList.add("landed");
   wheel.classList.add("picked");
   wheel.querySelector(`.slice[data-id="${it.id}"]`)?.classList.add("win");
@@ -360,9 +435,7 @@ function landed(it) {
 function show(list, kicker, isCombo = false, isDouble = false) {
   picks = isCombo && comboFrom ? [...list, comboFrom] : list;
   result.innerHTML = `<div class="text">${list.map((p) => esc(p.full)).join('<span class="plus">+</span>')}</div>`;
-  // Long texts (double-trouble combos) shrink until they fit the box.
-  const t = result.firstChild, room = result.clientHeight - 70;
-  for (let fs = parseFloat(getComputedStyle(t).fontSize); t.offsetHeight > room && fs > 22; ) t.style.fontSize = (fs -= 2) + "px";
+  fitText();
   setBtn(isDouble ? "double" : "done");
   result.classList.remove("pop"); void result.offsetWidth; result.classList.add("pop");
 }
@@ -525,6 +598,44 @@ else (() => {
 
   loop(); tick(); paint(true);
 })();
+
+/* ── Full size vs compact. In OBS: full size in the scene named CONFIG.fullScene, compact in
+   every other scene (needs the source's Page permissions ≥ "Read access to user information").
+   The corner button (hover the panel in Interact) flips it by hand until the next scene change. ── */
+const idleWatch = () => document.body.classList.toggle("idle", !result.firstChild);
+new MutationObserver(idleWatch).observe(result, { childList: true }); idleWatch();
+// The result box grows/shrinks when the compact timer shows or hides: refit the text.
+let fitH = 0;
+new ResizeObserver(() => { if (result.clientHeight !== fitH) { fitH = result.clientHeight; fitText(); } }).observe(result);
+function setCompact(on) {
+  if (document.body.classList.contains("compact") === on) return;
+  document.body.classList.toggle("compact", on); fitText();
+}
+// Where the compact card sits (its top-left corner in the 1920×1080 scene; the card is 780×300).
+const posPx = (v, max, d) => (Number.isFinite(+v) ? Math.max(0, Math.min(max, Math.round(+v))) : d) + "px";
+document.body.style.setProperty("--cx", posPx(CONFIG.compactX, 1140, 30));
+document.body.style.setProperty("--cy", posPx(CONFIG.compactY, 780, 30));
+// The size picked with the button is remembered (OBS restarts / source refreshes keep it).
+const SKEY = "bday-size-v1";
+try { const sz = localStorage.getItem(SKEY); if (sz === "compact" || sz === "full") setCompact(sz === "compact"); } catch {}
+$("#modeBtn").addEventListener("click", () => {
+  const on = !document.body.classList.contains("compact");
+  setCompact(on);
+  try { localStorage.setItem(SKEY, on ? "compact" : "full"); } catch {}
+});
+addEventListener("message", (e) => { if (e.data && typeof e.data.bdayCompact === "boolean") setCompact(e.data.bdayCompact); }); // builder preview
+const FULL_SCENE = String(CONFIG.fullScene || "").trim().toLowerCase();
+const obs = window.obsstudio;
+if (obs && FULL_SCENE) {
+  let lastScene = null;
+  const onScene = (name) => {
+    if (typeof name !== "string" || name === lastScene) return;
+    lastScene = name; setCompact(name.trim().toLowerCase() !== FULL_SCENE);
+  };
+  const ask = () => { try { obs.getCurrentScene((s) => onScene(s && s.name)); } catch {} };
+  addEventListener("obsSceneChanged", (e) => { const d = e.detail; onScene(typeof d === "string" ? (() => { try { return JSON.parse(d).name; } catch { return d; } })() : d && d.name); });
+  ask(); setInterval(ask, 1500); // backstop in case an event is missed
+}
 
 function fit() { const s = Math.min(1, innerWidth / 1920, innerHeight / 1080); stage.style.transform = `translateX(-50%) scale(${s})`; }
 addEventListener("resize", fit); fit();

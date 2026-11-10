@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stream Timer</title>
+<style>
+  /* Stream Timer — OBS Browser Source, Local file, 720×220 (any size with the same shape works).
+     Just the time: counts down the stream time left, then counts up as overtime ("+0:03:12").
+     Wheel options with a time value (+10 / -10 min) land here automatically: add birthday_wheel.html
+     as a Local file source too, so both share storage.
+     Interact: hover for start/pause + reset (click twice) and the arrows; scroll on a number, or click it and type. */
+  :root, body.theme-sakura {
+    --fill: #fff; --edge: #ff9fb8; --over-fill: #ff9fb8; --over-edge: #fff;
+    --plus: #ff9fb8; --minus: #7fb9cf; --chip-ink: #fff;
+    --accent: #b2e2f2; --accent-d: #a5c9d6; --accent-ink: #5d5c61; --done: #ffd3df; --done-ink: #5d5c61; --btn2: rgba(255,255,255,.85); --btn2-ink: #a09ea6;
+  }
+  body.theme-diablita {
+    --fill: #fff0f4; --edge: #c8132a; --over-fill: #ffd28a; --over-edge: #7a0a18;
+    --plus: #c8132a; --minus: #ffb8c8; --chip-ink: #fff0f4;
+    --accent: #c8132a; --accent-d: #7a0a18; --accent-ink: #fff0f4; --done: #ffb8c8; --done-ink: #3a0a18; --btn2: rgba(34,7,15,.85); --btn2-ink: #c58a9b;
+  }
+  body.theme-lantern {
+    --fill: #ffe4f0; --edge: #a8243f; --over-fill: #9fadf0; --over-edge: #221d3d;
+    --plus: #f08fb8; --minus: #7f8fd6; --chip-ink: #fff;
+    --accent: #f08fb8; --accent-d: #b2577f; --accent-ink: #3a1030; --done: #7f8fd6; --done-ink: #f4f2ff; --btn2: rgba(31,27,58,.85); --btn2-ink: #b7a9d6;
+  }
+  body.theme-diablita .chip.minus { --chip-ink: #3a0a18; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 720px; height: 220px; transform-origin: top left; font-family: var(--font); }
+  /* No background: #card is only the area the mouse can use in Interact. */
+  #card { position: absolute; left: 20px; top: 14px; width: 680px; height: 172px; }
+  #label { position: absolute; left: 0; right: 0; top: 14px; text-align: center; color: var(--fill); font: var(--weight) 20px/1 var(--font); letter-spacing: .2em; text-transform: uppercase; white-space: nowrap;
+    text-shadow: 2.5px 0.0px 0 var(--edge), 2.3px 1.0px 0 var(--edge), 1.8px 1.8px 0 var(--edge), 1.0px 2.3px 0 var(--edge), 0.0px 2.5px 0 var(--edge), -1.0px 2.3px 0 var(--edge), -1.8px 1.8px 0 var(--edge), -2.3px 1.0px 0 var(--edge), -2.5px 0.0px 0 var(--edge), -2.3px -1.0px 0 var(--edge), -1.8px -1.8px 0 var(--edge), -1.0px -2.3px 0 var(--edge), -0.0px -2.5px 0 var(--edge), 1.0px -2.3px 0 var(--edge), 1.8px -1.8px 0 var(--edge), 2.3px -1.0px 0 var(--edge), 0 3px 8px rgba(0,0,0,.3); transition: opacity .2s; }
+  body.no-label #label { display: none; }
+  .clock { position: absolute; left: 50%; top: 60%; transform: translate(-50%, -50%); display: flex; align-items: center; color: var(--fill); font: var(--weight) var(--fs, 120px)/1 var(--font); font-variant-numeric: tabular-nums; white-space: nowrap;
+    text-shadow: 4.0px 0.0px 0 var(--edge), 3.7px 1.5px 0 var(--edge), 2.8px 2.8px 0 var(--edge), 1.5px 3.7px 0 var(--edge), 0.0px 4.0px 0 var(--edge), -1.5px 3.7px 0 var(--edge), -2.8px 2.8px 0 var(--edge), -3.7px 1.5px 0 var(--edge), -4.0px 0.0px 0 var(--edge), -3.7px -1.5px 0 var(--edge), -2.8px -2.8px 0 var(--edge), -1.5px -3.7px 0 var(--edge), -0.0px -4.0px 0 var(--edge), 1.5px -3.7px 0 var(--edge), 2.8px -2.8px 0 var(--edge), 3.7px -1.5px 0 var(--edge), 0 6px 0 var(--edge), 0 10px 18px rgba(0,0,0,.3); }
+  body.no-label .clock { top: 50%; }
+  .field { position: relative; }
+  .clock input { display: block; width: calc(2ch + 6px); height: 1.2em; padding: 0; margin: 0; border: 0; border-radius: 16px; outline: 0; background: transparent; color: inherit; font: inherit; font-variant-numeric: tabular-nums; text-align: center; text-shadow: inherit; caret-color: var(--edge); }
+  .clock input:focus { background: rgba(255,255,255,.18); }
+  /* Digits are drawn in fixed-width cells (even spacing in fonts without tabular numbers);
+     the input on top is see-through until you click it to type. */
+  .clock input:not(:focus) { color: transparent; text-shadow: none; }
+  .digits { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .digits i { display: block; width: 1ch; text-align: center; font-style: normal; }
+  .field:focus-within .digits { visibility: hidden; }
+  .colon { position: relative; top: -.04em; padding: 0 2px; }
+  .sign { display: none; margin-right: 6px; }
+  #card.over .sign { display: block; }
+  /* Overtime: the colours flip */
+  #card.over { --fill: var(--over-fill); --edge: var(--over-edge); }
+  .step { position: absolute; left: 50%; width: 52px; height: 22px; margin-left: -26px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--fill); filter: drop-shadow(0 0 2px var(--edge)) drop-shadow(0 0 1px var(--edge)); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .step svg { display: block; width: 20px; height: 13px; margin: auto; }
+  .step.up { top: -20px; } .step.dn { bottom: -20px; }
+  #card.adjust .step { opacity: 1; pointer-events: auto; }
+  #card.adjust #label { opacity: 0; }
+  /* Controls: only while the mouse is over it (OBS Interact). Viewers just see the time. */
+  .ctrls { position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  #card:hover .ctrls, #card.adjust .ctrls { opacity: 1; pointer-events: auto; }
+  .tbtn { display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; cursor: pointer; }
+  .tbtn svg { display: block; }
+  #tPlay { width: 54px; height: 54px; background: var(--accent); color: var(--accent-ink); box-shadow: 0 5px 0 var(--accent-d); }
+  #tPlay:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--accent-d); }
+  #tPlay .i-pause, #card.running #tPlay .i-play { display: none; } #card.running #tPlay .i-pause { display: block; }
+  #tReset { width: 40px; height: 40px; background: var(--btn2); color: var(--btn2-ink); }
+  #tReset.armed { background: var(--done); color: var(--done-ink); }
+  #card.pop .clock { animation: thump .5s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes thump { 40% { transform: translate(-50%, -50%) scale(1.05); } }
+  /* "+10:00" chip when the wheel changes the time */
+  .chip { position: absolute; right: 70px; top: 0; padding: 8px 16px; border-radius: 22px; font: var(--weight) 26px/1 var(--font); font-variant-numeric: tabular-nums; color: var(--chip-ink); background: var(--plus); box-shadow: 0 4px 0 rgba(0,0,0,.18); pointer-events: none; }
+  .chip.minus { background: var(--minus); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="card">
+    <div id="label"></div>
+    <div class="clock">
+      <span class="sign">+</span>
+      <div class="field" data-unit="3600">
+        <button class="step up" data-d="1" tabindex="-1" aria-label="+1 hour"><svg viewBox="0 0 18 12"><path d="M3 9.5l6-6 6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <input id="tH" inputmode="numeric" maxlength="2" autocomplete="off" spellcheck="false" value="2" aria-label="Hours" /><span class="digits"></span>
+        <button class="step dn" data-d="-1" tabindex="-1" aria-label="-1 hour"><svg viewBox="0 0 18 12"><path d="M3 2.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <span class="colon">:</span>
+      <div class="field" data-unit="60">
+        <button class="step up" data-d="1" tabindex="-1" aria-label="+1 minute"><svg viewBox="0 0 18 12"><path d="M3 9.5l6-6 6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <input id="tM" inputmode="numeric" maxlength="2" autocomplete="off" spellcheck="false" value="00" aria-label="Minutes" /><span class="digits"></span>
+        <button class="step dn" data-d="-1" tabindex="-1" aria-label="-1 minute"><svg viewBox="0 0 18 12"><path d="M3 2.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <span class="colon">:</span>
+      <div class="field" data-unit="1">
+        <button class="step up" data-d="1" tabindex="-1" aria-label="+1 second"><svg viewBox="0 0 18 12"><path d="M3 9.5l6-6 6 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <input id="tS" inputmode="numeric" maxlength="2" autocomplete="off" spellcheck="false" value="00" aria-label="Seconds" /><span class="digits"></span>
+        <button class="step dn" data-d="-1" tabindex="-1" aria-label="-1 second"><svg viewBox="0 0 18 12"><path d="M3 2.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+    </div>
+    <div class="ctrls">
+      <button class="tbtn" id="tPlay" aria-label="Start / pause">
+        <svg class="i-play" width="26" height="26" viewBox="0 0 24 24"><path d="M8 5.2v13.6a1 1 0 0 0 1.5.86l10.7-6.8a1 1 0 0 0 0-1.72L9.5 4.34A1 1 0 0 0 8 5.2z" fill="currentColor"/></svg>
+        <svg class="i-pause" width="24" height="24" viewBox="0 0 24 24"><rect x="5.5" y="4.5" width="4.6" height="15" rx="2" fill="currentColor"/><rect x="13.9" y="4.5" width="4.6" height="15" rx="2" fill="currentColor"/></svg>
+      </button>
+      <button class="tbtn" id="tReset" aria-label="Reset (click twice)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/*__CONFIG__*/const CONFIG = {"theme":"sakura","font":"fredoka","label":"","startSeconds":7200};/*__END_CONFIG__*/
+const $ = (s) => document.querySelector(s);
+document.body.classList.add("theme-" + (["sakura", "diablita", "lantern"].includes(CONFIG.theme) ? CONFIG.theme : "sakura"));
+// Font choices: [CSS family, Google Fonts query, weight]
+const FONTS = {
+  nunito: ["Nunito Sans", "Nunito+Sans:opsz,wght@6..12,900", 900],
+  fredoka: ["Fredoka", "Fredoka:wght@700", 700],
+  dynapuff: ["DynaPuff", "DynaPuff:wght@700", 700],
+  mochiy: ["Mochiy Pop One", "Mochiy+Pop+One", 400],
+  dela: ["Dela Gothic One", "Dela+Gothic+One", 400],
+  bungee: ["Bungee", "Bungee", 400],
+  orbitron: ["Orbitron", "Orbitron:wght@900", 900],
+};
+const FONT = FONTS[CONFIG.font] || FONTS.fredoka;
+const fl = document.createElement("link"); fl.rel = "stylesheet";
+fl.href = "https://fonts.googleapis.com/css2?family=" + FONT[1] + "&display=swap"; document.head.appendChild(fl);
+document.documentElement.style.setProperty("--font", '"' + FONT[0] + '", "Nunito Sans", sans-serif');
+document.documentElement.style.setProperty("--weight", FONT[2]);
+const LABEL = String(CONFIG.label ?? "").trim();
+if (LABEL) $("#label").textContent = LABEL; else document.body.classList.add("no-label");
+
+const TMAX = 99 * 3600 + 59 * 60 + 59;
+const clampT = (v) => Math.max(0, Math.min(TMAX, Math.round(Number(v) || 0)));
+const DEF = clampT(CONFIG.startSeconds ?? 7200);
+const TKEY = "stream-timer-v1", EKEY = "stream-timer-events";
+
+// preset: seconds ↺ goes back to · left: ms left while paused (negative = overtime)
+// endAt: wall-clock end while running · applied: ids of wheel events already counted
+const fresh = () => ({ def: DEF, preset: DEF, left: DEF * 1000, endAt: 0, applied: eventIds() });
+function eventIds() { try { const e = JSON.parse(localStorage.getItem(EKEY) || "[]"); return Array.isArray(e) ? e.map((x) => x && x.id).filter(Boolean) : []; } catch { return []; } }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(TKEY) || "null");
+    if (s && s.def === DEF) return { def: DEF, preset: clampT(s.preset), left: Math.max(-TMAX * 1000, Math.min(TMAX * 1000, +s.left || 0)), endAt: +s.endAt || 0, applied: Array.isArray(s.applied) ? s.applied.slice(-200) : [] };
+  } catch {}
+  return null;
+}
+let tm = load() || fresh();
+const save = () => { tm.applied = tm.applied.slice(-200); try { localStorage.setItem(TKEY, JSON.stringify(tm)); } catch {} };
+save();
+
+const card = $("#card"), inputs = [[$("#tH"), 3600], [$("#tM"), 60], [$("#tS"), 1]];
+const running = () => tm.endAt > 0;
+const msLeft = () => (running() ? tm.endAt - Date.now() : tm.left);
+// Shown seconds: counting down → time left (rounded up); overtime → time past zero.
+const view = () => { const ms = msLeft(); return ms > 0 ? { over: false, sec: Math.ceil(ms / 1000) } : { over: true, sec: Math.floor(-ms / 1000) }; };
+const part = (sec, unit) => { const v = unit === 3600 ? Math.floor(sec / 3600) : unit === 60 ? Math.floor(sec / 60) % 60 : sec % 60; return unit === 3600 ? String(v) : String(v).padStart(2, "0"); };
+let shownKey = "", wasOver = null, ticker = 0, sizeKey = -1;
+// Wide fonts shrink so the time always fits (with room on the right for the hover controls).
+const clockEl = $(".clock");
+function fitClock() {
+  sizeKey = $("#tH").value.length;
+  clockEl.style.setProperty("--fs", "120px");
+  const w = clockEl.offsetWidth;
+  clockEl.style.setProperty("--fs", Math.min(120, Math.floor(120 * 560 / Math.max(w, 1))) + "px");
+}
+if (document.fonts) { document.fonts.ready.then(fitClock); document.fonts.addEventListener?.("loadingdone", fitClock); }
+
+function paint(force) {
+  const v = view(), key = (v.over ? "+" : "") + v.sec;
+  if (key === shownKey && !force) return;
+  shownKey = key;
+  inputs.forEach(([inp, unit]) => {
+    if (inp === document.activeElement && inp.dataset.dirty) return; // don't overwrite typing
+    inp.value = part(v.sec, unit);
+    if (unit === 3600) inp.style.width = `calc(${Math.max(1, inp.value.length)}ch + 6px)`;
+    inp.nextElementSibling.innerHTML = [...inp.value].map((c) => `<i>${c}</i>`).join("");
+  });
+  if (sizeKey !== $("#tH").value.length) fitClock();
+  card.classList.toggle("running", running());
+  card.classList.toggle("over", v.over);
+  if (wasOver === false && v.over) bump();
+  wasOver = v.over;
+}
+const bump = () => { card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop"); };
+const loop = () => { clearInterval(ticker); ticker = running() ? setInterval(() => paint(), 250) : 0; };
+const commit = () => { save(); loop(); paint(true); };
+
+// Set the time left by hand (never below zero). While paused at the start it also becomes ↺'s time.
+function setLeft(next) {
+  next = clampT(next);
+  const v = view();
+  if (running()) tm.endAt = v.over ? Date.now() + next * 1000 : tm.endAt + (next - v.sec) * 1000;
+  else { if (tm.left === tm.preset * 1000) tm.preset = next; tm.left = next * 1000; }
+  commit();
+}
+const base = () => { const v = view(); return v.over ? 0 : v.sec; };
+const step = (unit, d) => { inputs.forEach(([inp]) => delete inp.dataset.dirty); showAdjust(); setLeft(base() + unit * d); };
+
+// Wheel time changes: added straight on top (so −10 in overtime adds 10 more minutes of overtime).
+function applyDelta(sec) {
+  const lim = TMAX * 1000;
+  if (running()) tm.endAt = Date.now() + Math.max(-lim, Math.min(lim, tm.endAt - Date.now() + sec * 1000));
+  else tm.left = Math.max(-lim, Math.min(lim, tm.left + sec * 1000));
+  chip(sec); bump();
+}
+function chip(sec) {
+  const a = Math.abs(sec), h = Math.floor(a / 3600), m = Math.floor(a / 60) % 60, s = a % 60;
+  const el = document.createElement("div");
+  el.className = "chip" + (sec < 0 ? " minus" : "");
+  el.textContent = (sec < 0 ? "−" : "+") + (h ? `${h}:${String(m).padStart(2, "0")}` : m) + ":" + String(s).padStart(2, "0");
+  card.appendChild(el);
+  el.animate([
+    { transform: "translateY(14px) scale(.85)", opacity: 0 },
+    { transform: "translateY(0) scale(1)", opacity: 1, offset: 0.12 },
+    { transform: "translateY(0) scale(1)", opacity: 1, offset: 0.8 },
+    { transform: "translateY(-10px) scale(1)", opacity: 0 },
+  ], { duration: 3200, easing: "ease-out" }).onfinish = () => el.remove();
+}
+function pull() {
+  let evs; try { evs = JSON.parse(localStorage.getItem(EKEY) || "[]"); } catch { return; }
+  if (!Array.isArray(evs)) return;
+  const todo = evs.filter((e) => e && typeof e.id === "string" && !tm.applied.includes(e.id));
+  if (!todo.length) return;
+  const cur = load(); if (cur) tm = cur; // another copy of this source may have applied some already
+  let any = false;
+  todo.forEach((e) => { if (tm.applied.includes(e.id)) return; tm.applied.push(e.id); any = true; const d = Math.round(+e.d || 0); if (d) applyDelta(d); });
+  if (any) commit();
+}
+addEventListener("storage", (e) => {
+  if (e.key === EKEY) pull();
+  else if (e.key === TKEY) { const cur = load(); if (cur) { tm = cur; loop(); paint(true); } }
+});
+setInterval(pull, 1000); // backstop in case a storage event is missed
+
+$("#tPlay").addEventListener("click", () => {
+  if (running()) { tm.left = msLeft(); tm.endAt = 0; } else tm.endAt = Date.now() + tm.left;
+  commit();
+});
+// Reset needs two clicks within 3 s (it's the whole stream's time).
+const rst = $("#tReset"); let armT = 0;
+rst.addEventListener("click", () => {
+  if (!rst.classList.contains("armed")) { rst.classList.add("armed"); armT = setTimeout(() => rst.classList.remove("armed"), 3000); return; }
+  clearTimeout(armT); rst.classList.remove("armed");
+  tm.endAt = 0; tm.left = tm.preset * 1000; tm.applied = eventIds(); commit();
+});
+
+// Arrows show while the mouse moves over the card, and hide shortly after.
+let adjT = 0;
+function showAdjust() {
+  card.classList.add("adjust"); clearTimeout(adjT);
+  adjT = setTimeout(() => { if (!card.contains(document.activeElement)) card.classList.remove("adjust"); else showAdjust(); }, 2500);
+}
+card.addEventListener("pointermove", showAdjust);
+card.addEventListener("pointerdown", showAdjust);
+card.addEventListener("pointerleave", () => { if (!card.contains(document.activeElement)) { clearTimeout(adjT); card.classList.remove("adjust"); } });
+
+// Arrows: click = ±1, hold = keep going.
+let holdT = 0, holdI = 0;
+const stopHold = () => { clearTimeout(holdT); clearInterval(holdI); };
+card.querySelectorAll(".step").forEach((b) => {
+  const unit = +b.parentElement.dataset.unit, d = +b.dataset.d;
+  b.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); stopHold(); step(unit, d);
+    holdT = setTimeout(() => { holdI = setInterval(() => step(unit, d), unit === 1 ? 70 : 160); }, 400);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => b.addEventListener(ev, stopHold));
+});
+addEventListener("pointerup", stopHold); addEventListener("blur", stopHold);
+
+// Scroll over a number = ±1.
+let lastWheel = 0;
+card.querySelectorAll(".field").forEach((f) => f.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const now = performance.now(); if (now - lastWheel < 40) return; lastWheel = now;
+  step(+f.dataset.unit, e.deltaY < 0 ? 1 : -1);
+}, { passive: false }));
+
+// Click a number and type; Enter (or clicking away) sets it, Esc cancels.
+inputs.forEach(([inp, unit]) => {
+  inp.addEventListener("focus", () => { showAdjust(); inp.select(); });
+  inp.addEventListener("input", () => { inp.value = inp.value.replace(/\D/g, "").slice(0, 2); inp.dataset.dirty = "1"; });
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") inp.blur();
+    else if (e.key === "Escape") { delete inp.dataset.dirty; inp.blur(); }
+    else if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); step(unit, e.key === "ArrowUp" ? 1 : -1); inp.select(); }
+  });
+  inp.addEventListener("blur", () => {
+    const v = parseInt(inp.value, 10);
+    if (inp.dataset.dirty && !Number.isNaN(v)) {
+      const sec = base(), h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60;
+      setLeft(unit === 3600 ? Math.min(99, v) * 3600 + m * 60 + s : unit === 60 ? h * 3600 + Math.min(59, v) * 60 + s : h * 3600 + m * 60 + Math.min(59, v));
+    }
+    delete inp.dataset.dirty; paint(true); showAdjust();
+  });
+});
+
+function fit() { const s = Math.min(innerWidth / 720, innerHeight / 220); $("#stage").style.transform = `scale(${s})`; }
+addEventListener("resize", fit); fit();
+pull(); loop(); paint(true);
+</script>
+</body>
+</html>

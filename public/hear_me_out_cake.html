@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hear Me Out Cake</title>
+<style>
+  /* Hear Me Out Cake — OBS Browser Source, Local file, 1920×1080, transparent. The cake is included (bottom middle).
+     Interact: press the pink + (next to the cake) to put the next picture on the cake. Click a picture to select it, then:
+     drag it to move · drag the pink knob to rotate (around the stick's tip) · drag the blue dot to lengthen/shorten
+     the stick · scroll on it to rotate a little · × to take it off. Everything is remembered. */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; font: 600 15px/1.2 system-ui, sans-serif; user-select: none; }
+  body.browser { background: repeating-conic-gradient(#2a232c 0 25%, #332a35 0 50%) 50% / 28px 28px; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: top left; }
+  #cake { position: absolute; left: 855px; bottom: 24px; width: 210px; z-index: 0; pointer-events: none; }
+
+  .item { position: absolute; width: 0; height: 0; transform-origin: 0 0; }
+  .stick { position: absolute; left: -3.5px; width: 7px; border-radius: 3px; background: linear-gradient(90deg, #c49155, #ecca95 50%, #ad793d); }
+  .pic { position: absolute; cursor: grab; }
+  .pic img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,.3); pointer-events: none; }
+  .item.pop .pic, .item.pop .stick { animation: pop .5s cubic-bezier(.2,1.5,.4,1) both; }
+  @keyframes pop { from { scale: .6; opacity: 0; } }
+  /* handles: only while the mouse is on that picture (or dragging it) */
+  .h { position: absolute; opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .item:hover .h, .item.active .h, .item.sel .h { opacity: 1; pointer-events: auto; }
+  .hit { position: absolute; }  /* invisible zone around the picture + knob, so the handles don't vanish on the way */
+  .knob { width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: #fff; border: 3px solid #e2577f; cursor: grab; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+  .knob::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; border: 2px solid #e2577f; border-top-color: transparent; }
+  .line { width: 2px; margin-left: -1px; background: rgba(255,255,255,.8); }
+  .tip { width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; background: rgba(255,255,255,.95); border: 3px solid #7fb9cf; cursor: ns-resize; }
+  .del { width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; background: #3a2a35; color: #fff; display: grid; place-items: center; font-size: 15px; cursor: pointer; }
+
+  /* the + button: always there (top left) */
+  #add { position: absolute; left: 1075px; bottom: 94px; z-index: 200000; display: flex; align-items: center; gap: 6px; padding: 0 14px 0 10px; height: 48px; border: 0; border-radius: 24px; background: #e2577f; color: #fff; box-shadow: 0 4px 0 #b33d61; font: inherit; font-size: 18px; cursor: pointer; }
+  #add b { font-size: 30px; font-weight: 400; line-height: 1; }
+  #add:disabled { opacity: .45; cursor: default; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="cake" alt="" />
+  <button id="add"><b>+</b><span id="left"></span></button>
+</div>
+<script>
+/*__CONFIG__*/const DATA = {"cake":"hear-me-out/cake.webp","pics":[]};/*__END_CONFIG__*/
+// Filled by the rewards-menu builder: cake image + pictures in draft order ({ id, src }).
+const PICS = (DATA.pics || []).map((p, k) => (typeof p === "string" ? { id: "p" + k, src: p } : p)), N = PICS.length;
+const stage = document.getElementById("stage");
+if (!window.obsstudio) document.body.classList.add("browser"); // checkered background outside OBS
+document.getElementById("cake").src = DATA.cake;
+
+const SIDE = 190; // every picture gets about SIDE×SIDE of area, whatever its pixel size or shape
+const KEY = "hmo-cake-v4"; // new size/layout: start fresh
+let items = [];   // { i, x, y (stick tip), ang (deg), L (stick length), z }
+let zTop = 1;
+// Saved spots point at a picture's id, so adding/removing pictures in the builder can't mix them up.
+try { const s = JSON.parse(localStorage.getItem(KEY) || "[]"); if (Array.isArray(s)) items = s.filter((o) => o && typeof o.id === "string").map((o) => ({ ...o, i: PICS.findIndex((p) => p.id === o.id) })).filter((o) => o.i >= 0); } catch {}
+zTop = Math.max(1, ...items.map((o) => o.z || 1));
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(items.map(({ i, ...o }) => o))); } catch {} };
+
+const dims = [];
+const ready = Promise.all(PICS.map((p, i) => new Promise((res) => { const im = new Image(); im.onload = () => { dims[i] = [im.naturalWidth, im.naturalHeight]; res(); }; im.onerror = res; im.src = p.src; })));
+function sizeOf(i) {
+  const [nw, nh] = dims[i] || [1, 1], ar = nw / nh;
+  let w = SIDE * Math.sqrt(ar), h = SIDE / Math.sqrt(ar);
+  const k = Math.min(1, (SIDE * 1.5) / w, (SIDE * 1.35) / h); return [w * k, h * k];
+}
+
+// ── drawing ──
+const els = new Map();
+function draw(o, pop) {
+  let el = els.get(o);
+  if (!el) {
+    const [w, h] = sizeOf(o.i);
+    el = document.createElement("div"); el.className = "item" + (pop ? " pop" : "");
+    el.innerHTML = `<div class="hit"></div><div class="stick"></div><div class="pic" style="width:${w}px;height:${h}px;left:${-w / 2}px"><img src="${PICS[o.i].src}" alt="" /></div>
+      <div class="h line"></div><div class="h knob" data-act="rot"></div><div class="h tip" data-act="len"></div><div class="h del" data-act="del">×</div>`;
+    el.dataset.h = h; el.dataset.w = w;
+    stage.appendChild(el); els.set(o, el); bind(o, el);
+  }
+  const w = +el.dataset.w, h = +el.dataset.h;
+  Object.assign(el.style, { left: o.x + "px", top: o.y + "px", transform: `rotate(${o.ang}deg)`, zIndex: o.z });
+  const q = (s) => el.querySelector(s).style;
+  Object.assign(q(".stick"), { top: -o.L - 4 + "px", height: o.L + 4 + "px" });
+  q(".pic").top = -o.L - h + "px";
+  Object.assign(q(".hit"), { left: -w / 2 - 30 + "px", top: -o.L - h - 60 + "px", width: w + 60 + "px", height: h + 76 + "px" });
+  Object.assign(q(".line"), { top: -o.L - h - 20 + "px", height: "20px" });
+  Object.assign(q(".knob"), { top: -o.L - h - 24 + "px", left: "0px" });
+  Object.assign(q(".tip"), { top: "0px", left: "0px" });
+  Object.assign(q(".del"), { top: -o.L - h + "px", left: w / 2 + "px" });
+}
+
+// ── pointer helpers: page coords → stage coords ──
+let scale = 1;
+const toStage = (e) => { const r = stage.getBoundingClientRect(); return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale }; };
+const rad = (d) => d * Math.PI / 180;
+const up = (o) => ({ x: Math.sin(rad(o.ang)), y: -Math.cos(rad(o.ang)) }); // from the tip towards the picture
+
+function bind(o, el) {
+  el.addEventListener("pointerdown", (e) => {
+    const act = e.target.dataset.act || (e.target.closest(".pic") ? "move" : null);
+    select(el);
+    if (!act) return;
+    e.preventDefault(); e.stopPropagation();
+    o.z = ++zTop; draw(o);
+    if (act === "del") { remove(o); return; }
+    el.setPointerCapture(e.pointerId); el.classList.add("active");
+    const start = toStage(e), sx = o.x, sy = o.y;
+    const u = up(o), base = { x: o.x + u.x * o.L, y: o.y + u.y * o.L }; // where the stick meets the picture
+    const move = (ev) => {
+      const p = toStage(ev);
+      if (act === "move") { o.x = sx + p.x - start.x; o.y = sy + p.y - start.y; }
+      else if (act === "rot") { o.ang = Math.round(Math.atan2(p.x - o.x, -(p.y - o.y)) * 180 / Math.PI); }
+      else if (act === "len") { // keep the picture where it is, slide the tip along the stick
+        const L = Math.max(20, Math.min(700, (base.x - p.x) * u.x + (base.y - p.y) * u.y));
+        o.L = Math.round(L); o.x = base.x - u.x * o.L; o.y = base.y - u.y * o.L;
+      }
+      draw(o);
+    };
+    const end = () => { el.classList.remove("active"); el.removeEventListener("pointermove", move); save(); };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", end, { once: true });
+    el.addEventListener("pointercancel", end, { once: true });
+  });
+  el.querySelector(".pic").addEventListener("wheel", (e) => { e.preventDefault(); o.ang += e.deltaY < 0 ? -3 : 3; draw(o); save(); }, { passive: false });
+}
+
+// Clicking a picture selects it: its handles stay until you click somewhere else.
+function select(el) { document.querySelectorAll(".item.sel").forEach((x) => x !== el && x.classList.remove("sel")); el?.classList.add("sel"); }
+document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".item")) select(null); });
+
+function remove(o) { els.get(o)?.remove(); els.delete(o); items = items.filter((x) => x !== o); save(); renderBtn(); }
+
+// ── the + button: next picture onto the cake ──
+const addBtn = document.getElementById("add"), leftEl = document.getElementById("left");
+const used = () => new Set(items.map((o) => o.i));
+function renderBtn() { const left = N - used().size; leftEl.textContent = left ? `${left} left` : "all on"; addBtn.disabled = !left; }
+addBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+addBtn.onclick = () => { const u = used(); for (let i = 0; i < N; i++) if (!u.has(i)) return draft(i); };
+function draft(i) {
+  // pops up above the cake, standing on its stick, ready to be placed
+  const k = items.length % 5;
+  const o = { i, id: PICS[i].id, x: 960 + (k - 2) * 22, y: 905, ang: (k - 2) * 6, L: 150, z: ++zTop };
+  items.push(o); draw(o, true); save(); renderBtn();
+  select(els.get(o));
+}
+
+function fit() { scale = Math.min(innerWidth / 1920, innerHeight / 1080); stage.style.transform = `scale(${scale})`; }
+addEventListener("resize", fit); fit();
+ready.then(() => { items.forEach((o) => draw(o)); renderBtn(); });
+</script>
+</body>
+</html>

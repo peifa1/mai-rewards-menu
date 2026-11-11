@@ -10,6 +10,7 @@ import { SocialWidgetBuilder } from "@/components/SocialWidgetBuilder";
 import { WidgetBuilder } from "@/components/WidgetBuilder";
 import { AudioTeaserBuilder } from "@/components/AudioTeaserBuilder";
 import { BirthdayWheelBuilder } from "@/components/BirthdayWheelBuilder";
+import { HearMeOutBuilder } from "@/components/HearMeOutBuilder";
 const squiggleArrowAsset = { url: "/images/squiggle-arrow.png" };
 
 const chibi    = { url: "/images/Chibi%20art%20thank%20you.png" };
@@ -223,13 +224,13 @@ function cacheTextState(state: PersistedState) {
 }
 
 
-type TopTab = "patreon" | "twitch" | "audio" | "schedule";
+type TopTab = "patreon" | "twitch" | "audio" | "schedule" | "temporary";
 
 function Index() {
   const [tab, setTab] = useState<TopTab>("patreon");
   useEffect(() => {
     const saved = localStorage.getItem("active-tab") as TopTab | null;
-    if (saved === "patreon" || saved === "twitch" || saved === "audio" || saved === "schedule") setTab(saved);
+    if (saved === "patreon" || saved === "twitch" || saved === "audio" || saved === "schedule" || saved === "temporary") setTab(saved);
   }, []);
   useEffect(() => {
     try { localStorage.setItem("active-tab", tab); } catch {}
@@ -254,6 +255,7 @@ function Index() {
             { id: "twitch",  label: "Twitch Overlays" },
             { id: "audio",   label: "Audio Teasers" },
             { id: "schedule", label: "Stream Schedule" },
+            { id: "temporary", label: "Temporary" },
           ] as const).map(({ id, label }) => (
             <button
               key={id}
@@ -269,7 +271,7 @@ function Index() {
           ))}
         </div>
       </div>
-      {tab === "patreon" ? <PatreonShowcase /> : tab === "twitch" ? <TwitchOverlays /> : tab === "schedule" ? <ScheduleBuilder /> : <AudioTeaserBuilder />}
+      {tab === "patreon" ? <PatreonShowcase /> : tab === "twitch" ? <TwitchOverlays /> : tab === "schedule" ? <ScheduleBuilder /> : tab === "temporary" ? <TemporaryTab /> : <AudioTeaserBuilder />}
     </div>
   );
 }
@@ -298,7 +300,7 @@ function TwitchOverlays() {
             { id: "gamersupps", label: "Gamersupps", kanji: "飲" },
             { id: "social", label: "Social", kanji: "縁" },
             { id: "widget", label: "Widget", kanji: "札" },
-            { id: "birthday", label: "Birthday", kanji: "祝" },
+            { id: "birthday", label: "Wheel", kanji: "輪" },
           ] as const).map(({ id, label, kanji }) => (
             <button
               key={id}
@@ -316,6 +318,39 @@ function TwitchOverlays() {
         </div>
       </div>
       {sub === "patreon" ? <TwitchOverlayBuilder /> : sub === "gamersupps" ? <GamersuppsBuilder /> : sub === "social" ? <SocialWidgetBuilder /> : sub === "birthday" ? <BirthdayWheelBuilder /> : <WidgetBuilder />}
+    </div>
+  );
+}
+
+// One-off stream bits (e.g. the Hear-me-out cake) live here until they get a proper home.
+type TemporarySub = "hearmeout";
+
+function TemporaryTab() {
+  const [sub, setSub] = useState<TemporarySub>("hearmeout");
+  return (
+    <div className="flex flex-col">
+      <div className="w-full flex justify-center pt-1 pb-1">
+        <div
+          className="inline-flex rounded-full p-1 gap-1"
+          style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,180,200,0.18)" }}
+        >
+          {([{ id: "hearmeout", label: "Hear-me-out", kanji: "菓" }] as const).map(({ id, label, kanji }) => (
+            <button
+              key={id}
+              onClick={() => setSub(id)}
+              className="px-4 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.2em] transition inline-flex items-center gap-2"
+              style={{
+                background: sub === id ? "linear-gradient(135deg,#c8132a,#8a0a1c)" : "transparent",
+                color: sub === id ? "#fff0f4" : "#ffd0dc",
+              }}
+            >
+              <span className="font-hakkou text-xs" style={{ color: sub === id ? "#ffe2ec" : "#ffb8c8" }}>{kanji}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <HearMeOutBuilder />
     </div>
   );
 }
